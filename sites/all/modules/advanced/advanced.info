@@ -1,0 +1,5 @@
+name = "Advanced Module"
+description = "A module for advanced search"
+core = "6.x"
+version = "6.x-1.0"
+package = "search"

@@ -1,0 +1,459 @@
+<?php
+// $Id: hs_content_taxonomy_views.module,v 1.16 2008/11/20 01:04:51 wimleers Exp $
+
+/**
+ * @file
+ * Implementation of the Hierarchical Select API for the Content Taxonomy
+ * Views module.
+ */
+
+
+//----------------------------------------------------------------------------
+// Core hooks.
+
+/**
+ * Implementation of hook_menu().
+ */
+function hs_content_taxonomy_views_menu($may_cache) {
+  $items = array();
+
+  if (!$may_cache && arg(0) == 'admin' && arg(1) == 'build' && arg(2) == 'views' && is_string(arg(3)) && arg(4) == 'hs_config' && is_string(arg(5))) {
+    $view_name = arg(3);
+    $field_name = arg(5);
+    $widget_type = db_result(db_query("SELECT widget_type FROM {node_field_instance} WHERE field_name = '%s'", $field_name));
+
+    if ($widget_type == 'content_taxonomy_hs') {
+      $items[] = array(
+        'path' => "admin/build/views/$view_name/hs_config/$field_name",
+        'title' => t('Hierarchical Select configuration for !view', array('!view' => $view_name)),
+        'callback' => 'drupal_get_form',
+        'callback arguments' => array('hs_content_taxonomy_views_config_form', $view_name, $field_name),
+        'access' => user_access('administer views'),
+        'type' => MENU_NORMAL_ITEM,
+      );
+    }
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function hs_content_taxonomy_views_form_alter($form_id, &$form) {
+  // Change the exposed filters of Views. Only affects hierarchical vocabulary
+  // filters.
+  if (in_array($form_id, array('views_filters', 'views_filterblock'))) {
+    $hs_exposed_filters_found = 0;
+
+    // Find the ids and vocabulary ids of the exposed filters.
+    foreach ($form['view']['#value']->exposed_filter as $id => $filter) {
+      $field_name = _hs_content_taxonomy_views_parse_fieldname_from_id($filter['id']);
+      if ($field_name !== FALSE) {
+        $widget_type = db_result(db_query("SELECT widget_type FROM {node_field_instance} WHERE field_name = '%s'", $field_name));
+
+        // Only apply Hierarchical Select if it's enabled for this field.
+        if ($widget_type == 'content_taxonomy_hs') {
+          $hs_exposed_filters_found++;
+
+          $field = content_fields($field_name);
+          $vid = $field['vid']; // This is the vocabulary id, not the view id!
+          $tid = $field['tid'];
+          $view = $form['view']['#value'];
+
+          // Make it use a hierarchical select.
+          require_once(drupal_get_path('module', 'hierarchical_select') .'/includes/common.inc');
+
+          unset($form["filter$id"]['#size']);
+          unset($form["filter$id"]['#options']);
+          unset($form["filter$id"]['#theme']);
+
+          $form["filter$id"]['#type'] = 'hierarchical_select';
+          $defaults_override = array(
+            'module' => 'hs_content_taxonomy_views',
+            'params' => array(
+              'optional' => (bool) $view->exposed_filter[$id]['optional'],
+              'vid'      => $vid,
+              'tid'      => $tid,
+              'depth'    => min($field['depth'], _hs_taxonomy_hierarchical_select_get_depth($vid)),
+            ),
+            // When the **ALL** option is selected, nothing else should be.
+            'exclusive_lineages' => array('**ALL**'),
+            // This is a GET form, so also render the flat select.
+            'render_flat_select' => 1,
+          );
+          hierarchical_select_common_config_apply($form["filter$id"], "content-taxonomy-views-$view->name-$vid", $defaults_override);
+
+          // Inherit #required from the exposed filter settings.
+          $form["filter$id"]['#required'] = !((bool) $view->exposed_filter[$id]['optional']);
+
+          // Put the altered exposed filters in a separate table row.
+          hierarchical_select_common_views_exposed_filters_reposition();
+        }
+      }
+    }
+
+    if ($hs_exposed_filters_found > 0) {
+      // Views will remove the form_id in views_filters_process(), but we need
+      // it for Hierarchical Select to work, so put it back.
+      $form['copy_of_form_id'] = $form['form_id'] + array('#parents' => array('form_id'));
+    }
+  }
+
+  // Alter the edit view form: add a link to the Hierarchical Select
+  // configuration when appropriate and to mark which settings are now managed
+  // by the Hierarchical Select configuration.
+  if ($form_id == 'views_edit_view') {
+    foreach ($form['exposed_filter'] as $filter_id => $filter) {
+      // If $filter['field'] is not set, the exposed filter is being deleted.
+      if (is_numeric($filter_id) && isset($filter['field'])) {
+        $id = $form['exposed_filter'][$filter_id]['id']['#default_value'];
+        $field_name = _hs_content_taxonomy_views_parse_fieldname_from_id($id);
+        if ($field_name !== FALSE) {
+          $widget_type = db_result(db_query("SELECT widget_type FROM {node_field_instance} WHERE field_name = '%s'", $field_name));
+          if ($widget_type == 'content_taxonomy_hs') {
+            $view = $form['#parameters'][1];
+
+            $link = l(t('Configure Hierarchical Select'), "admin/build/views/$view->name/hs_config/$field_name");
+            $form['exposed_filter'][$filter_id]['name']['#value'] .= '<br />'. $link;
+
+            // Alter the form to support the current Hierarchical Select
+            // config when …
+            require_once(drupal_get_path('module', 'hierarchical_select') .'/includes/common.inc');
+            $config_id = "taxonomy-views-$view->name-$vid";
+            $config = hierarchical_select_common_config_get($config_id);
+
+            $text = t('This setting is now managed by the<br />Hierarchical Select configuration!');
+            
+            // Exposed filter's "Force single" setting.
+            $form['exposed_filter'][$filter_id]['single']['#description'] = $text;
+
+            // Additional settings when save_lineage is enabled.
+            if ($config['save_lineage']) {
+              // Filter's "Operator" setting.
+              $form['filter'][$filter_id]['operator']['#description'] = $text;
+
+              // Exposed filter's "Lock Operator" setting.
+              $form['exposed_filter'][$filter_id]['operator']['#description'] = $text;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function hs_content_taxonomy_views_requirements($phase) {
+  $requirements = array();
+
+  if ($phase == 'runtime') {
+    $pattern = <<<EOT
+function _views_build_filters_form(\$view) {
+  // When the form is retrieved through an AJAX callback, the cache hasn't
+  // been loaded yet. The cache is necesssary for _views_get_filters().
+  views_load_cache();
+EOT;
+    $views_with_patch_257004 = preg_match('#'. preg_quote($pattern) .'#m', file_get_contents(drupal_get_path('module', 'views') .'/views.module'));
+
+    if ($views_with_patch_257004) {
+      $value = t('The Views module is new enough.');
+      $description = '';
+      $severity = REQUIREMENT_OK;
+    }
+    else {
+      $value = t('The Views module is outdated.');
+      $description = t("The version of Views that you have installed is either
+        older than May 11, 2008, or doesn't have the obligatory patch applied.
+        Please apply the <a href=\"!patch_url\">patch</a> or update to a newer
+        version of the Views module!",
+        array('!patch_url' => 'http://drupal.org/files/issues/hs_compatibility.patch')
+      );
+      $severity = REQUIREMENT_ERROR;
+    }
+
+    $requirements['hs_content_taxonomy_views'] = array(
+      'title'       => t('Hierarchical Select Content Taxonomy Views'),
+      'value'       => $value,
+      'description' => $description,
+      'severity'    => $severity,
+    );
+  }
+
+  return $requirements;
+}
+
+
+//----------------------------------------------------------------------------
+// Forms API callbacks.
+
+/**
+ * Form definition; configuration form for Hierarchical Select as the widget
+ * for a Taxonomy exposed filter.
+ *
+ * @param $view_name
+ *   Name of a view. Provides necessary context.
+ * @param $field_name
+ *   Name of a field. Provides necessary context.
+ */
+function hs_content_taxonomy_views_config_form($view_name, $field_name) {
+  require_once(drupal_get_path('module', 'hierarchical_select') .'/includes/common.inc');
+
+  // Find the exposed filter, we need this to set the default value of
+  // $config['dropbox']['status'].
+  $view = views_get_view($view_name);
+  foreach ($view->exposed_filter as $filter) {
+    if ($filter['id'] == "content_taxonomy_$field_name.tid") {
+      $exposed_filter = $filter;
+      break;
+    }
+  }
+
+  $field = content_fields($field_name);
+
+  // Extract the necessary context from the $field array.
+  $vid = $field['vid'];
+  $tid = $field['tid'];
+  $depth = (empty($field['depth'])) ? 0 : $field['depth'];
+
+  // Add the Hierarchical Select config form.
+  $module = 'hs_content_taxonomy_views';
+  $params = array(
+    'vid'      => $vid,
+    'tid'      => $tid,
+    'depth'    => $depth,
+    'optional' => (bool) $exposed_filter['optional'],
+  );
+  $config_id = "content-taxonomy-views-$view_name-$field_name";
+  $vocabulary = taxonomy_get_vocabulary($vid);
+  $defaults = array(
+    // Enable the save_lineage setting by default if the multiple parents
+    // vocabulary option is enabled.
+    'save_lineage' => (int) ($vocabulary->hierarchy == 2),
+    'dropbox' => array(
+      'status' => !$exposed_filter['single'],
+    ),
+    'editability' => array(
+      'max_levels' => min($depth, _hs_taxonomy_hierarchical_select_get_depth($vid)),
+    ),
+  );
+  $strings = array(
+    'hierarchy'   => t('vocabulary'),
+    'hierarchies' => t('vocabularies'),
+    'item'        => t('term'),
+    'items'       => t('terms'),
+    'item_type'   => t('term type'),
+    'entity'      => t('node'),
+    'entities'    => t('nodes'),
+  );
+  $max_hierarchy_depth = min(($depth == 0) ? 9 : $depth, _hs_taxonomy_hierarchical_select_get_depth($vid));
+  $preview_is_required = !(bool)$exposed_filter['optional'];
+  $form['hierarchical_select_config'] = hierarchical_select_common_config_form($module, $params, $config_id, $defaults, $strings, $max_hierarchy_depth, $preview_is_required);
+
+  $form['link'] = array(
+    '#value' => l('Back to the view configuration', "admin/build/views/$view_name/edit"),
+    '#prefix' => '<div class="hierarchical-select-config-back-link">',
+    '#suffix' => '</div>',
+    '#weight' => -5,
+  );
+
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  // Add the the submit handler for the Hierarchical Select config form.
+  $parents = array('hierarchical_select_config');
+  $form['#submit']['hierarchical_select_common_config_form_submit'] = array($parents);
+
+  $form['#submit']['hs_content_taxonomy_views_common_config_form_submit'] = array($view_name, $field_name);
+
+  return $form;
+}
+
+/**
+ * Additional submit callback to redirect the user to the "Edit view" form.
+ * @param $form_id
+ * @param $form_values
+ * @param $view_name
+ *   Name of a view. Provides necessary context.
+ * @param $field_name
+ *   Name of a field. Provides necessary context.
+ */
+function hs_content_taxonomy_views_common_config_form_submit($form_id, $form_values, $view_name, $field_name) {
+  $view_id = db_result(db_query("SELECT vid FROM {view_view} WHERE name = '%s'", $view_name));
+  $field = 'content_'. $field_name .'.'. $field_name .'_value';
+
+  $filter = db_fetch_object(db_query("SELECT operator FROM {view_filter} WHERE vid = %d AND field = '%s'", $view_id, $field));
+  $exposed_filter = db_fetch_object(db_query("SELECT operator, single FROM {view_exposed_filter} WHERE vid = %d AND field = '%s'", $view_id, $field));
+
+  // Overrides when save_lineage is enabled.
+  if ($form_values['hierarchical_select_config']['save_lineage']) {
+    // "Operator" must always be 'AND'.
+    $filter->operator = 'AND';
+
+    // The exposed filter must be locked to 'AND'.
+    $exposed_filter->operator = 1;
+
+    // "Force single" must be disabled.
+    $exposed_filter->single = 0;
+  }
+  else {
+    // "Force single" must be enabled.
+    $exposed_filter->single = 1;      
+  }
+
+  // Overrides when the dropbox is enabled.
+  if ($form_values['hierarchical_select_config']['dropbox']['status']) {
+    // "Force single" must be disabled.
+    $exposed_filter->single = 0;
+  }
+
+  if ($view_id === FALSE) {
+    drupal_set_message(t("Could not update the view because it doesn't live in the database."), 'error');
+  }
+  else {
+    db_query("UPDATE {view_filter} SET operator = '%s' WHERE vid = %d AND field = '%s'", $filter->operator, $view_id, $field);
+    db_query("UPDATE {view_exposed_filter} SET operator = %d, single = %d WHERE vid = %d AND field = '%s'", $exposed_filter->operator, $exposed_filter->single, $view_id, $field);
+    cache_clear_all('views_urls', 'cache_views');
+    drupal_set_message(t("Updated the View's exposed filter according to the settings you made."));
+  }
+}
+
+
+//----------------------------------------------------------------------------
+// Hierarchical Select hooks.
+
+/**
+ * Implementation of hook_hierarchical_select_params().
+ */
+function hs_content_taxonomy_views_hierarchical_select_params() {
+  return array('optional') + hs_content_taxonomy_hierarchical_select_params();
+}
+
+/**
+ * Implementation of hook_hierarchical_select_root_level().
+ */
+function hs_content_taxonomy_views_hierarchical_select_root_level($params) {
+  $root_level =  ($params['optional']) ? array('**ALL**' => '<'. t('all') .'>') : array();
+  $root_level += hs_content_taxonomy_hierarchical_select_root_level($params);
+
+  return $root_level;
+}
+
+/**
+ * Implementation of hook_hierarchical_select_children().
+ */
+function hs_content_taxonomy_views_hierarchical_select_children($parent, $params) {
+  return ($parent == '**ALL**') ? array() : hs_content_taxonomy_hierarchical_select_children($parent, $params);
+}
+
+/**
+ * Implementation of hook_hierarchical_select_lineage().
+ */
+function hs_content_taxonomy_views_hierarchical_select_lineage($item, $params) {
+  return ($item == '**ALL**') ? array($item) : hs_content_taxonomy_hierarchical_select_lineage($item, $params);
+}
+
+/**
+ * Implementation of hook_hierarchical_select_valid_item().
+ */
+function hs_content_taxonomy_views_hierarchical_select_valid_item($item, $params) {
+  return ($item == '**ALL**' || hs_content_taxonomy_hierarchical_select_valid_item($item, $params));
+}
+
+/**
+ * Implementation of hook_hierarchical_select_item_get_label().
+ */
+function hs_content_taxonomy_views_hierarchical_select_item_get_label($item, $params) {
+  return ($item == '**ALL**') ? '<'. t('all') .'>' : hs_content_taxonomy_hierarchical_select_item_get_label($item, $params);
+}
+
+/**
+ * Implementation of hook_hierarchical_select_create_item().
+ */
+// No implementation. This doesn't make sense for exposed filters: if you were
+// able to create new items in the hierarchy, how could you then possibly find
+// anything for that item?
+
+/**
+ * Implementation of hook_hierarchical_select_entity_count().
+ */
+function hs_content_taxonomy_views_hierarchical_select_entity_count($item, $params) {
+  if ($item == '**ALL**') {
+    // Unlike in the hs_taxonomy_views implementation, we can't use a simple
+    // SQL query here, because no depth information is stored in the database.
+    return count(_taxonomy_hierarchical_select_get_tree($params['vid'], 0, -1, $params['depth']));
+  }
+  else {
+    return hs_content_taxonomy_hierarchical_select_entity_count($item, $params);
+  }
+}
+
+/**
+ * Implementation of hook_hierarchical_select_implementation_info().
+ */
+function hs_content_taxonomy_views_hierarchical_select_implementation_info() {
+  return array(
+    'hierarchy type' => t('Content Taxonomy'),
+    'entity type'    => t('Node'),
+  );
+}
+
+/**
+ * Implementation of hook_hierarchical_select_config_info().
+ */
+function hs_content_taxonomy_views_hierarchical_select_config_info() {
+  static $config_info;
+
+  if (!isset($config_info)) {
+    $config_info = array();
+
+    views_load_cache();
+    $result = db_query("SELECT vid, name FROM {view_view} ORDER BY name");
+    while ($view = db_fetch_object($result)) {
+      $view = views_get_view($view->name);
+
+      foreach ($view->exposed_filter as $filter_id => $filter) {
+        $field_name = _hs_content_taxonomy_views_parse_fieldname_from_id($filter['id']);
+        if ($field_name) {
+          $field = content_fields($field_name);
+          $vocabulary = taxonomy_get_vocabulary($field['vid']);
+
+          $config_id = "content-taxonomy-views-$view->name-$field_name";
+          $config_info[$config_id] = array(
+            'config_id'      => $config_id,
+            'hierarchy type' => t('Content Taxonomy'),
+            'hierarchy'      => t($vocabulary->name) ." ($field_name)",
+            'entity type'    => t('Node'),
+            'entity'         => '',
+            'context type'   => t('Views exposed filter'),
+            'context'        => t($view->name),
+            'edit link'      => "admin/build/views/$view->name/hs_config/$field_name",
+          );
+        }
+      }
+    }
+  }
+
+  return  $config_info;
+}
+
+/**
+ * Given an id of the form "content_taxonomy_<field name>.tid", get the
+ * field name.
+ *
+ * @return
+ *   When no valid id was given, FALSE, otherwise the field name.
+ */
+function _hs_content_taxonomy_views_parse_fieldname_from_id($id) {
+  $field_name = FALSE;
+
+  // When "save as tag": content_taxonomy_field_<field_name>.tid
+  // Other save options: content_field_<field_name>.<field_name>_value
+  if (preg_match("/(content|content_taxonomy)_(field_[A-Za-z0-9_]+)\.(\\2_value|tid)/", $id, $matches)) {
+    $field_name = $matches[2];
+  }
+  return $field_name;
+}

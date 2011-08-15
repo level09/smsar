@@ -1,0 +1,13 @@
+; $Id: click_filter.info,v 1.1.2.1.2.1.2.1 2009/04/17 19:20:57 jeremy Exp $
+name = Ad click filter
+package = Ad
+dependencies[] = ad
+description = Filter duplicate click statistics.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-08-05
+version = "6.x-2.1"
+core = "6.x"
+project = "ad"
+datestamp = "1249431906"
+

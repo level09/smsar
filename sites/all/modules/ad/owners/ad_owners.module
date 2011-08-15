@@ -1,0 +1,581 @@
+<?php
+// $Id: ad_owners.module,v 1.1.2.8.2.8 2009/03/31 21:01:31 jeremy Exp $
+
+/**
+ * @file
+ * Enhances the ad module to support ad owners.
+ *
+ * Copyright (c) 2008-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_theme().
+ */
+function ad_owners_theme() {
+  return array(
+    'ad_owner_permissions_form' => array(
+      'arguments' => array(
+        'form' => NULL,
+      ),
+    ),
+  );
+};
+
+/**
+ * Implementation of hook_menu().
+ */
+function ad_owners_menu() {
+  $items = array();
+
+  $items['node/%node/adowners'] = array(
+    'title' => 'Ad owners',
+    'page callback' => 'ad_owners_overview',
+    'page arguments' => array(1),
+    'access callback' => 'ad_owners_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+  );
+  $items['node/%node/adowners/list'] = array(
+    'title' => 'List',
+    'access callback' => 'ad_permission',
+    'access arguments' => array(1, 'manage owners'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0,
+  );
+  $items['node/%node/adowners/%user/permissions'] = array(
+    'title callback' => 'owner_permissions_title',
+    'title arguments' => array('!owner' => 3),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_owner_permissions_form', 1, 3),
+    'access callback' => 'ad_permission',
+    'access arguments' => array(1, 'manage owners'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2,
+  );
+  $items['node/%node/adowners/%user/remove'] = array(
+    'title' => 'Remove owner',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_owner_remove_form', 1, 3),
+    'access callback' => 'ad_permission',
+    'access arguments' => array(1, 'manage owners'),
+    'type' => MENU_CALLBACK,
+    'weight' => 6,
+  );
+  $items['node/%node/adowners/add'] = array(
+    'title' => 'Add owner',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_owners_add_form', 1),
+    'access callback' => 'ad_permission',
+    'access arguments' => array(1, 'manage owners'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 4,
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function ad_owners_perm() {
+  return array('grant default per ad type permissions');
+}
+
+/**
+ * Menu item access callback.
+ */
+function ad_owners_access($node) {
+  return ($node->type == 'ad') && ad_permission($node->nid, 'manage owners');
+}
+
+/**
+ * Menu item title callback - use the user name
+ */
+function owner_permissions_title($account) {
+  return t('!owner\'s permissions', array('!owner' => $account->name));
+}
+
+/**
+ * Return array default permissions.
+ */
+function ad_owners_default_permissions() {
+  $permissions = module_invoke_all('adapi', 'permissions', NULL);
+  $all = array();
+  $perms = array();
+  foreach ($permissions as $permission => $default) {
+    if ($default) {
+      $perms[] = $permission;
+    }
+    $all[] = $permission;
+  }
+  return array('default' => $perms, 'all' => $all);
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function ad_owners_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'ad_'. arg(4) .'_global_settings' || $form_id == 'ad_no_global_settings') {
+    if (!isset($form['adtype'])) {
+      $form['adtype'] = array('#type' => 'value', '#value' => arg(4));
+    }
+
+    $perms = ad_owners_default_permissions();
+    $form['permissions'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Permissions'),
+      '#collapsible' => TRUE,
+      '#description' => t('Select which permissions will be automatically granted to new owners of <em>!type</em> advertisements, per role.  If a user is a member of multiple roles, he will get all default permissions defined for each role he is a member of.', array('!type' => ad_get_types('name', arg(4)))),
+    );
+
+    $roles = user_roles(TRUE);
+    foreach ($roles as $rid => $role) {
+      $defaults = variable_get("ad_default_permissions_{$rid}_". $form['adtype']['#value'], $perms['default']);
+      $form['permissions']["role-$rid"] = array(
+        '#type' => 'fieldset',
+        '#title' => $role,
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+      $form['permissions']["role-$rid"]["default_permissions_$rid"] = array(
+        '#type' => 'checkboxes',
+        '#title' => t('Default permissions for users in the <em>!role</em> role', array('!role' => $role)),
+        '#options' => drupal_map_assoc($perms['all']),
+        '#default_value' => $defaults,
+      );
+    }
+    if (isset($form['save'])) {
+      $form['save']['#weight'] = 10;
+    }
+    if (isset($form['#submit']) && is_array($form['#submit'])) {
+      $form['#submit'] = array_merge(array('ad_owners_settings_submit'), $form['#submit']);
+    }
+    else {
+      $form['#submit'] = array('ad_owners_settings_submit');
+    }
+  }
+}
+
+/**
+ * Submit handler for global settings of all ad types.
+ * @see ad_form_alter()
+ */
+function ad_owners_settings_submit($form, $form_state) {
+  $roles = user_roles(TRUE);
+  foreach ($roles as $rid => $role) {
+    variable_set("ad_default_permissions_{$rid}_". $form_state['values']['adtype'], $form_state['values']["default_permissions_$rid"]);
+    unset($form_state['values']["default_permissions_$rid"]);
+  }
+  unset($form_state['values']['adtype']);
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function ad_owners_nodeapi(&$node, $op, $teaser, $page) {
+  global $user;
+
+  switch ($op) {
+    case 'insert':
+    case 'update':
+      if (isset($node->adtype)) {
+        // Be sure ad owner has at least default ad permissions.
+        ad_owners_add($node, $node->uid);
+        ad_owners_create_hostid($node->uid);
+      }
+      break;
+    case 'delete':
+      // Clean up ad_permissions and any other per-ad tables.
+      $result = db_query('SELECT oid, uid FROM {ad_owners} WHERE aid = %d', $node->nid);
+      while ($id = db_fetch_object($result)) {
+        db_query('DELETE FROM {ad_permissions} WHERE oid = %d', $id->oid);
+        $owner = user_load(array('uid' => $id->uid));
+        // Tell plug-in modules to clean up.
+        module_invoke_all('adowners', 'remove', $id->oid, $owner);
+      }
+      db_query('DELETE FROM {ad_owners} WHERE aid = %d', $node->nid);
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_adapi().
+ */
+function ad_owners_adapi($op, $node = NULL) {
+  switch ($op) {
+    case 'permissions':
+      return array('manage owners' => FALSE);
+      break;
+  }
+}
+
+/**
+ * Determine whether the ad owner has a given privilege.
+ *
+ * @param $ad
+ *   Node object or aid of advertisement.
+ * @param $permission
+ *   Special Ad owners permission which should be checked (such as 'manage owners')
+ * @param $account
+ *   User object, which are accessing the ad or current user by default.
+ */
+function ad_owners_adaccess($ad, $permission, $account = NULL) {
+  global $user;
+  static $permissions = array();
+
+  if (!isset($account)) {
+    $account = $user;
+  }
+
+  $aid = 0;
+  if (isset($ad)) {
+    if (is_numeric($ad)) {
+      $aid = $ad;
+    }
+    else if (is_object($ad) && isset($ad->nid)) {
+      $aid = $ad->nid;
+    }
+  }
+
+  if (!isset($permissions[$aid][$account->uid])) {
+    $oid = db_result(db_query("SELECT oid FROM {ad_owners} WHERE aid = %d and uid = %d", $aid, $account->uid));
+    $permissions[$aid][$account->uid] = explode('|,|', db_result(db_query("SELECT permissions FROM {ad_permissions} WHERE oid = %d", $oid)));
+  }
+  $access = '';
+  if (is_array($permission)) {
+    foreach ($permission as $perm) {
+      $access |= in_array($perm, $permissions[$aid][$account->uid]);
+    }
+  }
+  else {
+    $access = in_array($permission, $permissions[$aid][$account->uid]);
+  }
+
+  return $access;
+}
+
+
+/**
+ * TODO: Make this themeable.
+ * TODO: Group permissions by module.
+ * TODO: Allow modules to define default value for permission.
+ */
+function ad_owners_overview($node) {
+  drupal_set_title(t('Ad owners'));
+
+  // Be sure the node owner is listed as an ad owner
+  if (!db_result(db_query('SELECT oid FROM {ad_owners} WHERE uid = %d AND aid = %d', $node->uid, $node->nid))) {
+    ad_owners_add($node, $node->uid);
+  }
+
+  $header = array(
+    array('data' => t('Username'), 'field' => 'uid'),
+    array('data' => t('Options')),
+  );
+
+  $sql = "SELECT a.uid, u.name FROM {ad_owners} a INNER JOIN {users} u ON a.uid = u.uid WHERE aid = %d";
+  $sql .= tablesort_sql($header);
+  $result = pager_query($sql, 25, 0, NULL, $node->nid);
+
+  $rows = array();
+  while ($owner = db_fetch_object($result)) {
+    $row = array();
+    $row[] = $owner->name;
+    $options = array();
+    // first option is 'permissions', plug-ins come afterwards
+    $options[] = l(t('permissions'), 'node/'. $node->nid .'/adowners/'. $owner->uid .'/permissions');
+    $options = array_merge($options, module_invoke_all('adowners', 'overview', $node->nid, $owner->uid));
+    // node owner has to remain an ad owner
+    if ($node->uid != $owner->uid) {
+      $options[] = l(t('remove'), 'node/'. $node->nid .'/adowners/'. $owner->uid .'/remove');
+    }
+    $options = implode(' | ', $options);
+    $row[] = $options;
+    $rows[] = $row;
+  }
+
+  $output = theme('table', $header, $rows);
+  $output .= theme('pager', NULL, 25, 0);
+
+  return $output;
+}
+
+/**
+ * A simple form for adding new users as owners of ads.
+ */
+function ad_owners_add_form($form_state, $node) {
+  $form = array();
+  drupal_set_title(t('Add owner'));
+
+  $form['aid'] = array(
+    '#type' => 'value',
+    '#value' => $node->nid,
+  );
+  $form['username'] = array(
+    '#autocomplete_path' => 'user/autocomplete',
+    '#description' => t('Enter the username of the user who should have ownership permissions on this advertisement.'),
+    '#required' => TRUE,
+    '#type' => 'textfield',
+    '#title' => t('Username'),
+  );
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add owner'),
+  );
+
+  return $form;
+}
+
+function ad_owners_add_form_validate($form, &$form_state) {
+  $owner = user_load(array('name' => $form_state['values']['username']));
+  if (!is_object($owner)) {
+    form_set_error('username', t('The specified username %username does not exist.', array('%username' => $form_state['values']['username'])));
+  }
+  else if (db_result(db_query('SELECT oid FROM {ad_owners} WHERE uid = %d AND aid = %d', $owner->uid, $form_state['values']['aid']))) {
+    form_set_error('username', t('The specified user %username is already an owner of this ad.', array('%username' => $form_state['values']['username'])));
+  }
+  else if (!user_access('edit own advertisements', $owner) &&
+           !user_access('administer advertisements', $owner)) {
+    form_set_error('username', t('The specified user %username does not have <em>edit own advertisements</em> nor <em>administer advertisements</em> permissions.  The user must be !assigned to a !role with these privileges before you can add them as an ad owner.', array('%username' => $form_state['values']['username'], '!assigned' => l(t('assigned'), "user/$owner->uid/edit"), '!role' => l(t('role'), 'admin/user/permissions'))));
+  }
+  module_invoke_all('adowners', 'validate', $owner, $form_state['values']['aid']);
+}
+
+function ad_owners_add_form_submit($form, &$form_state) {
+  $owner = user_load(array('name' => $form_state['values']['username']));
+  $node = node_load($form_state['values']['aid']);
+  if (!(ad_owners_add($node, $owner->uid))) {
+    form_set_error('username', t('The user is already an owner of the ad.'));
+  }
+  else {
+    drupal_set_message(t('The user %username has been added as an owner of this advertisement.', array('%username' => $form_state['values']['username'])));
+    drupal_goto('node/'. $form_state['values']['aid'] .'/adowners/'. $owner->uid .'/permissions');
+  }
+}
+
+function is_ad_owner($aid, $account = NULL) {
+  global $user;
+  if (!isset($account)) {
+    $account = $user;
+  }
+  if (db_result(db_query('SELECT oid FROM {ad_owners} WHERE uid = %d AND aid = %d', $account->uid, $aid))) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+/**
+ * Add an owner to an ad.
+ */
+function ad_owners_add($node, $owner, $permissions = array()) {
+  $rc = 0;
+  $uid = is_numeric($owner) ? $owner : $owner->uid;
+  if (!db_result(db_query('SELECT oid FROM {ad_owners} WHERE aid = %d AND uid = %d', $node->nid, $uid))) {
+    db_query('INSERT INTO {ad_owners} (aid, uid) VALUES(%d, %d)', $node->nid, $uid);
+    $rc = db_affected_rows() ? 1 : 0;
+
+    if (empty($permissions)) {
+      // build permissions array from defaults
+      $perms = ad_owners_default_permissions();
+      $owner = user_load($uid);
+      if (is_array($owner->roles)) {
+        foreach ($owner->roles as $rid => $role) {
+          $default = variable_get("ad_default_permissions_{$rid}_". $node->adtype, $perms['default']);
+          $new = array();
+          foreach ($default as $key => $value) {
+            if ($value) {
+              $new[] = $value;
+            }
+          }
+          $permissions = $permissions + $new;
+        }
+      }
+    }
+
+    $oid = db_result(db_query("SELECT oid FROM {ad_owners} WHERE aid = %d and uid = %d", $node->nid, $uid));
+    db_query('DELETE FROM {ad_permissions} WHERE oid = %d', $oid);
+    db_query("INSERT INTO {ad_permissions} VALUES(%d, '%s')", $oid, implode('|,|', $permissions));
+    module_invoke_all('adowners', 'add', $node, array('oid' => $oid, 'uid' => $uid, 'aid' => $node->nid));
+  }
+  return $rc;
+}
+
+/**
+ * Create a unique host id for each ad owner, used when displaying ads remotely.
+ */
+function ad_owners_create_hostid($uid) {
+  $hostid = db_result(db_query('SELECT hostid FROM {ad_hosts} WHERE uid = %d', $uid));
+  if (!$hostid) {
+    $hostid = md5($uid . time());
+    db_query("INSERT INTO {ad_hosts} (uid, hostid) VALUES (%d, '%s')", $uid, md5($uid . time()));
+  }
+
+  return $hostid;
+}
+
+/**
+ * Removes ad owner from an ad.
+ */
+function ad_owner_remove_form($form_state, $node, $owner) {
+  $form['aid'] = array(
+    '#type' => 'value',
+    '#value' => $node->nid,
+  );
+  $form['uid'] = array(
+    '#type' => 'value',
+    '#value' => $owner->uid,
+  );
+
+  return confirm_form($form,
+    t('Are you sure you want to remove user %name as an owner of this advertisement?', array('%name' => $owner->name)),
+    "node/$node->nid/adowners",
+    t('This action cannot be undone.'),
+    t('Remove'),
+    t('Cancel')
+  );
+}
+
+/**
+ * Don't allow the removal of the primary owner of the advertisement.
+ */
+function ad_owner_remove_form_validate($form, &$form_state) {
+  $node = node_load($form_state['values']['aid']);
+  if ($node->uid == $form_state['values']['uid']) {
+    $owner = user_load(array('uid' => $form_state['values']['uid']));
+    drupal_set_message(t('%name is the primary owner of this advertisement.  You cannot remove the primary owner.', array('%name' => $owner->name)), 'error');
+
+    $form_state['redirect'] = 'node/'. $form_state['values']['aid'] .'/adowners';
+  }
+}
+
+/**
+ * Remove the ad owner, and all associated permissions.
+ */
+function ad_owner_remove_form_submit($form, &$form_state) {
+  $oid = db_result(db_query('SELECT oid FROM {ad_owners} WHERE aid = %d AND uid = %d', $form_state['values']['aid'], $form_state['values']['uid']));
+  db_query('DELETE FROM {ad_owners} WHERE oid = %d', $oid);
+  db_query('DELETE FROM {ad_permissions} WHERE oid = %d', $oid);
+  $owner = user_load(array('uid' => $form_state['values']['uid']));
+  module_invoke_all('adowners', 'remove', $oid, $owner);
+  drupal_set_message(t('The ad owner %name has been removed.', array('%name' => $owner->name)));
+
+  $form_state['redirect'] = 'node/'. $form_state['values']['aid'] .'/adowners';
+}
+
+
+/**
+ * Display a form with all available permissions and their status for the
+ * selected ad and ad owner.
+ */
+function ad_owner_permissions_form($form_state, $node, $user) {
+  drupal_set_title(t('Permissions'));
+
+  $oid = db_result(db_query("SELECT oid FROM {ad_owners} WHERE aid = %d and uid = %d", $node->nid, $user->uid));
+  $granted = explode('|,|', db_result(db_query("SELECT permissions FROM {ad_permissions} WHERE oid = %d", $oid)));
+
+  $form['header'] = array(
+    '#type' => 'value',
+    '#value' => array(t('permission'), t('granted'))
+  );
+
+  $rows = array();
+
+  $permissions = module_invoke_all('adapi', 'permissions', $node);
+  foreach ($permissions as $permission => $default) {
+    $form['permission'][$permission] = array(
+      '#value' => t($permission),
+    );
+    $form['grant'][str_replace(' ', '_', $permission)] = array(
+      '#type' => 'checkbox',
+      '#default_value' => in_array($permission, $granted) ? 1 : 0,
+    );
+  }
+
+  $form['oid'] = array(
+    '#type' => 'hidden',
+    '#value' => $oid,
+  );
+
+  $form['aid'] = array(
+    '#type' => 'hidden',
+    '#value' => $node->nid,
+  );
+
+  $form['uid'] = array(
+    '#type' => 'hidden',
+    '#value' => $user->uid,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  return $form;
+}
+
+/**
+ * Display ad owner permissions in a simple table.
+ */
+function theme_ad_owner_permissions_form($form) {
+  $output = drupal_render($form['options']);
+  foreach (element_children($form['permission']) as $key) {
+    $row = array();
+    $row[] = drupal_render($form['permission'][$key]);
+    $row[] = drupal_render($form['grant'][str_replace(' ', '_', $key)]);
+    $rows[] = $row;
+  }
+
+  $output = theme('table', $form['header']['#value'], $rows);
+  $output .= drupal_render($form);
+  return $output;
+}
+
+/**
+ * Store the ad owner's updated permissions in the ad_permissions table.
+ */
+function ad_owner_permissions_form_submit($form, &$form_state) {
+  $permissions = module_invoke_all('adapi', 'permissions', array());
+  $perms = array();
+  foreach ($permissions as $permission => $default) {
+    $perm = str_replace(' ', '_', $permission);
+    if (isset($form_state['values'][$perm]) && $form_state['values'][$perm] > 0) {
+      $perms[] = $permission;
+    }
+  }
+  db_query('DELETE FROM {ad_permissions} WHERE oid = %d', $form_state['values']['oid']);
+  db_query("INSERT INTO {ad_permissions} VALUES(%d, '%s')", $form_state['values']['oid'], implode('|,|', $perms));
+
+  drupal_set_message(t('The permissions have been saved.'));
+  $form_state['redirect'] = 'node/'. $form_state['values']['aid'] .'/adowners';
+}
+
+/**
+ * Determine whether the user has a given privilege.
+ */
+function ad_owners_permission($aid, $string, $account) {
+  static $permissions = array();
+
+  if (!isset($permissions[$aid]) || !isset($permissions[$aid][$account->uid])) {
+    $oid = db_result(db_query("SELECT oid FROM {ad_owners} WHERE aid = %d and uid = %d", $aid, $account->uid));
+    if ($oid) {
+      $permissions[$aid][$account->uid] = explode('|,|', db_result(db_query("SELECT permissions FROM {ad_permissions} WHERE oid = %d", $oid)));
+    }
+    else {
+      $account = user_load($account->uid);
+      if (user_access('grant default per ad type permissions')) {
+        $perms = ad_owners_default_permissions();
+        $permissions[$aid][$account->uid] = $perms['default'];
+      }
+      else {
+        $permissions[$aid][$account->uid] = array();
+      }
+    }
+  }
+
+  return (in_array("$string", $permissions[$aid][$account->uid]));
+}

@@ -1,0 +1,13 @@
+; $Id: ad_owners.info,v 1.1.2.1 2009/01/29 16:38:02 neochief Exp $
+name = Ad Owners
+package = Ad
+dependencies[] = ad
+description = Enhances the ad module to support ad owners.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-08-05
+version = "6.x-2.1"
+core = "6.x"
+project = "ad"
+datestamp = "1249431906"
+

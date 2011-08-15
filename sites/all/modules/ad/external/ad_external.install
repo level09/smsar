@@ -1,0 +1,50 @@
+<?php
+// $Id: ad_external.install,v 1.1.2.1.2.2 2009/02/16 17:06:48 jeremy Exp $
+
+/**
+ * @file
+ * Ad_external module database schema.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function ad_external_schema() {
+  $schema['ad_external'] = array(
+    'description' => 'The ad_external table stores source URLs for external ads.',
+    'fields' => array(
+      'aid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'url' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      )
+    ),
+    'primary key' => array('aid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * ad_external module installation.
+ */
+function ad_external_install() {
+  drupal_install_schema('ad_external');
+}
+
+/**
+ * Allow complete uninstallation of the ad_external module.
+ */
+function ad_external() {
+  drupal_uninstall_schema('ad_external');
+}

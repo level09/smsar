@@ -1,0 +1,320 @@
+# $Id: de.po,v 1.1.4.2 2009/01/18 02:24:15 ronan Exp $
+#
+# German translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  backup_migrate.module,v 1.3.2.13 2008/09/29 03:21:06 ronan
+#  backup_migrate.info,v 1.2 2008/03/08 21:29:37 ronan
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Drupal Backup Migrate V6.x-1.x\n"
+"POT-Creation-Date: 2008-10-28 15:33+0100\n"
+"PO-Revision-Date: 2008-11-04 18:39+0100\n"
+"Last-Translator: Frank Tartler <frank.tartler@googlemail.com>\n"
+"Language-Team: Frank Tartler <frank.tartler@googlemail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"X-Poedit-Language: German\n"
+"X-Poedit-Country: GERMANY\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: backup_migrate.module:18;396
+#: backup_migrate.info:0
+msgid "Backup and Migrate"
+msgstr "Sichern und Migrieren"
+
+#: backup_migrate.module:19
+msgid "Backup/restore your database or migrate data to or from another Drupal site."
+msgstr "Datenbank sichern/wiederherstellen oder Daten von einer zu einer anderen Drupal-Website migrieren."
+
+#: backup_migrate.module:26
+msgid "Backup/Export DB"
+msgstr "Datenbank sichern/exportieren"
+
+#: backup_migrate.module:27
+msgid "Backup the database."
+msgstr "Datenbank sichern."
+
+#: backup_migrate.module:32
+msgid "Restore/Import DB"
+msgstr "Datenbank wiederherstellen/importieren"
+
+#: backup_migrate.module:33
+msgid "Restore the database from a previous backup"
+msgstr "Datenbank von einer früheren Sicherung wiederherstellen"
+
+#: backup_migrate.module:41
+msgid "Saved Backups"
+msgstr "Gespeicherte Sicherungen"
+
+#: backup_migrate.module:42;66
+msgid "View existing backup files"
+msgstr "Bestehende Sicherungsdateien anzeigen"
+
+#: backup_migrate.module:49
+msgid "Manual Backups"
+msgstr "Manuelle Sicherungen"
+
+#: backup_migrate.module:57
+msgid "Scheduled Backups"
+msgstr "Zeitgesteuerte Sicherungen"
+
+#: backup_migrate.module:65
+msgid "Backup Schedule"
+msgstr "Sicherungs-Zeitplan"
+
+#: backup_migrate.module:74;126
+msgid "restore from backup"
+msgstr "von Sicherung wiederherstellen"
+
+#: backup_migrate.module:75
+msgid "Restore database from a backup file on the server"
+msgstr "Datenbank von einer Sicherungsdatei auf dem Server wiederherstellen"
+
+#: backup_migrate.module:81
+msgid "Delete File"
+msgstr "Datei löschen"
+
+#: backup_migrate.module:82
+msgid "Delete a backup file"
+msgstr "Eine Sicherungsdatei löschen"
+
+#: backup_migrate.module:148
+msgid "Are you sure you want to delete the backup file at %path?"
+msgstr "Soll die Sicherungsdatei in %path wirklich gelöscht werden?"
+
+#: backup_migrate.module:148
+msgid "This action cannot be undone."
+msgstr "Diese Aktion kann nicht rückgängig gemacht werden."
+
+#: backup_migrate.module:148;935
+msgid "Delete"
+msgstr "Löschen"
+
+#: backup_migrate.module:148;329
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: backup_migrate.module:168
+msgid "Backup every"
+msgstr "Sichern alle"
+
+#: backup_migrate.module:169
+msgid "Hour(s)"
+msgstr "Stunde(n)"
+
+#: backup_migrate.module:170
+msgid "Use 0 for no scheduled backup. Cron must be configured to run for backups to work."
+msgstr "0 verwenden um keine zeitgesteuerten Sicherungen zu verwenden. Damit es funktioniert muss Cron konfiguriert sein, Sicherungen laufen zu lassen."
+
+#: backup_migrate.module:175
+msgid "Number of Backup files to keep"
+msgstr "Anzahl aufzubewahrender Sicherungsdateien"
+
+#: backup_migrate.module:176
+msgid "The number of backup files to keep before deleting old ones. Use 0 to never delete backups"
+msgstr "Die Anzahl Sicherungsdateien, die aufbewahrt werden sollen bevor alte gelöscht werden. 0 verwenden damit Sicherungen nie gelöscht werden."
+
+#: backup_migrate.module:197
+msgid "Exclude the following tables altogether"
+msgstr "Die folgenden Tabellen komplett ausschließen"
+
+#: backup_migrate.module:200
+msgid "The selected tables will not be added to the backup file."
+msgstr "Die ausgewählten Tabellen werden der Sicherungsdatei nicht hinzugefügt."
+
+#: backup_migrate.module:205
+msgid "Exclude the data from the following tables"
+msgstr "Daten aus den folgenden Tabellen ausschließen"
+
+#: backup_migrate.module:208
+msgid "The selected tables will have their structure backed up but not their contents. This is useful for excluding cache data to reduce file size."
+msgstr "Von den ausgewählten Tabellen wird die Struktur, nicht aber der Inhalt gesichert. Dies ist nützlich um Cache-Daten auszuschließen, damit sich die Dateigröße reduziert."
+
+#: backup_migrate.module:212
+msgid "Backup file name"
+msgstr "Sicherungsdateiname"
+
+#: backup_migrate.module:218
+msgid "Replacement patterns"
+msgstr "Ersetzungsmuster"
+
+#: backup_migrate.module:222
+msgid "Prefer raw-text replacements for text to avoid problems with HTML entities!"
+msgstr "Ersetzungen in reinem Text sind vorzuziehen um Probleme mit HTML-Entities zu vermeiden!"
+
+#: backup_migrate.module:242
+msgid "Compression"
+msgstr "Komprimierung"
+
+#: backup_migrate.module:248;863;933
+msgid "Download"
+msgstr "Herunterladen"
+
+#: backup_migrate.module:251
+msgid "Save to Files Directory"
+msgstr "In Dateiverzeichnis speichern"
+
+#: backup_migrate.module:255
+msgid "Destination"
+msgstr "Ziel"
+
+#: backup_migrate.module:261
+msgid "Append a timestamp."
+msgstr "Einen Zeitstempel anhängen"
+
+#: backup_migrate.module:266
+msgid "Timestamp format"
+msgstr "Zeitstempel-Format"
+
+#: backup_migrate.module:268
+msgid "Should be a PHP <a href=\"!url\">date()</a> format string."
+msgstr "Sollte eine Zeichenkette im Format der PHP-Funktion <a href=\"!url\">date()</a> sein."
+
+#: backup_migrate.module:272
+msgid "Save these settings."
+msgstr "Diese Einstellungen speichern."
+
+#: backup_migrate.module:277
+msgid "Backup Database"
+msgstr "Datenbank sichern"
+
+#: backup_migrate.module:329
+msgid "Are you sure you want to restore the database from the backup at %path?"
+msgstr "Soll die Datenbank wirklich von der Sicherung in %path wiederhergestellt werden?"
+
+#: backup_migrate.module:329
+msgid "This will delete some or all of your data and cannot be undone. <strong>Always test your backups on a non-production server!</strong>"
+msgstr "Dies löscht manche oder alle der Daten und kann nicht rückgängig gemacht werden. <strong>Sicherungen sollten immer auf einem nicht-produktiven Server getestet werden!</strong>"
+
+#: backup_migrate.module:329;934
+msgid "Restore"
+msgstr "Wiederherstellen"
+
+#: backup_migrate.module:347
+msgid "Upload a Backup File"
+msgstr "Eine Sicherungsdatei hochladen"
+
+#: backup_migrate.module:349
+msgid "Upload a backup file created by this version of this module. For other database backups please use another tool for import. Max file size: %size"
+msgstr "Lädt eine Sicherungsdatei hoch, die von dieser Version des Moduls erstellt wurde. Für andere Datenbanksicherungen muss zum Import ein anderes Werkzeug verwendet werden. Maximale Dateigröße: %size"
+
+#: backup_migrate.module:354
+msgid "<p>This will delete some or all of your data and cannot be undone. If there is a sessions table in the backup file, you and all other currently logged in users will be logged out. <strong>Always test your backups on a non-production server!</strong><p>"
+msgstr "<p>Dies löscht manche oder alle der Daten und kann nicht rückgängig gemacht werden. Wenn es eine Tabelle ‚Sessions‘ in der Sicherungsdatei gibt, werden Sie und alle anderen momentan angemeldeten Benutzer abgemeldet. <strong>Sicherungen sollen immer auf einem nicht-produktiven Server getestet werden!</strong><p>"
+
+#: backup_migrate.module:359
+msgid "Restore Database"
+msgstr "Datenbank wiederherstellen"
+
+#: backup_migrate.module:364
+msgid "<p>Or you can restore one of the files in the <a href=\"!url\">saved backup directory.</a></p>"
+msgstr "<p>Es kann auch eine der Dateien im <a href=\"!url\">Verzeichnis der gespeicherten Sicherungen</a> wiederhergestellt werden.</p>"
+
+#: backup_migrate.module:395;424
+msgid "Backup the database with the default settings"
+msgstr "Datenbank mit Standardeinstellungen sichern"
+
+#: backup_migrate.module:700
+msgid "This version of PHP does not support gzip comressed files. Please try using an uncompressed sql backup."
+msgstr "Diese PHP-Version unterstützt keine mittels gzip komprimiertern Dateien. Es sollte eine unkomprimierte SQL-Sicherung verwendet werden."
+
+#: backup_migrate.module:725
+msgid "Unable to decompress bzip file. Please try using an uncompressed backup."
+msgstr "Bzip-Datei kann nicht dekomprimiert werden. Es sollte mit einer unkomprimieren Sicherung versucht werden."
+
+#: backup_migrate.module:731
+msgid "This version of PHP does not support bzip compressed files. Please try using an uncompressed backup."
+msgstr "Diese PHP-Version unterstützt keine mittels bzip komprimierten Dateien. Es sollte eine unkomprimierte Sicherung versucht werden."
+
+#: backup_migrate.module:759
+msgid "Unable to decompress zip file. Please try using an uncompressed backup."
+msgstr "Zip-Datei konnte nicht dekomprimiert werden. Es sollte eine unkomprimierte Sicherung versucht werden."
+
+#: backup_migrate.module:765
+msgid "This version of PHP does not support zip comressed files. Please try using an uncompressed backup."
+msgstr "Diese PHP-Version unterstützt keine mittels zip komprimierte Dateien. Es sollte eine umkomprimierte Sicherung verwendet werden."
+
+#: backup_migrate.module:791
+msgid "Restore complete. %num SQL commands executed."
+msgstr "Wiederherstellung vollständig. %num SQL-Kommandos ausgeführt."
+
+#: backup_migrate.module:792
+msgid "Restore Again..."
+msgstr "Erneute Wiederherstellung..."
+
+#: backup_migrate.module:796
+msgid "Unable to open file %file to restore database"
+msgstr "Datei %file konnte nicht geöffnet werden, um die Datenbank wiederherzustellen."
+
+#: backup_migrate.module:860
+msgid "Database backup saved to %file. "
+msgstr "Datenbanksicherung gespeichert in %file."
+
+#: backup_migrate.module:864
+msgid "Delete..."
+msgstr "Löschen..."
+
+#: backup_migrate.module:865
+msgid "Restore..."
+msgstr "Wiederherstellen..."
+
+#: backup_migrate.module:1013;1021
+msgid "Unable to create or write to the save directory '%directory'. Please check the file permissions on your files directory."
+msgstr "Das Verzeichnis %directory konnte nicht erstellt werden oder es konnte nicht darin geschrieben werden. Es sollten die Dateiberechtigungen in diesem Verzeichnis überprüft werden."
+
+#: backup_migrate.module:1059
+msgid "Security notice: Backup and Migrate was unable to write a test text file to the destination directory %directory, and is therefore unable to check the security of the backup destination. Backups to the server will be disabled until the destination becomes writable and secure."
+msgstr "Sicherheitshinweis: ‚Sichern und Migrieren‘ konnte keine Test-Textdatei in das Zielverzeichnis %directory schreiben, daher konnte auch nicht die Sicherheit des Sicherungsziels geprüft werden. Sicherungen auf dem Server werden deaktiviert bis das Ziel schreibbar und sicher wird."
+
+#: backup_migrate.module:1068
+msgid "Security notice: Backup and Migrate will not save backup files to the server because the destination directory is publicly accessible. If you want to save files to the server, please secure the '%directory' directory"
+msgstr "Sicherheitshinweis: ‚Sichern und Migrieren‘ wird keine Sicherungsdateien auf dem Server speichern, da das Zielverzeichnis öffentlich zugänglich ist. Wenn Dateien auf dem Server gepeichert werden sollen, muss das Verzeichnis %directory sicher werden"
+
+#: backup_migrate.module:157;336;377;546;0
+msgid "backup_migrate"
+msgstr "backup_migrate"
+
+#: backup_migrate.module:157
+msgid "Database backup file deleted: %file"
+msgstr "Datenbank-Sicherungsdatei gelöscht: %file"
+
+#: backup_migrate.module:336
+msgid "Database restored from %file"
+msgstr "Datenbank wiederhergestellt aus %file"
+
+#: backup_migrate.module:377
+msgid "Database restored from upload %file"
+msgstr "Datenbank wiederhergestellt aus hochgeladener Datei %file"
+
+#: backup_migrate.module:390
+msgid "action"
+msgstr "Aktion"
+
+#: backup_migrate.module:390
+msgid "Backed up database"
+msgstr "Datenbank gesichert"
+
+#: backup_migrate.module:546
+msgid "Database backup downloaded"
+msgstr "Datenbank-Sicherung heruntergeladen"
+
+#: backup_migrate.module:126
+msgid "perform backup"
+msgstr "Sicherung durchführen"
+
+#: backup_migrate.module:126
+msgid "access backup files"
+msgstr "auf Sicherungsdateien zugreifen"
+
+#: backup_migrate.module:126
+msgid "delete backup files"
+msgstr "Sicherungsdateien löschen"
+
+#: backup_migrate.info:0
+msgid "Backup or migrate the Drupal Database quickly and without unnecessary data."
+msgstr "Die Drupal-Datenbank einfach und ohne unnötige Daten sichern und wiederherstellen."
+

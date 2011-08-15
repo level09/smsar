@@ -1,0 +1,13 @@
+/* $Id: formatted_number.css,v 1.1.2.1 2008/11/13 14:07:31 markuspetrux Exp $ */
+
+/**
+ * Selectors using .node-form are required to override .form-text in node.css.
+ * Selector without .node-form is required to style the element elsewhere.
+ */
+.node-form .formatted-number,
+.node-form .container-inline .formatted-number,
+.formatted-number {
+  display: inline;
+  width: auto;
+  text-align: right;
+}

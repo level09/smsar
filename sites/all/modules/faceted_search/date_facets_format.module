@@ -1,0 +1,111 @@
+<?php
+// $Id: date_facets_format.module,v 1.3 2008/12/29 17:35:12 davidlesieur Exp $
+
+/**
+ * @file
+ * Provides formatting options for date-based facets.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function date_facets_format_menu() {
+  $items = array();
+  $items['admin/settings/faceted_search/date_format'] = array(
+    'title' => 'Date formats',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('date_facets_format_admin_settings_form'),
+    'access arguments' => array('administer faceted search'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Menu callback for the administration settings.
+ */
+function date_facets_format_admin_settings_form() {
+  // Possible date formats (based on choices from system_date_time_settings()).
+  $y = array(
+    'Y',
+    'y',
+  );
+  $ym = array(
+    // Short
+    'Y-m',
+    'Y/m',
+    'Y M',
+    'm/Y',
+    'm.Y',
+    'M Y',
+    // Medium
+    'Y, F',
+    'F, Y',
+    'F Y',
+  );
+  $ymd = array(
+    // Short
+    'Y-m-d',
+    'Y/m/d',
+    'Y M j',
+    'm/d/Y',
+    'M j Y',
+    'd/m/Y',
+    'd.m.Y',
+    'j M Y',
+    // Medium
+    'D, Y-m-d',
+    'D, Y/m/d',
+    'D, m/d/Y',
+    'D, d/m/Y',
+    'Y, F j',
+    'F j, Y',
+    'j F Y',
+    'j F, Y',
+    'j. F Y',
+    // Long
+    'l, Y,  F j',
+    'l, F j, Y',
+    'l, j F Y',
+    'l, j F, Y',
+    'l, j. F Y',
+  );
+  foreach ($y as $format) {
+    $y_choices[$format] = format_date(time(), 'custom', $format);
+  }
+  foreach ($ym as $format) {
+    $ym_choices[$format] = format_date(time(), 'custom', $format);
+  }
+  foreach ($ymd as $format) {
+    $ymd_choices[$format] = format_date(time(), 'custom', $format);
+  }
+  $form['format'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Date formats'),
+    '#description' => t('Choose the display formats to use when navigating date-based facets.'),
+  );
+  $form['format']['date_facets_format_y'] = array(
+    '#type' => 'select',
+    '#title' => t('Year format'),
+    '#description' => t('The format for year display.'),
+    '#options' => $y_choices,
+    '#default_value' => variable_get('date_facets_format_y', $y[0]),
+  );
+  $form['format']['date_facets_format_ym'] = array(
+    '#type' => 'select',
+    '#title' => t('Year & month format'),
+    '#description' => t('The format for year & month display.'),
+    '#options' => $ym_choices,
+    '#default_value' => variable_get('date_facets_format_ym', $ym[1]),
+  );
+  $form['format']['date_facets_format_ymd'] = array(
+    '#type' => 'select',
+    '#title' => t('Full date format'),
+    '#description' => t('The format for full date display.'),
+    '#options' => $ymd_choices,
+    '#default_value' => variable_get('date_facets_format_ymd', $ymd[1]),
+  );
+  return system_settings_form($form);
+}
+

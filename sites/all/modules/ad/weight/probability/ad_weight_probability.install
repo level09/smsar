@@ -1,0 +1,33 @@
+<?php
+// $Id: ad_weight_probability.install,v 1.1.4.2 2009/02/27 22:11:20 jeremy Exp $
+
+/**
+ * Ad weight probability module database schema.
+ * Copyright (c) 2008-2009
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Installation of the ad_weight_probability schema.
+ */
+function ad_weight_probability_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    default:
+      db_query("CREATE TABLE {ad_weight_probability} (
+        aid INT NOT NULL DEFAULT '0',
+        probability INT(3) NOT NULL DEFAULT '0',
+
+        PRIMARY KEY (aid))");
+  }
+}
+
+/**
+ * Complete uninstallation of the ad_weight_probability module.
+ */
+function ad_weight_probability_uninstall() {
+  db_query('DROP TABLE IF EXISTS {ad_weight_probability}');
+  drupal_set_message('The ad_weight_probability module has been completely uninstalled.');
+}
+

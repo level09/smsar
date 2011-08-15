@@ -1,0 +1,12 @@
+<?php
+// $Id: field_keyword_filter.install,v 1.1 2008/05/29 22:14:50 davidlesieur Exp $
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function field_keyword_filter_uninstall() {
+  if (db_table_exists('faceted_search_filters')) {
+    db_query("DELETE FROM {faceted_search_filters} WHERE filter_key LIKE 'field_%' AND filter_id = 'keyword'");
+  }
+}
+

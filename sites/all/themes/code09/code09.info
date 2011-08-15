@@ -1,0 +1,25 @@
+name = Code09 Theme
+description = Code09 Theme, by Level09 Studios
+core = 6.x
+engine = phptemplate
+
+regions[left] = Left sidebar
+regions[right] = Right sidebar
+regions[banner_left] = Banner Left
+regions[content_top] = Content Top
+regions[content] = Content
+regions[header] = Header
+regions[footer] = Footer
+regions[node_bottom] = Node Buttom
+
+
+stylesheets[print][] = blueprint/print.css
+stylesheets[all][] = blueprint/screen.css
+stylesheets[all][] = blueprint/plugins/fancy-type/screen.css
+stylesheets[all][] = ui.all.css
+stylesheets[all][] = style.css
+conditional-stylesheets[if IE][all][] = blueprint/ie.css
+
+
+scripts[] = js/qtip.js
+scripts[] = js/script.js

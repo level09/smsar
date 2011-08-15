@@ -1,0 +1,33 @@
+# $Id: conditional_styles.pot,v 1.2 2008/09/15 01:55:27 johnalbin Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  conditional_styles.module,v 1.2 2008/09/14 10:11:18 johnalbin
+#  conditional_styles.info,v 1.1 2008/09/11 03:36:43 johnalbin
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Conditional Stylesheets 6.x-1.x\n"
+"POT-Creation-Date: 2008-09-14 19:53-0600\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: conditional_styles.module:0
+msgid "conditional_styles"
+msgstr ""
+
+#: conditional_styles.info:0
+msgid "Conditional Stylesheets"
+msgstr ""
+
+#: conditional_styles.info:0
+msgid "Allows themes to add conditional stylesheets."
+msgstr ""
+

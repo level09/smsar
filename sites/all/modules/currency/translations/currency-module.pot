@@ -1,0 +1,121 @@
+# $Id: currency-module.pot,v 1.1.2.1 2008/09/11 04:41:39 kbahey Exp $
+#
+# LANGUAGE translation of Drupal (currency.module)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  currency.module,v 1.8.2.1 2007/04/10 03:19:27 wafaa
+#  currency_api.module,v 1.4.2.1 2007/04/10 03:19:27 wafaa
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2007-04-14 00:51-0400\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: currency.module:20
+msgid "Settings for currency exchange rates."
+msgstr ""
+
+#: currency.module:29;69
+msgid "Currency exchange"
+msgstr ""
+
+#: currency.module:41
+msgid "Default Currency From"
+msgstr ""
+
+#: currency.module:45
+msgid "Three letter symbol for default currency to convert from."
+msgstr ""
+
+#: currency.module:50
+msgid "Default Currency To"
+msgstr ""
+
+#: currency.module:54
+msgid "Three letter symbol for default currency to convert to."
+msgstr ""
+
+#: currency.module:59
+msgid "Description"
+msgstr ""
+
+#: currency.module:60
+msgid "This is the currency exchange rate page."
+msgstr ""
+
+#: currency.module:63
+msgid "This text will be displayed at the top of the currency exchange page"
+msgstr ""
+
+#: currency.module:68
+msgid "Navigation link text"
+msgstr ""
+
+#: currency.module:72
+msgid "The text in the navigation link which points to the currency exchange page."
+msgstr ""
+
+#: currency.module:90
+msgid "Amount"
+msgstr ""
+
+#: currency.module:94
+msgid "Amount to convert"
+msgstr ""
+
+#: currency.module:99
+msgid "From"
+msgstr ""
+
+#: currency.module:106
+msgid "To"
+msgstr ""
+
+#: currency.module:113
+msgid "Convert"
+msgstr ""
+
+#: currency.module:121
+msgid "Amount is required."
+msgstr ""
+
+#: currency.module:125
+msgid "Invalid Amount. Please enter a valid numeric amount."
+msgstr ""
+
+#: currency.module:137
+msgid "currency exchange error: "
+msgstr ""
+
+#: currency.module:141
+msgid "@amount @from = @value @to"
+msgstr ""
+
+#: currency.module:147
+msgid "Detailed history and chart"
+msgstr ""
+
+#: currency.module:79
+msgid "use currency"
+msgstr ""
+
+#: currency.module:0
+msgid "currency"
+msgstr ""
+
+#: currency_api/currency_api.module:10 currency_api/currency_api.info:0
+msgid "This module provides an API for currency conversion."
+msgstr ""
+
+#: currency_api/currency_api.module:19 currency_api/currency_api.info:0
+msgid "Currency API"
+msgstr ""
+

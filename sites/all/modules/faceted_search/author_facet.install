@@ -1,0 +1,12 @@
+<?php
+// $Id: author_facet.install,v 1.7 2009/01/04 19:36:25 davidlesieur Exp $
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function author_facet_uninstall() {
+  if (db_table_exists('faceted_search_filters')) {
+    db_query("DELETE FROM {faceted_search_filters} WHERE filter_key = 'author'");
+  }
+}
+

@@ -1,0 +1,615 @@
+<?php
+// $Id: hs_content_taxonomy.module,v 1.33 2008/12/01 02:21:17 wimleers Exp $
+
+/**
+ * @file
+ * Implementation of the Hierarchical Select API for the Content Taxonomy
+ * module.
+ */
+
+
+/**
+ * TRICKY: Content Taxonomy's depth setting:
+ * - 0 means the entire tree
+ * - 1 means only the root level
+ * - 2 means the first two levels
+ * - etc.
+ */
+
+
+define('HS_CONTENT_TAXONOMY_SEPARATOR', '<span class="hierarchical-select-item-separator">›</span>');
+
+
+//----------------------------------------------------------------------------
+// Core hooks.
+
+/**
+ * Implementation of hook_menu().
+ */
+function hs_content_taxonomy_menu($may_cache) {
+  $items = array();
+
+  if (!$may_cache) {
+    $context = _hs_content_taxonomy_parse_context_from_url();
+    if (is_array($context)) {
+      list($content_type_name, $field_name) = $context;
+
+      $content_type = content_types($content_type_name);
+
+      $items[] = array(
+        'path' => 'admin/content/types/'. $content_type['url_str'] .'/fields/'. $field_name .'/hs_config',
+        'title' => t('Hierarchical Select configuration for !field', array('!field' => $content_type['fields'][$field_name]['widget']['label'])),
+        'callback' => 'drupal_get_form',
+        'callback arguments' => array('hs_content_taxonomy_config_form', $content_type['type'], $field_name),
+        'access' => user_access('administer content types'),
+        'type' => MENU_CALLBACK,
+      );
+    }
+  }
+  return $items;
+}
+
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function hs_content_taxonomy_form_alter($form_id, &$form) {
+  if ($form_id == '_content_admin_field') {
+    if ($form['widget']['widget_type']['#default_value'] == 'content_taxonomy_hs') {
+      // Hide the "multiple values" setting, so the user can't change it.
+      $form['field']['multiple']['#type'] = 'hidden';
+
+      // Add a fake checkbox form item to indicate the current state of this
+      // setting. Because this checkbox is disabled, it won't be submitted,
+      // and that's why we have to add a fake form item.
+      $split = array_search('multiple', array_keys($form['field'])) + 1;
+      $first_part = array_slice($form['field'], 0, $split);
+      $second_part = array_slice($form['field'], $split);
+      $form['field'] = $first_part;
+      $form['field']['fake_multiple'] = $form['field']['multiple'];
+      $form['field']['fake_multiple']['#type'] = 'checkbox';
+      $form['field']['fake_multiple']['#attributes'] = array('disabled' => 'disabled');
+      $form['field']['fake_multiple']['#description'] = t(
+        'This setting is now managed by the Hierarchical Select widget
+        configuration!'
+      );
+      $form['field'] += $second_part;
+    }
+  }
+}
+
+
+//----------------------------------------------------------------------------
+// Forms API callbacks.
+
+/**
+ * Form definition; configuration form for Hierarchical Select as the widget
+ * for a content_taxonomy field.
+ *
+ * @param $content_type_name
+ *   Name of a content type. Provides necessary context.
+ * @param $field_name
+ *   Name of a field. Provides necessary context.
+ */
+function hs_content_taxonomy_config_form($content_type_name, $field_name) {
+  require_once(drupal_get_path('module', 'hierarchical_select') .'/includes/common.inc');
+
+  drupal_add_css(drupal_get_path('module', 'hs_content_taxonomy') .'/hs_content_taxonomy.css');
+
+  $content_type = content_types($content_type_name);
+  $field = $content_type['fields'][$field_name];
+
+  // Extract the necessary context from the $field array.
+  $vid = $field['vid'];
+  $tid = $field['tid'];
+  $depth = (empty($field['depth'])) ? 0 : $field['depth'];
+
+  // Add the Hierarchical Select config form.
+  $module = 'hs_content_taxonomy';
+  $params = array(
+    'vid'   => $vid,
+    'tid'   => $tid,
+    'depth' => $depth,
+  );
+  $config_id = "content-taxonomy-$field_name";
+  $vocabulary = taxonomy_get_vocabulary($vid);
+  $defaults = array(
+    // Enable the save_lineage setting by default if the multiple parents
+    // vocabulary option is enabled.
+    'save_lineage' => (int) ($vocabulary->hierarchy == 2),
+    'editability' => array(
+      'max_levels' => min($depth, _hs_taxonomy_hierarchical_select_get_depth($vid)),
+    ),
+  );
+  // If this config is being created (not edited), then enable the dropbox if
+  // this is a "multiple values" field. This allows for an intuitive
+  // transition to a Hierarchical Select widget.
+  if (variable_get('hs_config_'. $config_id, FALSE) === FALSE) {
+    $defaults['dropbox']['status'] = $field['multiple'];
+  }
+  $strings = array(
+    'hierarchy'   => t('vocabulary'),
+    'hierarchies' => t('vocabularies'),
+    'item'        => t('term'),
+    'items'       => t('terms'),
+    'item_type'   => t('term type'),
+    'entity'      => t('node'),
+    'entities'    => t('nodes'),
+  );
+  $max_hierarchy_depth = min(($depth == 0) ? 9 : $depth, _hs_taxonomy_hierarchical_select_get_depth($vid));
+  $preview_is_required = $field['required'];
+  $form['hierarchical_select_config'] = hierarchical_select_common_config_form($module, $params, $config_id, $defaults, $strings, $max_hierarchy_depth, $preview_is_required);
+
+  $form['link'] = array(
+    '#value' => l('Back to the field configuration', 'admin/content/types/'. $content_type['url_str'] .'/fields/'. $field_name),
+    '#prefix' => '<div class="cck-hierarchical-select-back-link">',
+    '#suffix' => '</div>',
+    '#weight' => -5,
+  );
+
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  // Add the the submit handler for the Hierarchical Select config form.
+  $parents = array('hierarchical_select_config');
+  $form['#submit']['hierarchical_select_common_config_form_submit'] = array($parents);
+
+  $form['#submit']['hs_content_taxonomy_common_config_form_submit'] = array($content_type_name, $field_name);
+
+  return $form;
+}
+
+/**
+ * Additional submit callback to update the multiple values field setting.
+ */
+function hs_content_taxonomy_common_config_form_submit($form_id, $form_state['values'], $content_type_name, $field_name) {
+  $config = $form_state['values']['hierarchical_select_config'];
+  $multiple_values = ($config['save_lineage'] | $config['dropbox']['status']);
+
+  $content_type = content_types($content_type_name);
+  $field = $content_type['fields'][$field_name];
+
+  $form_state['values'] = array(
+    'widget_type' => 'content_taxonomy_hs',
+    'label'       => $field['widget']['label'],
+    'weight'      => $field['widget']['weight'],
+    'description' => $field['widget']['description'],
+    'required'    => $field['required'],
+    'multiple'    => $multiple_values,
+    'save'        => $field['save'],
+    'vid'         => $field['vid'],
+    'tid'         => $field['tid'],
+    'depth'       => $field['depth'],
+    'op'          => t('Save field settings'),
+    'submit'      => t('Save field settings'),
+    'type_name'   => $field['type_name'],
+    'field_name'  => $field_name,
+    'field_type'  => 'content_taxonomy',
+    'module'      => 'content_taxonomy, hs_content_taxonomy',
+    'form_id'     => '_content_admin_field',
+  );
+
+  drupal_execute('_content_admin_field', $form_state['values'], $field['type_name'], $field_name);
+}
+
+
+//----------------------------------------------------------------------------
+// CCK hooks.
+
+/**
+ * Implementation of hook_widget_info().
+ */
+function hs_content_taxonomy_widget_info() {
+  return array(
+    'content_taxonomy_hs' => array( // 'content_taxonomy_hs' instead of 'content_taxonomy_hierarchical_select' due to CCK limitations.
+      'label'       => 'Hierarchical Select',
+      'field types' => array('content_taxonomy'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_widget_settings().
+ */
+function hs_content_taxonomy_widget_settings($op, $widget) {
+  switch ($op) {
+    case 'form':
+      drupal_add_css(drupal_get_path('module', 'hs_content_taxonomy') .'/hs_content_taxonomy.css');
+
+      $context = _hs_content_taxonomy_parse_context_from_url();
+      list($content_type_name, $field_name) = $context;
+      $content_type = content_types($content_type_name);
+
+      $url = 'admin/content/types/'. $content_type['url_str'] .'/fields/'. $field_name .'/hs_config';
+
+      $items[] = t(
+        "Due to limitations of CCK, there is a separate form to
+        <a href=\"!url\"> configure this Hierarchical Select widget's
+        settings.</a>",
+        array('!url' => url($url))
+      );
+      $items[] = t(
+        'The %multiple_values field setting is now managed by the Hierarchical
+        Select module: it will be enabled when either the %enable_the_dropbox
+        or %save_term_lineage settings (or both) are enabled.',
+        array(
+          '%multiple_values'    => t('Multiple values'),
+          '%enable_the_dropbox' => t('Enable the dropbox'),
+          '%save_term_lineage'  => t('Save term lineage'),
+        )
+      );
+
+      $form['hs_config'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Hierarchical Select configuration'),
+        '#description' => '<p class="cck-hierarchical-select-warning">'.
+          '<span class="highlight">Important!</span>'.
+          '</p>'. theme('item_list', $items),
+        '#collapsible' => FALSE,
+      );
+
+      return $form;
+
+    case 'callbacks':
+      return array(
+        'default value' => CONTENT_CALLBACK_NONE,
+      );
+    }
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function hs_content_taxonomy_widget($op, &$node, $field, &$node_field) {
+  if ($field['widget']['type'] == 'content_taxonomy_hs') {
+    $field_name = $field['field_name'];
+    $vid        = $field['vid'];
+    $tid        = $field['tid'];
+    $depth      = (empty($field['depth'])) ? 0 : $field['depth'];
+
+    switch ($op) {
+      case 'form':
+        require_once(drupal_get_path('module', 'hierarchical_select') .'/includes/common.inc');
+
+        $form[$field_name]['#tree'] = TRUE;
+        $form[$field_name]['tids'] = array(
+          '#title' => $field['widget']['label'],
+          '#type' => 'hierarchical_select',
+          '#weight' => $field['widget']['weight'],
+          '#config' => array(
+            'module' => 'hs_content_taxonomy',
+            'params' => array(
+              'vid'   => $vid,
+              'tid'   => $tid,
+              'depth' => $depth,
+            ),
+          ),
+          '#required' => $field['required'],
+          '#description' => t($field['widget']['description']),
+          // The default value comes from $node_field (thus from the CCK
+          // storage), unless it's empty, then we check if $node->taxonomy
+          // (thus 'normal' Taxonomy storage) contains a value, and use that
+          // instead, unless that's empty too.
+          // The latter will only work reliably if only one content_taxonomy
+          // field is being used, because when you have multiple
+          // content_taxonomy fields that use the same vocabulary, there's no
+          // way to distinguish.
+          '#default_value' => ((is_array($node_field[$tid])) ? array_keys($node_field[$tid]) : ((is_array($node->taxonomy)) ? array_keys($node->taxonomy) : array())),
+        );
+        hierarchical_select_common_config_apply($form[$field_name]['tids'], "content-taxonomy-$field_name");
+        return $form;
+
+      case 'process form values':
+        // TRICKY: this piece of utterly ugly, crappy and dysfunctional code
+        // is here thanks to the ugly internal works of the content_taxonomy
+        // module that don't make any sense at all. It's necessary to support
+        // the 'both' (and 'cck') "save option" of content_taxonomy.
+        if (isset($field['save']) && $field['save'] != 'tag') {
+          if ($field['multiple'] && is_array($node_field['tids'])) {
+            foreach ($node_field['tids'] as $key => $tid) {
+              if ($tid != 0) {
+                $keys[$tid] = $tid;
+              }
+            }
+          }
+          else {
+            $keys[$node_field['tids']] = $node_field['tids'];
+          }
+          $node_field = content_transpose_array_rows_cols(array('value' => $keys));
+        }
+        else {
+          if (!$field['multiple']) {
+            $value = $node_field['tids'];
+            $node_field['tids'] = array();
+            $node_field['tids'][0] = $value;
+          }
+        }
+        break;
+    }
+  }
+}
+
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function hs_content_taxonomy_field_formatter_info() {
+  return array(
+    'hierarchical_text' => array(
+      'label' => 'As hierarchical text',
+      'field types' => array('content_taxonomy'),
+    ),
+    'hierarchical_links' => array(
+      'label' => 'As hierarchical links',
+      'field types' => array('content_taxonomy'),
+    ),
+  );
+}
+
+/**
+ * Implemenation of hook_field_formatter().
+ */
+function hs_content_taxonomy_field_formatter($field, $item, $formatter, $node) {
+  $output = '';
+
+  if (!is_array($item)) {
+    return $output;
+  }
+
+  // Extract required field information.
+  $field_name = $field['field_name'];
+  $vid        = $field['vid'];
+  $tid        = $field['tid'];
+  $depth      = (empty($field['depth'])) ? 0 : $field['depth'];
+
+  // Get the config for this field.
+  require_once(drupal_get_path('module', 'hierarchical_select') .'/includes/common.inc');
+  $config_id = "content-taxonomy-$field_name";
+  $config = hierarchical_select_common_config_get($config_id);
+  $config += array(
+    'module' => 'hs_content_taxonomy',
+    'params' => array(
+      'vid'   => $vid,
+      'tid'   => $tid,
+      'depth' => $depth,
+    ),
+  );
+
+  // Generate a dropbox out of the selection. This will automatically
+  // calculate all lineages for us.
+  $selection = array_keys($item);
+  $dropbox = _hierarchical_select_dropbox_generate($config, $selection);
+
+  // Actual formatting.
+  $separator = HS_CONTENT_TAXONOMY_SEPARATOR;
+  foreach ($dropbox->lineages as $id => $lineage) {
+    if ($id > 0) {
+      $output .= '<br />';
+    }
+
+    $items = array();
+    foreach ($lineage as $level => $item) {
+      // Depending on which formatter is active, create links or use labels.
+      if ($formatter == 'hierarchical_links') {
+        $term = taxonomy_get_term($item['value']);
+        $items[] = l($term->name, taxonomy_term_path($term), array('rel' => 'tag', 'title' => $term->description));
+      }
+      else {
+        $items[] = $item['label'];
+      }
+    }
+    $output .= implode($separator, $items);
+  }
+
+  // Add the CSS.
+  drupal_add_css(drupal_get_path('module', 'hierarchical_select') .'/hierarchical_select.css');
+
+  return $output;
+}
+
+
+//----------------------------------------------------------------------------
+// Hierarchical Select hooks.
+
+/**
+ * Implementation of hook_hierarchical_select_params().
+ */
+function hs_content_taxonomy_hierarchical_select_params() {
+  $params = array(
+    'vid',   // The vocabulary id.
+    'tid',   // The root term's term id.
+    'depth', // The depth of the tree.
+  );
+  return $params;
+}
+
+/**
+ * Implementation of hook_hierarchical_select_root_level().
+ */
+function hs_content_taxonomy_hierarchical_select_root_level($params) {
+  $terms = _hs_taxonomy_hierarchical_select_get_tree($params['vid'], $params['tid'], -1, 1);
+  return _hs_taxonomy_hierarchical_select_terms_to_options($terms);
+}
+
+/**
+ * Implementation of hook_hierarchical_select_children().
+ */
+function hs_content_taxonomy_hierarchical_select_children($parent, $params) {
+  static $tree;
+
+  $vid   = $params['vid'];
+  $tid   = $params['tid'];
+  $depth = $params['depth'];
+
+  // Keep a static cache of the entire tree, this allows us to quickly look up
+  // if a term is not to deep – because if it's too deep, we don't want to
+  // return any children.
+  if (!isset($tree[$vid][$tid])) {
+    $raw_tree = _hs_taxonomy_hierarchical_select_get_tree($vid, $tid);
+    foreach ($raw_tree as $term) {
+      $tree[$vid][$tid][$term->tid] = $term->depth;
+    }
+  }
+  $terms = ($depth > 0 && $tree[$vid][$tid][$parent] + 1 >= $depth) ? array() : _hs_taxonomy_hierarchical_select_get_tree($vid, $parent, -1, 1);
+  return _hs_taxonomy_hierarchical_select_terms_to_options($terms);
+}
+
+/**
+ * Implementation of hook_hierarchical_select_lineage().
+ */
+function hs_content_taxonomy_hierarchical_select_lineage($item, $params) {
+  $lineage = hs_taxonomy_hierarchical_select_lineage($item, $params);
+
+  // If there is NO root term, then the tid parameter is set to 0. In that
+  // case, there is no need to remove any of the terms before the root term,
+  // because there won't be any.
+  if ($params['tid'] != 0) {
+    // TRICKY: When the root term has been *changed* over time, it *might* not
+    // be in the lineage, because the lineage. This means the lineage is not
+    // inside the tree below the defined root term. So we have to reset the
+    // lineage.
+    if (!in_array($params['tid'], $lineage)) {
+      $lineage = array();
+    }
+    else {
+      // Remove all terms before the root term and then the root term itself, too.
+      while (count($lineage) && $lineage[0] != $params['tid']) {
+        array_shift($lineage);
+      }
+      array_shift($lineage);
+    }
+  }
+
+  return $lineage;
+}
+
+/**
+ * Implementation of hook_hierarchical_select_valid_item().
+ */
+function hs_content_taxonomy_hierarchical_select_valid_item($item, $params) {
+  if (!is_numeric($item) || $item < 1) {
+    return FALSE;
+  }
+  $term = taxonomy_get_term($item);
+  return ($term->vid == $params['vid'] && _hs_content_taxonomy_term_within_allowed_depth($term->tid, $term->vid, $params['tid'], $params['depth']));
+}
+
+/**
+ * Implementation of hook_hierarchical_select_item_get_label().
+ */
+function hs_content_taxonomy_hierarchical_select_item_get_label($item, $params) {
+  return hs_taxonomy_hierarchical_select_item_get_label($item, $params);
+}
+
+/**
+ * Implementation of hook_hierarchical_select_create_item().
+ */
+function hs_content_taxonomy_hierarchical_select_create_item($label, $parent, $params) {
+  // TRICKY: no depth check is necessary because HS's internal validation
+  // prevents an invalid parent.
+  return hs_taxonomy_hierarchical_select_create_item($label, $parent, $params);
+}
+
+/**
+ * Implementation of hook_hierarchical_select_entity_count().
+ */
+function hs_content_taxonomy_hierarchical_select_entity_count($item, $params) {
+  return hs_taxonomy_hierarchical_select_entity_count($item, $params);
+}
+
+/**
+ * Implementation of hook_hierarchical_select_implementation_info().
+ */
+function hs_content_taxonomy_hierarchical_select_implementation_info() {
+  return array(
+    'hierarchy type' => t('Content Taxonomy'),
+    'entity type'    => t('Node'),
+  );
+}
+
+/**
+ * Implementation of hook_hierarchical_select_config_info().
+ */
+function hs_content_taxonomy_hierarchical_select_config_info() {
+  static $config_info;
+
+  if (!isset($config_info)) {
+    $config_info = array();
+
+    $content_types = content_types();
+    $fields = content_fields();
+
+    foreach ($fields as $field_name => $field) {
+      if ($field['type'] == 'content_taxonomy') {
+        foreach ($content_types as $content_type_name => $content_type) {
+          if (isset($content_type['fields'][$field_name]) && $content_type['fields'][$field_name]['widget']['type'] == 'content_taxonomy_hs') {
+            $vocabulary = taxonomy_get_vocabulary($field['vid']);
+
+            $config_id = "content-taxonomy-$field_name";
+            $config_info["$config_id|$content_type_name"] = array(
+              'config_id'      => $config_id,
+              'hierarchy type' => t('Content Taxonomy'),
+              'hierarchy'      => t($vocabulary->name) ." ($field_name)",
+              'entity type'    => t('Node'),
+              'entity'         => t($content_type['name']),
+              'context type'   => t('Node form'),
+              'context'        => '',
+              'edit link'      => "admin/content/types/$content_type_name/fields/$field_name/hs_config",
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return  $config_info;
+}
+
+
+//----------------------------------------------------------------------------
+// Private functions.
+
+/**
+ * Parse the context (the content type and the field name) from the URL.
+ *
+ * @return
+ *   - FALSE if no context could be found
+ *   - array($content_type_name, $field_name) otherwise
+ */
+function _hs_content_taxonomy_parse_context_from_url() {
+  if (arg(0) == 'admin' && arg(1) == 'content' && arg(2) == 'types') {
+    $content_type = content_types(arg(3));
+    $type = node_get_types('types', $content_type['type']);
+
+    $field_name = arg(5);
+
+    if (arg(4) == 'fields' && !empty($field_name) && isset($content_type['fields'][$field_name])) {
+      if ($content_type['fields'][$field_name]['type'] == 'content_taxonomy' && $content_type['fields'][$field_name]['widget']['type'] == 'content_taxonomy_hs') {
+        return array($content_type['type'], $field_name);
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+function _hs_content_taxonomy_term_within_allowed_depth($tid, $vid, $root_tid, $allowed_depth) {
+  // If the allowed depth is zero, then every term is allowed!
+  if ($allowed_depth == 0) {
+    return TRUE;
+  }
+
+  // Otherwise, only allow terms that are within the allowed depth.
+  static $valid_tids;
+  if (!isset($valid_tids[$vid][$root_tid][$allowed_depth])) {
+    $valid_tids[$vid][$root_tid][$allowed_depth] = array();
+    $tree = _hs_taxonomy_hierarchical_select_get_tree($vid, $root_tid);
+    foreach ($tree as $term) {
+      if ($term->depth < $allowed_depth) {
+        $valid_tids[$vid][$root_tid][$allowed_depth][] = $term->tid;
+      }
+    }
+  }
+  return in_array($tid, $valid_tids[$vid][$root_tid][$allowed_depth]);
+}

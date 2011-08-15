@@ -1,0 +1,459 @@
+<?php
+// $Id: ad.install,v 1.2.2.4.2.27.2.7.2.4 2009/04/03 17:01:02 jeremy Exp $
+
+/**
+ * @file
+ * Advertisement module database schema.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Ad module database schema.
+ */
+function ad_schema() {
+ /**
+  * The ad table stores administrative information about each ad.  The
+  * actual ad itself can be found in the appropriate ad type table.
+  */
+  $schema['ads'] = array(
+    'description' => 'The ad table stores administrative information about each ad.  The actual ad itself can be found in the appropriate ad type table.',
+    'fields' => array(
+      'aid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Unique ad ID. Equals to ad nid.',
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'The {users}.uid that owns this node; initially, this is the user that created it.',
+      ),
+      'adstatus' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Ad status',
+      ),
+      'adtype' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Ad type',
+      ),
+      'redirect' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Ad redirect URL',
+      ),
+      'autoactivate' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Is ad autoactivating?',
+      ),
+      'autoactivated' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Is ad autoactivated?',
+      ),
+      'autoexpire' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Is ad autoexpiring?',
+      ),
+      'autoexpired' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Is ad autoexpired?',
+      ),
+      'activated' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Is ad activated?',
+      ),
+      'maxviews' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Maximum ad impressions',
+      ),
+      'maxclicks' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Maximum ad clicks',
+      ),
+      'expired' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Is ad expired?',
+      ),
+    ),
+    'primary key' => array('aid'),
+    'indexes' => array(
+      'uid' => array('uid'),
+      'autoactivate' => array('autoactivate'),
+      'autoactivate' => array('autoactivate'),
+    ),
+  );
+
+ /**
+  * This table counts each time a given action occurs on an ad.  Actions
+  * include when the ad is viewed, clicked, enabled and disabled.
+  * Statistics are collected at an hourly granularity.
+  *
+  * The source column is used for tracking statistics for externally
+  * hosted ads.
+  *
+  * Actions:
+  *  'view', 'click', 'enable', 'disable'
+  */
+  $schema['ad_statistics'] = array(
+    'description' => 'Stores ad statistics.',
+    'fields' => array(
+      'sid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' => 'Statistics entry ID.',
+      ),
+      'aid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Ad id.',
+      ),
+      'date' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Date when action was made.',
+      ),
+      'action' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Actions: "view", "click", "enable", "disable".',
+      ),
+      'adgroup' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => '',
+        'description' => 'Ad group.',
+      ),
+      'hostid' => array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Host from which acion was made.',
+      ),
+      'count' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of actions triggered.',
+      ),
+      'extra' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Alow add-on modules to provide additional statistics granularity.',
+      ),
+    ),
+    'primary key' => array('sid'),
+    'indexes' => array(
+      'aid' => array('aid'),
+      'date' => array('date'),
+      'action' => array('action'),
+      'adgroup' => array('adgroup'),
+      'hostid' => array('hostid'),
+      'extra' => array('extra'),
+    ),
+  );
+
+ /**
+  * The ad_clicks table tracks when a given advertisement was clicked,
+  * who clicked it (uid if any and IP address), and what page they were
+  * on when they clicked it.
+  */
+  $schema['ad_clicks'] = array(
+    'description' => 'The ad_clicks table tracks when a given advertisement was clicked, who clicked it (uid if any and IP address), and what page they were on when they clicked it.',
+    'fields' => array(
+      'cid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' => 'Statistics entry ID.',
+      ),
+      'aid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Ad id.',
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => '',
+      ),
+      'status' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => '',
+      ),
+      'hostname' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Host from which acion was made.',
+      ),
+      'user_agent' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Clicker\'s browser agent.',
+      ),
+      'adgroup' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Ad group.',
+      ),
+      'hostid' => array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Host from which acion was made.',
+      ),
+      'url' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => '',
+        'description' => 'Clicked URL.',
+      ),
+      'timestamp' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Date when action was made.',
+      ),
+      'extra' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Alow add-on modules to provide additional statistics granularity.',
+      ),
+    ),
+    'primary key' => array('cid'),
+    'indexes' => array(
+      'aid' => array('aid'),
+      'status' => array('status'),
+      'hostname' => array('hostname'),
+      'user_agent' => array('user_agent'),
+      'adgroup' => array('adgroup'),
+      'hostid' => array('hostid'),
+      'url' => array('url'),
+      'extra' => array('extra'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Ad module installation.
+ */
+function ad_install() {
+  // Create tables.
+  drupal_install_schema('ad');
+}
+
+/**
+ * Allow complete uninstallation of the ad module.
+ */
+function ad_uninstall() {
+  // Delete all ad content.
+  $result = db_query("SELECT nid FROM {node} WHERE type = 'ad'");
+  while ($node = db_fetch_object($result)) {
+    node_delete($node->nid);
+    variable_del("ad_autoactivate_warning_$node->nid");
+  }
+
+  // Delete all remaining ad module variables.
+  $variables = array('ad_cron_timestamp', 'ad_link_target', 'ad_cache', 'ad_cache_file', 'adserve', 'ad_group_vid', 'ad_groups', 'ad_validate_url', 'ad_display');
+  foreach ($variables as $variable) {
+    variable_del($variable);
+  }
+  db_query("DELETE FROM {variable} WHERE name LIKE 'ad_block_quantity_%'");
+
+  // Remove tables.
+  drupal_uninstall_schema('ad');
+}
+
+/**
+ * Convert some things from absolete dev. schema to new schema API
+ */
+function ad_update_6001() {
+  $ret = array();
+  // When we touching index columns, we should first remove it from schema
+  db_drop_index($ret, 'ad_clicks', 'status');
+  db_change_field($ret, 'ad_clicks', 'status', 'status',
+      array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => '',
+      ),
+      array('indexes' => array(
+        'status' => array('status'),
+      ),
+    )
+  );
+  db_drop_index($ret, 'ad_hosts', 'status');
+  db_change_field($ret, 'ad_hosts', 'status', 'status',
+      array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => '',
+      ),
+      array('indexes' => array(
+        'status' => array('status'),
+      ),
+    )
+  );
+
+  db_drop_index($ret, 'ad_statistics', 'hostid');
+  db_change_field($ret, 'ad_statistics', 'hostid', 'hostid',
+      array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Host from which acion was made.',
+      ),
+      array('indexes' => array(
+        'hostid' => array('hostid'),
+      ),
+    )
+  );
+
+  db_drop_index($ret, 'ad_hosts', 'hostid');
+  db_change_field($ret, 'ad_hosts', 'hostid', 'hostid',
+      array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Host from which acion was made.',
+      ),
+      array('indexes' => array(
+        'hostid' => array('hostid'),
+      ),
+    )
+  );
+  return $ret;
+}
+
+/**
+ * Rebuild menu for anyone using the ad_embed module.
+ */
+function ad_update_6002() {
+  menu_rebuild();
+  return array();
+}
+
+/**
+ * Flush all caches for new themeable ad display functions.
+ */
+function ad_update_6003() {
+  drupal_flush_all_caches();
+  return array();
+}
+
+/**
+ * Introduce "extra" field for ad statistics and clicks, optionally allowing
+ * add-on modules to provide additional granularity.
+ */
+function ad_update_6004() {
+  $ret = array();
+  db_add_field($ret, 'ad_statistics', 'extra',
+    array(
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => TRUE,
+      'default' => '',
+      'description' => 'Alow add-on modules to provide additional statistics granularity.',
+    ),
+    array('indexes' => array(
+      'extra' => array('extra'))
+    ));
+  db_add_field($ret, 'ad_clicks', 'extra',
+    array(
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => TRUE,
+      'default' => '',
+      'description' => 'Alow add-on modules to provide additional statistics granularity.',
+    ),
+    array('indexes' => array(
+      'extra' => array('extra'))
+    ));
+  return $ret;
+}
+
+/**
+ * Flush all caches for AHAH ad type switcher to work.
+ */
+function ad_update_6005() {
+  drupal_flush_all_caches();
+  return array();
+}
+

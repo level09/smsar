@@ -1,0 +1,14 @@
+; $Id: formatted_number.info,v 1.1.2.1 2008/11/13 14:07:31 markuspetrux Exp $
+name = Formatted Number CCK
+description = Defines CCK numeric types where thousands separator and decimal point are inherited from the Format Number API module.
+package = CCK
+dependencies[] = content
+dependencies[] = format_number
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-07-08
+version = "6.x-1.2"
+core = "6.x"
+project = "formatted_number"
+datestamp = "1247093153"
+

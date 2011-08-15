@@ -1,0 +1,21 @@
+<?php 
+// $Id: backup_migrate.install,v 1.1.4.1 2008/08/14 02:16:59 ronan Exp $
+
+/**
+ * @file
+ * backup and migrate install/uninstall hooks
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function backup_migrate_install() {
+}
+
+/**
+ * Remove variables on uninstall.
+ */
+function backup_migrate_uninstall() {
+  db_query("DELETE FROM {variable} WHERE name LIKE 'backup_migrate_%'");
+  cache_clear_all('variables', 'cache');
+}

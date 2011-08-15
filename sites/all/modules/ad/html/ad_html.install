@@ -1,0 +1,54 @@
+<?php
+// $Id: ad_html.install,v 1.1.2.1.2.4 2009/02/16 17:06:49 jeremy Exp $
+
+/**
+ * @file
+ * Ad_html module database schema.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function ad_html_schema() {
+  $schema['ad_html'] = array(
+    'description' => 'The ad_html table stores HTML code of html ads.',
+    'fields' => array(
+      'aid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'html' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('aid'),
+  );
+  return $schema;
+}
+
+/**
+ * ad_html module installation.
+ */
+function ad_html_install() {
+  drupal_install_schema('ad_html');
+}
+
+/**
+ * Allow complete uninstallation of the ad_html module.
+ */
+function ad_html_uninstall() {
+  // Delete all ad_html content.
+  $result = db_query("SELECT aid FROM {ad_html}");
+  while ($aid = db_result($result)) {
+    node_delete($aid);
+  }
+
+  // Remove tables.
+  drupal_uninstall_schema('ad_html');
+}

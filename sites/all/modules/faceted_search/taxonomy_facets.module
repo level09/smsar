@@ -1,0 +1,585 @@
+<?php
+// $Id: taxonomy_facets.module,v 1.38 2009/03/03 04:55:34 davidlesieur Exp $
+
+/**
+ * @file
+ * Provides facets based on taxonomy (categories).
+ */
+
+require_once('./'. drupal_get_path('module', 'faceted_search') .'/faceted_search.inc');
+
+/**
+ * Implementation of hook_cron().
+ */
+function taxonomy_facets_cron() {
+  $limit = (int)variable_get('search_cron_limit', 100);
+  $results = db_query_range('SELECT nid FROM {taxonomy_facets_node} WHERE changed <> 0 ORDER BY changed ASC', 0, $limit);
+  while ($n = db_fetch_object($results)) {
+    _taxonomy_facets_update($n->nid);
+
+    // Mark the node's term associations as up-to-date.
+    db_query('UPDATE {taxonomy_facets_node} SET changed = 0 WHERE nid = %d', $n->nid);
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function taxonomy_facets_menu() {
+  $items = array();
+  $items['admin/settings/faceted_search/taxonomy_facets'] = array(
+    'title' => 'Taxonomy index',
+    'page callback' => 'taxonomy_facets_index_page',
+    'access arguments' => array('administer faceted search'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'taxonomy_facets.admin.inc',
+  );
+  $items['admin/settings/faceted_search/taxonomy_facets/rebuild'] = array(
+    'page callback' => 'taxonomy_facets_rebuild',
+    'access arguments' => array('administer faceted search'),
+    'type' => MENU_CALLBACK,
+    'file' => 'taxonomy_facets.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ * Mark the node's term associations as needing update.
+ *
+ * Note: Term associations are stored in the taxonomy_facets_term_node table
+ * even for unpublished nodes. This avoids any problem if the node's published
+ * status is altered outside of hook_nodeapi()'s reach.
+ */
+function taxonomy_facets_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'delete':
+      // Delete the node's term associations.
+      db_query("DELETE FROM {taxonomy_facets_node} WHERE nid = %d", $node->nid);
+      db_query("DELETE FROM {taxonomy_facets_term_node} WHERE nid = %d", $node->nid);
+      break;
+
+    case 'insert':
+      // Insert a record for storing the node's term associations status.
+      db_query('INSERT INTO {taxonomy_facets_node} (nid, changed) VALUES (%d, %d)', $node->nid, 0);
+      // Immediately update the node's term associations.
+      _taxonomy_facets_update($node->nid);
+      break;
+
+    case 'update':
+      // Immediately update the node's term associations.
+      _taxonomy_facets_update($node->nid);
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_taxonomy().
+ *
+ * The taxonomy_facets_term_node table is used to store a (nid,tid) pair for
+ * each term that's associated to a node *and*, unlike the core term_node table,
+ * all ancestors of those terms. This ensures that browsing for any term will
+ * also return nodes associated with descendant terms. This table is Taxonomy
+ * Facets' "index". Of course, this is needed only for hierarchical
+ * vocabularies; when querying terms in "flat" vocabularies, Taxonomy Facets
+ * uses the core term_node table.
+ *
+ * Taxonomy changes in hierarchical vocabularies thus require an update of the
+ * taxonomy_facets_term_node table. Whether a vocabulary or a term changes, we
+ * rebuild associations for all terms of the affected vocabulary. This is needed
+ * because an existing vocabulary can become hierarchical (requiring adding the
+ * associations) or become flat (requiring removal of the associations). Also,
+ * an existing term may move under a new parent, potentially affecting many
+ * other terms in the vocabulary (requiring rebuilding the associations).
+ *
+ * Admittedly, this is a bit crude as this behavior often rebuilds the term
+ * associations of nodes that do not really need an update. However, the
+ * associations are not directly created in this hook; here we only mark nodes
+ * as needing an update, and the cron hook takes care of the real work.
+ */
+function taxonomy_facets_taxonomy($op, $type, $array = NULL) {
+  if ($op == 'delete' || $op == 'update') {
+    if ($type == 'term') {
+      $vocabulary = taxonomy_vocabulary_load($array['vid']);
+      if ($vocabulary->hierarchy) {
+        if ($op == 'update') {
+          // A term from a hierarchical vocabulary has changed.
+          _taxonomy_facets_touch($array['vid']);
+        }
+        else { // $op == 'delete'
+          // A term from a hierarchical vocabulary has been deleted. We can't
+          // use _taxonomy_facets_touch() here, because at this point the term
+          // has already been removed from the term_data table.
+          _taxonomy_facets_touch_term($array['tid']);
+        }
+      }
+    }
+    else {
+      // A vocabulary has changed.
+      _taxonomy_facets_touch($array['vid']);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_faceted_search_collect().
+ */
+function taxonomy_facets_faceted_search_collect(&$facets, $domain, $env, $selection, $arg = NULL) {
+  switch ($domain) {
+    case 'facets':
+      $vocabularies = taxonomy_get_vocabularies();
+      foreach ($vocabularies as $vocabulary) {
+        _taxonomy_facets_localize_vocabulary($vocabulary);
+        // If the vocabulary's corresponding facet is allowed.
+        if (!isset($selection) || isset($selection['taxonomy'][$vocabulary->vid])) {
+          $facets[] = new taxonomy_facet($vocabulary);
+        }
+      }
+      break;
+
+    case 'text':
+      // Scan the given search text for a 'taxonomy:{path,path,path,...}' token,
+      // and create facets from it.
+      if ($found_text = search_query_extract($arg, 'taxonomy')) {
+        $vocabularies = taxonomy_get_vocabularies();
+        // Extract separate facets
+        $paths = explode(',', $found_text);
+        foreach ($paths as $path_index => $tids) {
+          $tids = explode('.', $tids); // Extract path of tids
+          $path = array(); // Array to collect path of categories
+          $previous_tid = 0;
+          foreach ($tids as $tid) {
+            if (!is_numeric($tid) || $tid <= 0) {
+              break; // Invalid tid
+            }
+            $term = taxonomy_get_term($tid);
+            if (!$term) {
+              break; // No term for tid
+            }
+            if (!isset($vocabularies[$term->vid]) || (isset($selection) && !isset($selection['taxonomy'][$term->vid]))) {
+              break; // Term's vocabulary not allowed.
+            }
+            if ($previous_tid != 0) {
+              $parents = taxonomy_get_parents($tid);
+              if (!isset($parents[$previous_tid])) {
+                break; // Term is not a child of the previous term in path
+              }
+            }
+            _taxonomy_facets_localize_term($term);
+            // Add category to current path.
+            if ($vocabularies[$term->vid]->hierarchy) {
+              // TODO: Fix potential problem if parents of the first tid have been omitted from $tids
+              $path[] = new taxonomy_facet_hierarchical_category($term->tid, $term->name);
+            }
+            else {
+              $path[] = new taxonomy_facet_category($term->tid, $term->name);
+            }
+            $previous_tid = $tid;
+          }
+          // If found some categories in the current path of tids, build a facet
+          if (count($path) > 0) {
+            _taxonomy_facets_localize_vocabulary($vocabularies[$term->vid]);
+            $facets[] = new taxonomy_facet($vocabularies[$term->vid], $path);
+          }
+        }
+
+        // Remove the parsed token from the search text.
+        $arg = search_query_insert($arg, 'taxonomy');
+      }
+      return $arg;
+
+    case 'node':
+      if (is_array($arg->taxonomy)) {
+        $vocabularies = taxonomy_get_vocabularies();
+        foreach ($arg->taxonomy as $term) {
+          $vid = $term->vid;
+          // If the vocabulary's corresponding facet is allowed.
+          if (isset($vocabularies[$vid]) && (!isset($selection) || isset($selection['taxonomy'][$vid]))) {
+            $path = array();
+            // Retrieve ancestor terms.
+            while ($term) {
+              _taxonomy_facets_localize_term($term);
+              if ($vocabularies[$vid]->hierarchy) {
+                $category = new taxonomy_facet_hierarchical_category($term->tid, $term->name);
+              }
+              else {
+                $category = new taxonomy_facet_category($term->tid, $term->name);
+              }
+              array_unshift($path, $category);
+              $parents = taxonomy_get_parents($term->tid);
+              $term = reset($parents); // Keep only the first parent
+            }
+            if ($path) {
+              _taxonomy_facets_localize_vocabulary($vocabularies[$vid]);
+              // Create a facet with the found term as the active category.
+              $facets[] = new taxonomy_facet($vocabularies[$vid], $path);
+            }
+          }
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function taxonomy_facets_form_faceted_search_edit_form_alter(&$form, $form_state) {
+  // Prepend submit function (must be called before the settings are saved).
+  $form['#submit'] = array('taxonomy_facets_edit_form_submit' => array()) + $form['#submit'];
+}
+
+/**
+ * Submit callback for the environment edit form.
+ *
+ * Check what vocabularies have been enabled/disabled in order to mark
+ * associated nodes as needing an update.
+ */
+function taxonomy_facets_edit_form_submit($form, &$form_state) {
+  $env = $form_state['values']['env'];
+
+  // Find what vocabularies were enabled before this form submission.
+  $old_status = array();
+  $results = db_query("SELECT env_id, filter_id AS vid FROM {faceted_search_filters} WHERE filter_key = 'taxonomy' AND status = 1");
+  while ($r = db_fetch_object($results)) {
+    $old_status[$r->vid][$r->env_id] = TRUE;
+  }
+
+  // Determine what vocabularies require associated nodes to be marked for an update.
+  $enabled = FALSE;
+  $vocabularies = taxonomy_get_vocabularies();
+  foreach (array_keys($vocabularies) as $vid) {
+    if (!$vocabularies[$vid]->hierarchy) {
+      // Updating term node associations is only relevant with hierarchical
+      // vocabularies.
+      continue;
+    }
+    // Check requested status for the current environment.
+    if (isset($form_state['values']['facets']['taxonomy_'. $vid]['status'])) {
+      $new_status = $form_state['values']['facets']['taxonomy_'. $vid]['status'];
+      if (($new_status && !isset($old_status[$vid])) ||
+        (!$new_status && isset($old_status[$vid]) && count($old_status[$vid]) == 1 && isset($old_status[$vid][$env->env_id]))) {
+        // Vocabulary is now enabled and no environment was already using it
+        // - OR -
+        // Vocabulary is now disabled and this was the last environment needing it.
+        _taxonomy_facets_touch($vid);
+        if ($new_status) {
+          $enabled = TRUE;
+        }
+      }
+    }
+  }
+
+  if ($enabled) {
+    drupal_set_message(t('The newly enabled taxonomy facets will only become effective after their indexes have been built by <a href="@cron">cron</a> runs.', array('@cron' => url('admin/reports/status/run-cron')))); // TODO: Add link to indexing status page.
+  }
+}
+
+/**
+ * A taxonomy-based facet.
+ *
+ * @see taxonomy_facet_category()
+ */
+class taxonomy_facet extends faceted_search_facet {
+  /**
+   * The vocabulary used by this facet.
+   */
+  var $_vocabulary = NULL;
+
+  /**
+   * Constructor.
+   */
+  function taxonomy_facet($vocabulary, $active_path = array()) {
+    parent::faceted_search_facet('taxonomy', $active_path);
+    $this->_vocabulary = $vocabulary;
+    parent::set_weight($vocabulary->weight); // Assign default weight.
+  }
+
+  /**
+   * Returns the id of this facet.
+   */
+  function get_id() {
+    return $this->_vocabulary->vid;
+  }
+
+  /**
+   * Return the label of this facet. The implementor is responsible to ensure
+   * adequate security filtering.
+   */
+  function get_label() {
+    return check_plain($this->_vocabulary->name);
+  }
+
+  /**
+   * Returns the available sort options for this facet.
+   */
+  function get_sort_options() {
+    $options = parent::get_sort_options();
+    $options['term'] = t('Term'); // Term weight & name.
+    return $options;
+  }
+
+  /**
+   * Handler for the 'count' sort criteria.
+   */
+  function build_sort_query_count(&$query) {
+    $query->add_orderby('count', 'DESC');
+    $query->add_orderby('term_data.weight', 'ASC');
+    $query->add_orderby('term_data.name', 'ASC');
+  }
+
+  /**
+   * Handler for the 'term' sort criteria.
+   */
+  function build_sort_query_term(&$query) {
+    $query->add_orderby('term_data.weight', 'ASC');
+    $query->add_orderby('term_data.name', 'ASC');
+  }
+
+  /**
+   * Returns the search text for this facet, taking into account this facet's
+   * active path.
+   */
+  function get_text() {
+    return implode('.', array_map('_taxonomy_facets_get_category_tid', $this->get_active_path()));
+  }
+
+  /**
+   * Updates a query for retrieving the root categories of this facet and their
+   * associated nodes within the current search results.
+   *
+   * @param $query
+   *   The query object to update.
+   *
+   * @return
+   *   FALSE if this facet can't have root categories.
+   */
+  function build_root_categories_query(&$query) {
+    if ($this->_vocabulary->hierarchy) {
+      $query->add_table('taxonomy_facets_term_node', 'nid', 'n', 'nid', 'term_node');
+      $query->add_table('term_hierarchy', 'tid', 'term_node', 'tid');
+      $query->add_where('term_hierarchy.parent = 0');
+    }
+    else {
+      $query->add_table('term_node', 'vid', 'n', 'vid');
+    }
+    $query->add_table('term_data', 'tid', 'term_node', 'tid');
+    $query->add_field('term_data', 'tid', 'tid');
+    $query->add_field('term_data', 'name', 'name');
+    $query->add_where('term_data.vid = %d', $this->_vocabulary->vid);
+    $query->add_groupby('tid'); // Needed for counting matching nodes.
+    return TRUE;
+  }
+
+  /**
+   * This factory method creates categories given query results that include the
+   * fields selected in get_root_categories_query() or get_subcategories_query().
+   *
+   * @param $results
+   *   $results A database query result resource.
+   *
+   * @return
+   *   Array of categories.
+   */
+  function build_categories($results) {
+    $categories = array();
+    while ($result = db_fetch_object($results)) {
+      $result->vid = $this->_vocabulary->vid; // Fill missing term data.
+      _taxonomy_facets_localize_term($result);
+      if ($this->_vocabulary->hierarchy) {
+        $categories[] = new taxonomy_facet_hierarchical_category($result->tid, $result->name, $result->count);
+      }
+      else {
+        $categories[] = new taxonomy_facet_category($result->tid, $result->name, $result->count);
+      }
+    }
+    return $categories;
+  }
+}
+
+/**
+ * A category for non-hierarchical taxonomy-based facets.
+ *
+ * @see taxonomy_facet()
+ */
+class taxonomy_facet_category extends faceted_search_category {
+  var $_tid = NULL;
+  var $_name = '';
+
+  /**
+   * Constructor.
+   */
+  function taxonomy_facet_category($tid, $name, $count = NULL) {
+    parent::faceted_search_category($count);
+    $this->_tid = $tid;
+    $this->_name = $name;
+  }
+
+  /**
+   * Return the label of this category.
+   *
+   * @param $html
+   *   TRUE when HTML is allowed in the label, FALSE otherwise. Checking this
+   *   flag allows implementors to provide a rich-text label if desired, and an
+   *   alternate plain text version for cases where HTML cannot be used. The
+   *   implementor is responsible to ensure adequate security filtering.
+   */
+  function get_label($html = FALSE) {
+    return check_plain($this->_name);
+  }
+
+  /**
+   * Updates a query for selecting nodes matching this category.
+   *
+   * @param $query
+   *   The query object to update.
+   */
+  function build_results_query(&$query) {
+    // Since multiple terms might be used and cause multiple joins of
+    // taxonomy_facets_term_node, we add the tid into the table alias to ensure
+    // a unique alias.
+    $query->add_table('term_node', 'nid', 'n', 'nid', "term_node_{$this->_tid}");
+    $query->add_where("term_node_{$this->_tid}.tid = %d", $this->_tid);
+  }
+}
+
+/**
+ * A category for hierarchical taxonomy-based facets.
+ *
+ * @see taxonomy_facet()
+ */
+class taxonomy_facet_hierarchical_category extends taxonomy_facet_category {
+
+  /**
+   * Constructor.
+   */
+  function taxonomy_facet_hierarchical_category($tid, $name, $count = NULL) {
+    parent::taxonomy_facet_category($tid, $name, $count);
+  }
+
+  /**
+   * Updates a query for retrieving the subcategories of this category and their
+   * associated nodes within the current search results.
+   *
+   * This only needs to be overridden for hierarchical facets.
+   *
+   * @param $query
+   *   The query object to update.
+   *
+   * @return
+   *   FALSE if this facet can't have subcategories.
+   */
+  function build_subcategories_query(&$query) {
+    $query->add_table('taxonomy_facets_term_node', 'nid', 'n', 'nid', 'term_node');
+    $query->add_table('term_data', 'tid', 'term_node', 'tid');
+    $query->add_table('term_hierarchy', 'tid', 'term_node', 'tid');
+    $query->add_field('term_data', 'tid', 'tid');
+    $query->add_field('term_data', 'name', 'name');
+    $query->add_where('term_hierarchy.parent = %d', $this->_tid);
+    $query->add_groupby('tid'); // Needed for counting matching nodes.
+    return TRUE;
+  }
+
+  /**
+   * Updates a query for selecting nodes matching this category.
+   *
+   * @param $query
+   *   The query object to update.
+   */
+  function build_results_query(&$query) {
+    // Since multiple terms might be used and cause multiple joins of
+    // taxonomy_facets_term_node, we add the tid into the table alias to ensure
+    // a unique alias.
+    $query->add_table('taxonomy_facets_term_node', 'nid', 'n', 'nid', "term_node_{$this->_tid}");
+    $query->add_where("term_node_{$this->_tid}.tid = %d", $this->_tid);
+  }
+}
+
+// --------------------------------------------------------------------------
+// Internal stuff
+
+/**
+ * Return the id of the specified category. Useful for array_map().
+ */
+function _taxonomy_facets_get_category_tid($category) {
+  return $category->_tid;
+}
+
+/**
+ * Update the term associations of a node in the taxonomy_facets_term_node
+ * table.
+ */
+function _taxonomy_facets_update($nid) {
+  // Retrieve the node's current term associations from the core term_node
+  // table, but only for terms that belong to hierarchical vocabularies whose
+  // corresponding facets are enabled in at least one search environment. Terms
+  // that do not meet those conditions do not belong in the
+  // taxonomy_facets_term_node table.
+  $tids = array();
+  $results = db_query("SELECT tn.tid, t.vid FROM {node} n INNER JOIN {term_node} tn ON n.vid = tn.vid INNER JOIN {term_data} t ON t.tid = tn.tid INNER JOIN {faceted_search_filters} f ON f.filter_id = t.vid INNER JOIN {vocabulary} v ON t.vid = v.vid WHERE n.nid = %d AND f.filter_key = 'taxonomy' AND f.status = 1 AND v.hierarchy > 0", $nid);
+  while ($r = db_fetch_object($results)) {
+    // Create associations between the node and all of the term's ancestors.
+    $ancestors = taxonomy_get_parents_all($r->tid);
+    foreach ($ancestors as $term) {
+      // Using the tid as key to avoid duplicates (multiple terms may share
+      // common ancestors).
+      $tids[$term->tid] = $term->tid;
+    }
+  }
+
+  db_lock_table('{taxonomy_facets_term_node}');
+  // Delete the node's old term associations from taxonomy_facets_term_node.
+  db_query('DELETE FROM {taxonomy_facets_term_node} WHERE nid = %d', $nid);
+  // Insert the node's updated term associations into taxonomy_facets_term_node.
+  foreach ($tids as $tid) {
+    db_query("INSERT INTO {taxonomy_facets_term_node} (nid, tid) VALUES (%d, %d)", $nid, $tid);
+  }
+  db_unlock_tables();
+}
+
+/**
+ * Mark all nodes associated with terms from the specified vocabulary as needing
+ * an update.
+ */
+function _taxonomy_facets_touch($vid) {
+  // Mark nodes with the current time, unless they're already marked.
+  db_query('UPDATE {taxonomy_facets_node} SET changed = %d WHERE changed = 0 AND nid IN (SELECT n.nid FROM {node} n INNER JOIN {term_node} tn ON n.vid = tn.vid INNER JOIN {term_data} t ON t.tid = tn.tid WHERE t.vid = %d)', time(), $vid);
+}
+
+/**
+ * Mark all nodes associated with the specified term or one of the term's
+ * children as needing an update.
+ */
+function _taxonomy_facets_touch_term($tid) {
+  // Mark nodes with the current time, unless they're already marked.
+  db_query('UPDATE {taxonomy_facets_node} SET changed = %d WHERE changed = 0 AND nid IN (SELECT tn.nid FROM {taxonomy_facets_term_node} tn WHERE tn.tid = %d)', time(), $tid);
+}
+
+/**
+ * Localize a term by replacing its name attribute with its localized version
+ * for the current language.
+ *
+ * @param $term
+ *   The term to localize, with at least tid, vid, and name data members.
+ *
+ * This is based on i18ntaxonomy_localize_terms(), but with less overhead.
+ */
+function _taxonomy_facets_localize_term(&$term) {
+  // If this term's vocabulary supports localization.
+  if (module_exists('i18ntaxonomy') && i18ntaxonomy_vocabulary($term->vid) == I18N_TAXONOMY_LOCALIZE) {
+    $term->name = tt("taxonomy:term:$term->tid:name", $term->name);
+  }
+}
+
+/**
+ * Localize a vocabulary by replacing its name attribute with its localized
+ * version for the current language.
+ */
+function _taxonomy_facets_localize_vocabulary(&$vocabulary) {
+  // If this vocabulary supports localization.
+  if (module_exists('i18ntaxonomy') && i18ntaxonomy_vocabulary($vocabulary->vid) == I18N_TAXONOMY_LOCALIZE) {
+    $vocabulary->name = tt("taxonomy:vocabulary:$vocabulary->vid:name", $vocabulary->name);
+  }
+}

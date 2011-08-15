@@ -1,0 +1,249 @@
+# $Id: nl.po,v 1.1.2.1 2009/06/06 15:49:18 libeco Exp $
+#
+# Dutch translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  formatted_number.module,v 1.1.2.4 2008/12/07 21:06:09 markuspetrux
+#  formatted_number.install,v 1.1.2.3 2009/02/24 11:57:28 markuspetrux
+#  formatted_number.info,v 1.1.2.1 2008/11/13 14:07:31 markuspetrux
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2009-06-04 16:45+0200\n"
+"PO-Revision-Date: 2009-06-04 17:23+0100\n"
+"Last-Translator: L.B. Cohn <lichai@999games.nl>\n"
+"Language-Team: Dutch <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+#: formatted_number.module:62
+msgid "Formatted tiny integer"
+msgstr "Geformatteerde tiny integer"
+
+#: formatted_number.module:63
+msgid "Store a number in the database as a tiny integer (-128 to 127)."
+msgstr "Bewaar een nummer in de database als een tiny integer (-128 to 127)."
+
+#: formatted_number.module:69
+msgid "Formatted tiny integer (unsigned)"
+msgstr "Geformatteerde tiny integer (unsigned)"
+
+#: formatted_number.module:70
+msgid "Store a number in the database as a tiny unsigned integer (0 to 255)."
+msgstr "Bewaar een nummer in de database als een tiny unsigned integer (0 to 255)."
+
+#: formatted_number.module:76
+msgid "Formatted small integer"
+msgstr "Geformatteerde small integer"
+
+#: formatted_number.module:77
+msgid "Store a number in the database as a small integer (-32768 to 32767)."
+msgstr "Bewaar een nummer in de database als een small integer (-32768 to 32767)."
+
+#: formatted_number.module:83
+msgid "Formatted small integer (unsigned)"
+msgstr "Geformatteerde small integer (unsigned)"
+
+#: formatted_number.module:84
+msgid "Store a number in the database as a small unsigned integer (0 to 65535)."
+msgstr "Bewaar een nummer in de database als een small unsigned integer (0 to 65535)."
+
+#: formatted_number.module:90
+msgid "Formatted medium integer"
+msgstr "Geformatteerde medium integer"
+
+#: formatted_number.module:91
+msgid "Store a number in the database as a medium integer (-8388608 to 8388607)."
+msgstr "Bewaar een nummer in de database als een medium integer (-8388608 to 8388607)."
+
+#: formatted_number.module:97
+msgid "Formatted medium integer (unsigned)"
+msgstr "Geformatteerde medium integer (unsigned)"
+
+#: formatted_number.module:98
+msgid "Store a number in the database as a medium unsigned integer (0 to 16777215)."
+msgstr "Bewaar een nummer in de database als een medium unsigned integer (0 to 16777215)."
+
+#: formatted_number.module:104
+msgid "Formatted integer"
+msgstr "Geformatteerde integer"
+
+#: formatted_number.module:105
+msgid "Store a number in the database as an integer (-2147483648 to 2147483647)."
+msgstr "Bewaar een nummer in de database als een integer (-2147483648 tot 2147483647)."
+
+#: formatted_number.module:111
+msgid "Formatted integer (unsigned)"
+msgstr "Geformatteerde integer (unsigned)"
+
+#: formatted_number.module:112
+msgid "Store a number in the database as an unsigned integer (0 to 4294967295)."
+msgstr "Bewaar een nummer in de database als een unsigned integer (0 tot 4294967295)."
+
+#: formatted_number.module:121
+msgid "Formatted big integer"
+msgstr "Geformatteerde big  integer"
+
+#: formatted_number.module:122
+msgid "Store a number in the database as a big integer (-9223372036854775808 to 9223372036854775807)."
+msgstr "Bewaar een nummer in de database als een big integer (-9223372036854775808 to 9223372036854775807)."
+
+#: formatted_number.module:128
+msgid "Formatted big integer (unsigned)"
+msgstr "Geformatteerde big integer (unsigned)"
+
+#: formatted_number.module:129
+msgid "Store a number in the database as a big unsigned integer (0 to 18446744073709551615)."
+msgstr "Bewaar een nummer in de database als een big unsigned integer (0 to 18446744073709551615)."
+
+#: formatted_number.module:140
+msgid "Formatted decimal"
+msgstr "Geformatteerde decimaal"
+
+#: formatted_number.module:141
+msgid "Store a number in the database in a fixed decimal format."
+msgstr "Sla een waarde in de database op in een decimaal formaat."
+
+#: formatted_number.module:146
+msgid "Formatted float"
+msgstr "Geformatteerde float"
+
+#: formatted_number.module:147
+msgid "Store a number in the database in a floating point format."
+msgstr "Sla een waarde in de database op als floating point getal."
+
+#: formatted_number.module:176
+msgid "Prefix"
+msgstr "Voorvoegsel"
+
+#: formatted_number.module:179
+msgid "Define a string that should be prefixed to the value, like $ or €. Leave blank for none. Separate singular and plural values with a pipe (pound|pounds)."
+msgstr "Geef op wat als voorvoegsel moet worden gebruikt zoals: $ of €. Laat leeg als er geen voorvoegsel moet worden gebruikt. Maak onderscheid tussen enkelvoud en meervoud met een pipe, bijvoorbeeld: euro|euro's."
+
+#: formatted_number.module:183
+msgid "Suffix"
+msgstr "Achtervoegsel"
+
+#: formatted_number.module:186
+msgid "Define a string that should suffixed to the value, like m², m/s², kb/s. Leave blank for none. Separate singular and plural values with a pipe (pound|pounds)."
+msgstr "Geef op wat als achtervoegsel moet worden gebruikt zoals: m², m/s², kb/s. Laat leeg als er geen achtervoegsel moet worden gebruikt. Maak onderscheid tussen enkelvoud en meervoud met een pipe, bijvoorbeeld: kilo|kilo's."
+
+#: formatted_number.module:193
+msgid "Minimum"
+msgstr "Minimum"
+
+#: formatted_number.module:194
+msgid "Use this option to defined the minimum value that can be accepted for this field. Leave blank for no explicit limitation."
+msgstr "Gebruik deze optie om het minimum getal te bepalen dat kan worden geaccepteerd voor dit veld. Laat leeg om geen limiet in te stellen."
+
+#: formatted_number.module:197
+msgid "Maximum"
+msgstr "Maximum"
+
+#: formatted_number.module:198
+msgid "Use this option to defined the maximum value that can be accepted for this field. Leave blank for no explicit limitation."
+msgstr "Gebruik deze optie om het maximum getal te bepalen dat kan worden geaccepteerd in dit veld. Laat leeg om geen limiet in te stellen."
+
+#: formatted_number.module:234
+msgid "Precision"
+msgstr "Precisie"
+
+#: formatted_number.module:237
+msgid "The total number of digits to store in the database, including digits to the right of the decimal point."
+msgstr "Het totale aantal getallen om te bewaren in de database, inclusief getallen rechts van de decimale punt."
+
+#: formatted_number.module:242
+msgid "Decimals"
+msgstr "Decimalen"
+
+#: formatted_number.module:245
+msgid "The number of digits to the right of the decimal point."
+msgstr "Het aantal getallen rechts van de decimale punt."
+
+#: formatted_number.module:254
+msgid "\"Minimum\" must be a valid number."
+msgstr "\"Minimum\" moet een valide nummer zijn."
+
+#: formatted_number.module:259
+msgid "\"Minimum\" cannot be lower than !num."
+msgstr "\"Minimum\" kan niet lager zijn dan !num."
+
+#: formatted_number.module:265
+msgid "\"Maximum\" must be a valid number."
+msgstr "\"Maximum\"moet een valide nummer zijn."
+
+#: formatted_number.module:270
+msgid "\"Maximum\" cannot be greater than !num."
+msgstr "\"Maximum\" kan niet groter zijn dan !num."
+
+#: formatted_number.module:275
+msgid "\"Minimum\" may not be a greater than \"Maximum\"."
+msgstr "\"Minimum\" mag niet groter zijn dan \"Maximum\"."
+
+#: formatted_number.module:340
+msgid "Default"
+msgstr "Standaard"
+
+#: formatted_number.module:341
+msgid "Remove redundant zeros"
+msgstr "Verwijder overbodige nullen"
+
+#: formatted_number.module:342
+msgid "Unformatted"
+msgstr "Ongeformatteerd"
+
+#: formatted_number.module:351
+msgid "Numeric text field"
+msgstr "Numeriek tekstveld"
+
+#: formatted_number.module:472
+msgid "The specified number !num is invalid."
+msgstr "Het opgegeven nummer !num is niet-valide."
+
+#: formatted_number.module:517
+msgid "%name: may be not be empty."
+msgstr "%name mag niet leeg zijn."
+
+#: formatted_number.module:522
+msgid "%name: the value may be no smaller than %min."
+msgstr "%name: de waarde mag niet kleiner zijn dan %min."
+
+#: formatted_number.module:525
+msgid "%name: the value may be no larger than %max."
+msgstr "%name: de waarde mag niet groter zijn dan %max."
+
+#: formatted_number.module:0
+msgid "formatted_number"
+msgstr "geformatteerd_nummer"
+
+#: (duplicate) formatted_number.install:23
+msgid "Format Number API"
+msgstr "Geformatteerd Nummer API"
+
+#: (duplicate) formatted_number.install:24
+msgid "%module-name requires, at least, version 6.x-1.1 of the <a href=\"@format-number\">Format Number API</a> module."
+msgstr "%module-name vereist tenminste versie 6.x-1.1 van de <a href=\"@format-number\">Nummerformaat API</a>-module."
+
+#: (duplicate) formatted_number.install:25
+msgid "Formatter Number CCK"
+msgstr "Formatteer Nummer CCK"
+
+#: (duplicate) formatted_number.install:28
+msgid "version 6.x-1.0"
+msgstr "versie 6.x-1.0"
+
+#: formatted_number.info:0
+msgid "Formatted Number CCK"
+msgstr "Geformatteerd Nummer CCK"
+
+#: formatted_number.info:0
+msgid "Defines CCK numeric types where thousands separator and decimal point are inherited from the Format Number API module."
+msgstr "Levert CCk numerieke types waar duizendtalscheider en decimale punt worden gebruikt uit de Nummerformaat API-module."
+
+#: formatted_number.info:0
+msgid "CCK"
+msgstr "CCK"
+

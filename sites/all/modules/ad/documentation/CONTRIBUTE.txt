@@ -1,0 +1,64 @@
+There are many ways that you can contribute to the development of the ad
+module:
+ 1. Testing.
+ 2. Documentation.
+ 3. Code.
+ 4. Money.
+
+
+1. Testing
+
+   The ad project is a large and complex collection of modules.  As new
+  features are added, unfortunately new bugs are sometimes added too.  And
+  unfortunately these bugs can go undetected in my development environement.
+  By installing the ad module on your server, testing it, and reporting any
+  problems that you run into, you help to improve the project.
+
+   Before submitting bug reports, please be sure that you are running the
+  latest version of the code, as your bug may have already been fixed.  Also,
+  please be sure to review the existing bug reports that other people have
+  already submitted so I don't have to waste time cleaning up duplicate bug
+  reports -- I maintain this project on a volunteer basis and already have
+  little enough time as is.  Finally, be sure to review the included
+  documentation to be sure that you have properly installed and configured the
+  module.
+
+   Bug reports can be viewed and submitted at the following URL:
+     http://drupal.org/project/issues/ad
+
+
+2. Documentation.
+
+   There is limited documentation built into the modules, and additional
+  documentation found in the documentation directory distributed with the ad
+  module.  However, documentation can always be improved.  You don't need to
+  know how to write code or create patches to help improve the documentation.
+  You can simply rewrite documentation files and attach them to the project's
+  issue queue at the following URL:
+     http://drupal.org/project/issues/ad
+
+
+3. Code.
+
+   There are plenty of issues listed in the project's queue waiting until I
+  find the time to code up fixes.  If you are a PHP coder yourself, it is
+  tremendously helpful if you track down bugs and submit fixes!  It's most
+  helpful if you submit fixes for both the 4.7.x and 5.x versions of the
+  module.
+
+   In addition to fixing bugs, you are also welcome to contribute new
+  features.  It's preferred when new features use the ad module's many hooks
+  and are implemented in external modules.
+
+
+4. Money.
+
+   I maintain the ad module in my spare time.  While cash donations are not in
+  any way required, they are certainly appreciated.  The simplest way to donate
+  money is to use PayPal and send the donation to my email address:
+  jeremy@tag1consulting.com.  If you are unable to use PayPal, drop me a note at
+  that same email address and we can work out something else.
+
+   I also offer consulting services, and can be contracted to add specific
+  functionality to the module.  Contact me at jeremy@tag1consulting.com for
+  more information.

@@ -1,0 +1,16 @@
+; $Id: date_authored_facet.info,v 1.4 2009/01/04 19:32:04 davidlesieur Exp $
+name = Date Authored Facet
+description = "Provides a facet for searching content by date of creation."
+dependencies[] = faceted_search
+dependencies[] = search
+package = Faceted Search
+core = 6.x
+php = 5.1
+
+
+; Information added by drupal.org packaging script on 2009-03-03
+version = "6.x-1.0-beta2"
+core = "6.x"
+project = "faceted_search"
+datestamp = "1236113138"
+

@@ -1,0 +1,161 @@
+<?php
+// $Id: ad_image.install,v 1.2.2.2.2.6.2.4.2.3 2009/04/02 15:48:29 jeremy Exp $
+
+/**
+ * @file
+ * Ad_image module database schema.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function ad_image_schema() {
+  $schema['ad_image'] = array(
+    'description' => 'The ad_image table stores image information such as file ID, title, width, height of corresponding image ads.',
+    'fields' => array(
+      'aid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'fid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'url' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'tooltip' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'remote_image' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'width' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'height' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'unique keys' => array(
+      'aid' => array('aid')
+    ),
+  );
+  $schema['ad_image_format'] = array(
+    'description' => 'The ad_image_format table stores dimensions for image ads.',
+    'fields' => array(
+      'gid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'min_width' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'max_width' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'min_height' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'max_height' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'max_size' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('gid'),
+  );
+
+  return $schema;
+}
+
+
+/**
+ * ad_image module installation.
+ */
+function ad_image_install() {
+  drupal_install_schema('ad_image');
+}
+
+/**
+ * Allow complete uninstallation of the ad_image module.
+ */
+function ad_image_uninstall() {
+  // Delete all ad_image content.
+  $result = db_query("SELECT aid FROM {ad_image}");
+  while ($aid = db_result($result)) {
+    node_delete($aid);
+  }
+
+  // Remove tables.
+  drupal_uninstall_schema('ad_image');
+}
+
+/**
+ * Introduce remote_image field for remotely hosted images.
+ */
+function ad_image_update_6001() {
+  $ret = array();
+  db_add_field($ret, 'ad_image', 'remote_image',
+    array(
+      'type' => 'varchar',
+      'length' => '255',
+      'not null' => TRUE,
+      'default' => '',
+    ));
+  return $ret;
+}
+
+/**
+ * Introduce remote_image field for remotely hosted images.
+ */
+function ad_image_update_6002() {
+  $ret = array();
+  db_add_field($ret, 'ad_image_format', 'max_size',
+    array(
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE,
+      'default' => '0',
+    ));
+  return $ret;
+}

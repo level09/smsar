@@ -1,0 +1,14 @@
+; $Id: faceted_search_views.info,v 1.3 2009/02/09 00:30:22 davidlesieur Exp $
+name = Faceted Search Views
+description = "Allows to use Views to display Faceted Search results."
+dependencies[] = faceted_search_ui
+dependencies[] = views
+package = Faceted Search
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-03-03
+version = "6.x-1.0-beta2"
+core = "6.x"
+project = "faceted_search"
+datestamp = "1236113138"
+

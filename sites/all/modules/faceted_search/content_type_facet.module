@@ -1,0 +1,285 @@
+<?php
+// $Id: content_type_facet.module,v 1.21 2009/03/03 05:13:12 davidlesieur Exp $
+
+/**
+ * @file
+ * Provides a facet for content types.
+ */
+
+require_once('./'. drupal_get_path('module', 'faceted_search') .'/faceted_search.inc');
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function content_type_facet_form_faceted_search_edit_form_alter(&$form, &$form_state) {
+  $env = $form['env']['#value'];
+
+  $form['content_type_facet'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Content Type Facet options'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => 10,
+  );
+
+  $types = array();
+  foreach (array_keys(node_get_types('names')) as $type) {
+    $types[$type] = $type;
+  }
+  if (count($types)) {
+    $names = node_get_types('names');
+    faceted_search_localize_types($names);
+    $form['content_type_facet']['content_type_facet_types'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Content types to display in the Content type facet'),
+      '#description' => t('Only the checked types will appear in the Content type facet. If none is checked, all types allowed by the search environment may appear in the facet. Note that this setting is not a filter for search results; all content types allowed by the search environment will still be searchable through other facets or from text searches.'),
+      '#options' => $names,
+      '#default_value' => array_intersect($types, array_filter($env->settings['content_type_facet_types'])),
+    );
+  }
+  else {
+    $form['content_type_facet']['content_type_facet_help'] = array(
+      '#type' => 'markup',
+      '#value' => '<p>'. t('No content types are currently defined.') .'</p>',
+    );
+  }
+}
+
+/**
+ * Implementation of hook_faceted_search_collect().
+ */
+function content_type_facet_faceted_search_collect(&$facets, $domain, $env, $selection, $arg = NULL) {
+  switch ($domain) {
+    case 'facets':
+      // If the content type facet is allowed.
+      if (!isset($selection) || isset($selection['content_type'][1])) {
+        $types = content_type_facet_get_types($env);
+        $facets[] = new content_type_facet($types);
+      }
+      break;
+
+    case 'text':
+      // If the content type facet is allowed.
+      if (!isset($selection) || isset($selection['content_type'][1])) {
+        // Find the allowed types.
+        $all_types = array();
+        foreach (array_keys(node_get_types('names')) as $type) {
+          $all_types[$type] = $type;
+        }
+        $types = content_type_facet_get_types($env);
+        if (empty($types)) {
+          $allowed_types = $all_types;
+        }
+        else {
+          $allowed_types = array_intersect($types, $all_types);
+        }
+
+        // Scan the search text for a 'content_type:type' token, and extract a
+        // facet from it.
+        if ($type = search_query_extract($arg, 'content_type')) {
+          // Create a facet with the type found in search text as the active
+          // category.
+          if (isset($allowed_types[$type])) {
+            $facets[] = new content_type_facet($types, $type);
+          }
+          // Remove the parsed token from the search text.
+          $arg = search_query_insert($arg, 'content_type');
+        }
+      }
+      return $arg;
+
+    case 'node':
+      // If the content type facet is allowed.
+      if (!isset($selection) || isset($selection['content_type'][1])) {
+        $types = content_type_facet_get_types($env);
+        if (empty($types) || isset($types[$arg->type])) {
+          // Create a facet with the node's type as the active category.
+          $facets[] = new content_type_facet($types, $arg->type);
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_faceted_search_init().
+ */
+function content_type_facet_faceted_search_init(&$env) {
+  $env->settings['content_type_facet_types'] = array();
+}
+
+/**
+ * Return an array of all node types that are allowed to be shown in the content
+ * type facet.
+ *
+ * @return
+ *   Array of type names, or an empty array if all types are allowed.
+ */
+function content_type_facet_get_types($env) {
+  $allowed_types = faceted_search_types($env);
+  $types = array_filter($env->settings['content_type_facet_types']);
+  if (empty($allowed_types) || empty($types)) {
+    // All types are allowed (if there are restrictions in the environment,
+    // they're going to be already built into the query).
+    return $types;
+  }
+  else {
+    // Only return types that are allowed by the environment.
+    $types = array_intersect($types, $allowed_types);
+    if (count($types) == count($allowed_types)) {
+      // All types are selected; do the same as if none was.
+      return array();
+    }
+    return $types;
+  }
+}
+
+/**
+ * A node-type based facet.
+ */
+class content_type_facet extends faceted_search_facet {
+
+  var $_types = array();
+
+  /**
+   * Constructor. Optionally assigns the active type of the facet.
+   *
+   * @param $types
+   *   Array of possible type names for this facet, or empty array if all types
+   *   are allowed.
+   * @param $type
+   *   Optional. Type to set as this facet's active category.
+   */
+  function content_type_facet($types, $type = NULL) {
+    $active_path = array();
+    if ($type) {
+      $active_path[] = new content_type_facet_category($type, node_get_types('name', $type));
+    }
+    parent::faceted_search_facet('content_type', $active_path);
+    $this->_types = $types;
+  }
+
+  function get_id() {
+    return 1; // This module provides only one facet
+  }
+
+  function get_label() {
+    return t('Content type');
+  }
+
+  /**
+   * Returns the available sort options for this facet.
+   */
+  function get_sort_options() {
+    $options = parent::get_sort_options();
+    $options['type'] = t('Type');
+    return $options;
+  }
+
+  /**
+   * Handler for the 'count' sort criteria.
+   */
+  function build_sort_query_count(&$query) {
+    $query->add_orderby('count', 'DESC');
+    $query->add_orderby('node_type_name', 'ASC');
+  }
+
+  /**
+   * Handler for the 'type' sort criteria.
+   */
+  function build_sort_query_type(&$query) {
+    $query->add_orderby('node_type_name', 'ASC');
+  }
+
+  /**
+   * Return the search text for this facet, taking into account this facet's
+   * active path.
+   */
+  function get_text() {
+    if ($category = $this->get_active_category()) {
+      return $category->_type;
+    }
+    return '';
+  }
+
+  /**
+   * Updates a query for retrieving the root categories of this facet and their
+   * associated nodes within the current search results.
+   *
+   * @param $query
+   *   The query object to update.
+   *
+   * @return
+   *   FALSE if this facet can't have root categories.
+   */
+  function build_root_categories_query(&$query) {
+    $query->add_table('node_type', 'type', 'n', 'type');
+    $query->add_field('node_type', 'type');
+    $query->add_field('node_type', 'name');
+    if (!empty($this->_types)) {
+      $query->add_where("node_type.type IN ('". implode("', '", $this->_types) ."')");
+    }
+    $query->add_groupby('node_type_type');
+    return TRUE;
+  }
+
+  /**
+   * This factory method creates categories given query results that include the
+   * fields selected in get_root_categories_query() or get_subcategories_query().
+   *
+   * @param $results
+   *   $results A database query result resource.
+   *
+   * @return
+   *   Array of categories.
+   */
+  function build_categories($results) {
+    $categories = array();
+    while ($result = db_fetch_object($results)) {
+      $categories[] = new content_type_facet_category($result->node_type_type, $result->node_type_name, $result->count);
+    }
+    return $categories;
+  }
+}
+
+/**
+ * A node-type based facet category.
+ */
+class content_type_facet_category extends faceted_search_category {
+  var $_type = NULL;
+  var $_name = '';
+
+  /**
+   * Constructor.
+   */
+  function content_type_facet_category($type, $name, $count = NULL) {
+    parent::faceted_search_category($count);
+    $this->_type = $type;
+    $this->_name = $name;
+    faceted_search_localize_type($this->_type, $this->_name);
+  }
+
+  /**
+   * Return the label of this category.
+   *
+   * @param $html
+   *   TRUE when HTML is allowed in the label, FALSE otherwise. Checking this
+   *   flag allows implementors to provide a rich-text label if desired, and an
+   *   alternate plain text version for cases where HTML cannot be used. The
+   *   implementor is responsible to ensure adequate security filtering.
+   */
+  function get_label($html = FALSE) {
+    return check_plain($this->_name);
+  }
+
+  /**
+   * Updates a query for selecting nodes matching this category.
+   *
+   * @param $query
+   *   The query object to update.
+   */
+  function build_results_query(&$query) {
+    $query->add_where("n.type = '%s'", $this->_type);
+  }
+}
+

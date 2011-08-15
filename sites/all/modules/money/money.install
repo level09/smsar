@@ -1,0 +1,149 @@
+<?php
+// $Id: money.install,v 1.1.2.6 2009/02/23 19:13:34 markuspetrux Exp $
+
+/**
+ * @file
+ * Module installation/uninstallation hooks.
+ */
+
+/**
+ * Implementation of hook_requirements().
+ */
+function money_requirements($phase) {
+  if ($phase == 'install') {
+    $requirements = array();
+    $t = get_t();
+    drupal_load('module', 'format_number');
+    if (!function_exists('format_number_get_options')) {
+      $requirements['format_number'] = array(
+        'title' => $t('Format Number API'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('%module-name requires, at least, version 6.x-1.1 of the <a href="@format-number">Format Number API</a> module.', array(
+          '%module-name' => $t('Money CCK field'),
+          '@format-number' => 'http://drupal.org/project/format_number',
+        )),
+      );
+    }
+    drupal_load('module', 'formatted_number');
+    if (!function_exists('formatted_number_widget_validate')) {
+      $requirements['formatted_number'] = array(
+        'title' => $t('Formatted Number CCK'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('%module-name requires, at least, version 6.x-1.0 of the <a href="@formatted-number">Formatted Number CCK</a> module.', array(
+          '%module-name' => $t('Money CCK field'),
+          '@formatted-number' => 'http://drupal.org/project/formatted_number',
+        )),
+      );
+    }
+    return $requirements;
+  }
+}
+
+/**
+ * Implementation of hook_install().
+ *
+ * Notify content module when this module is installed.
+ */
+function money_install() {
+  drupal_load('module', 'content');
+  content_notify('install', 'money');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ *
+ * Notify content module when this module is uninstalled.
+ */
+function money_uninstall() {
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'money');
+}
+
+/**
+ * Implementation of hook_enable().
+ *
+ * Notify content module when this module is enabled.
+ */
+function money_enable() {
+  drupal_load('module', 'content');
+  content_notify('enable', 'money');
+}
+
+/**
+ * Implementation of hook_disable().
+ *
+ * Notify content module when this module is disabled.
+ */
+function money_disable() {
+  drupal_load('module', 'content');
+  content_notify('disable', 'money');
+}
+
+/**
+ * Update all money fields to reflect the new Views integration feature.
+ *
+ * References:
+ * http://drupal.org/node/131953 (CCK feature request)
+ * http://drupal.org/node/335546 (Money CCK field task)
+ */
+function money_update_6000() {
+  drupal_load('module', 'content');
+
+  if ($abort = content_check_update('money')) {
+    return $abort;
+  }
+
+  $ret = array();
+  $result = db_query("SELECT field_name, db_columns FROM {content_node_field} WHERE type = 'money'");
+  while ($field = db_fetch_object($result)) {
+    $db_columns = unserialize($field->db_columns);
+    if (empty($db_columns['amount']['views'])) {
+      $db_columns['amount']['views'] = TRUE;
+      $db_columns['currency']['views'] = TRUE;
+      $success = db_query("UPDATE {content_node_field} SET db_columns = '%s' WHERE field_name = '%s'", serialize($db_columns), $field->field_name);
+      $ret[] = array(
+        'success' => $success !== FALSE,
+        'query' => strtr('Updating definition of the Money CCK field: %field-name.', array('%field-name' => $field->field_name)),
+      );
+    }
+  }
+
+  if (!empty($ret)) {
+    content_clear_type_cache();
+  }
+  return $ret;
+}
+
+/**
+ * Update all money fields to reflect the changes in display mode setting.
+ *
+ * Reference:
+ * http://drupal.org/node/217842
+ */
+function money_update_6001() {
+  drupal_load('module', 'content');
+
+  if ($abort = content_check_update('money')) {
+    return $abort;
+  }
+
+  $ret = array();
+  $result = db_query("SELECT field_name, type_name, widget_settings FROM {content_node_field_instance} WHERE widget_type = 'money_widget'");
+  while ($field = db_fetch_object($result)) {
+    $widget_settings = unserialize($field->widget_settings);
+    if (isset($widget_settings['currency_display_mode'])) {
+      $widget_settings['currency_display_mode'] = ($widget_settings['currency_display_mode'] == 'symbol' ? 'a|+|s' : 'a|+|c');
+      $widget_settings = serialize($widget_settings);
+      $success = db_query("UPDATE {content_node_field_instance} SET widget_settings = '%s' WHERE type_name = '%s' AND field_name = '%s'", $widget_settings, $field->type_name, $field->field_name);
+      $ret[] = array(
+        'success' => $success !== FALSE,
+        'query' => strtr('Updating definition of the Money CCK field %field-name for type %type-name.', array('%field-name' => $field->field_name, '%type-name' => $field->type_name)),
+      );
+    }
+  }
+
+  if (!empty($ret)) {
+    content_clear_type_cache();
+  }
+  return $ret;
+}

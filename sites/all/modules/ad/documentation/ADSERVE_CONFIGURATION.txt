@@ -1,0 +1,18 @@
+It is possible to override adserve settings by adding them to the $conf array
+in settings.php.  Read more about how to override a variable in the comments
+within settings.php.
+
+Any adserve variable can be overridden in this way.
+
+What follows is a sample overidden settings.php conf array, including some
+non-adserve variables along with adserve variables:
+
+------------
+
+conf = array(
+  'site_name' => 'My Drupal site',
+  'theme_default' => 'minelli',
+  'anonymous' => 'Visitor',
+  'adcache' => 'none',
+  'method' => 'javascript',
+);

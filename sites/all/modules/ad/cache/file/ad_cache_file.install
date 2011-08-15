@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * @file
+ * Install file for ad_cache_file.module.
+ */
+
+/**
+ * Implementation of hook_disable().
+ */
+function ad_cache_file_disable() {
+  if (variable_get('ad_cache', 'none') === 'file') {
+    variable_set('ad_cache', 'none');
+    drupal_set_message(t('The advertisement cache type has been reverted from %file to %none because the %name module was disabled.', array('%file' => t('file'), '%none' => t('none'), '%name' => t('ad file cache'))));
+  }
+}

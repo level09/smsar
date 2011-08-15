@@ -1,0 +1,10 @@
+sites/default/settings.php
+sites/default/files/js
+sites/default/files/css
+sites/default/files/imagecache/
+backup/
+.*
+!.htaccess
+!.gitignore
+sites/default/files/xmlsitemap/
+

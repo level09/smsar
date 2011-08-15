@@ -1,0 +1,659 @@
+# $Id: currency_currency_api-module.pot,v 1.1.2.1 2008/09/11 04:41:39 kbahey Exp $
+#
+# LANGUAGE translation of Drupal (currency_api/currency_api.module)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from file: currency_api.module,v 1.4.2.1 2007/04/10 03:19:27 wafaa
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2007-04-14 00:51-0400\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: currency_api/currency_api.module:20
+msgid "Settings for currency API."
+msgstr ""
+
+#: currency_api/currency_api.module:33
+msgid "Log all currency exchange requests and errors to watchdog"
+msgstr ""
+
+#: currency_api/currency_api.module:196
+msgid "Afghanistan Afghani (AFA)"
+msgstr ""
+
+#: currency_api/currency_api.module:197
+msgid "Albanian Lek (ALL)"
+msgstr ""
+
+#: currency_api/currency_api.module:198
+msgid "Algerian Dinar (DZD)"
+msgstr ""
+
+#: currency_api/currency_api.module:199
+msgid "Argentine Peso (ARS)"
+msgstr ""
+
+#: currency_api/currency_api.module:200
+msgid "Aruba Florin (AWG)"
+msgstr ""
+
+#: currency_api/currency_api.module:201
+msgid "Australian Dollar (AUD)"
+msgstr ""
+
+#: currency_api/currency_api.module:202
+msgid "Bahamian Dollar (BSD)"
+msgstr ""
+
+#: currency_api/currency_api.module:203
+msgid "Bahraini Dinar (BHD)"
+msgstr ""
+
+#: currency_api/currency_api.module:204
+msgid "Bangladesh Taka (BDT)"
+msgstr ""
+
+#: currency_api/currency_api.module:205
+msgid "Barbados Dollar (BBD)"
+msgstr ""
+
+#: currency_api/currency_api.module:206
+msgid "Belarus Ruble (BYR)"
+msgstr ""
+
+#: currency_api/currency_api.module:207
+msgid "Belize Dollar (BZD)"
+msgstr ""
+
+#: currency_api/currency_api.module:208
+msgid "Bermuda Dollar (BMD)"
+msgstr ""
+
+#: currency_api/currency_api.module:209
+msgid "Bhutan Ngultrum (BTN)"
+msgstr ""
+
+#: currency_api/currency_api.module:210
+msgid "Bolivian Boliviano (BOB)"
+msgstr ""
+
+#: currency_api/currency_api.module:211
+msgid "Botswana Pula (BWP)"
+msgstr ""
+
+#: currency_api/currency_api.module:212
+msgid "Brazilian Real (BRL)"
+msgstr ""
+
+#: currency_api/currency_api.module:213
+msgid "British Pound (GBP)"
+msgstr ""
+
+#: currency_api/currency_api.module:214
+msgid "Brunei Dollar (BND)"
+msgstr ""
+
+#: currency_api/currency_api.module:215
+msgid "Bulgarian Lev (BGN)"
+msgstr ""
+
+#: currency_api/currency_api.module:216
+msgid "Burundi Franc (BIF)"
+msgstr ""
+
+#: currency_api/currency_api.module:217
+msgid "Cambodia Riel (KHR)"
+msgstr ""
+
+#: currency_api/currency_api.module:218
+msgid "Canadian Dollar (CAD)"
+msgstr ""
+
+#: currency_api/currency_api.module:219
+msgid "Cape Verde Escudo (CVE)"
+msgstr ""
+
+#: currency_api/currency_api.module:220
+msgid "Cayman Islands Dollar (KYD)"
+msgstr ""
+
+#: currency_api/currency_api.module:221
+msgid "CFA Franc (BCEAO) (XOF)"
+msgstr ""
+
+#: currency_api/currency_api.module:222
+msgid "CFA Franc (BEAC) (XAF)"
+msgstr ""
+
+#: currency_api/currency_api.module:223
+msgid "Chilean Peso (CLP)"
+msgstr ""
+
+#: currency_api/currency_api.module:224
+msgid "Chinese Yuan (CNY)"
+msgstr ""
+
+#: currency_api/currency_api.module:225
+msgid "Colombian Peso (COP)"
+msgstr ""
+
+#: currency_api/currency_api.module:226
+msgid "Comoros Franc (KMF)"
+msgstr ""
+
+#: currency_api/currency_api.module:227
+msgid "Costa Rica Colon (CRC)"
+msgstr ""
+
+#: currency_api/currency_api.module:228
+msgid "Croatian Kuna (HRK)"
+msgstr ""
+
+#: currency_api/currency_api.module:229
+msgid "Cuban Peso (CUP)"
+msgstr ""
+
+#: currency_api/currency_api.module:230
+msgid "Cyprus Pound (CYP)"
+msgstr ""
+
+#: currency_api/currency_api.module:231
+msgid "Czech Koruna (CZK)"
+msgstr ""
+
+#: currency_api/currency_api.module:232
+msgid "Danish Krone (DKK)"
+msgstr ""
+
+#: currency_api/currency_api.module:233
+msgid "Dijibouti Franc (DJF)"
+msgstr ""
+
+#: currency_api/currency_api.module:234
+msgid "Dominican Peso (DOP)"
+msgstr ""
+
+#: currency_api/currency_api.module:235
+msgid "East Caribbean Dollar (XCD)"
+msgstr ""
+
+#: currency_api/currency_api.module:236
+msgid "Ecuador Sucre (ECS)"
+msgstr ""
+
+#: currency_api/currency_api.module:237
+msgid "Egyptian Pound (EGP)"
+msgstr ""
+
+#: currency_api/currency_api.module:238
+msgid "El Salvador Colon (SVC)"
+msgstr ""
+
+#: currency_api/currency_api.module:239
+msgid "Eritrea Nakfa (ERN)"
+msgstr ""
+
+#: currency_api/currency_api.module:240
+msgid "Estonian Kroon (EEK)"
+msgstr ""
+
+#: currency_api/currency_api.module:241
+msgid "Ethiopian Birr (ETB)"
+msgstr ""
+
+#: currency_api/currency_api.module:242
+msgid "Euro (EUR)"
+msgstr ""
+
+#: currency_api/currency_api.module:243
+msgid "Falkland Islands Pound (FKP)"
+msgstr ""
+
+#: currency_api/currency_api.module:244
+msgid "Fiji Dollar (FJD)"
+msgstr ""
+
+#: currency_api/currency_api.module:245
+msgid "Gambian Dalasi (GMD)"
+msgstr ""
+
+#: currency_api/currency_api.module:246
+msgid "Ghanian Cedi (GHC)"
+msgstr ""
+
+#: currency_api/currency_api.module:247
+msgid "Gibraltar Pound (GIP)"
+msgstr ""
+
+#: currency_api/currency_api.module:248
+msgid "Gold Ounces (XAU)"
+msgstr ""
+
+#: currency_api/currency_api.module:249
+msgid "Guatemala Quetzal (GTQ)"
+msgstr ""
+
+#: currency_api/currency_api.module:250
+msgid "Guinea Franc (GNF)"
+msgstr ""
+
+#: currency_api/currency_api.module:251
+msgid "Guyana Dollar (GYD)"
+msgstr ""
+
+#: currency_api/currency_api.module:252
+msgid "Haiti Gourde (HTG)"
+msgstr ""
+
+#: currency_api/currency_api.module:253
+msgid "Honduras Lempira (HNL)"
+msgstr ""
+
+#: currency_api/currency_api.module:254
+msgid "Hong Kong Dollar (HKD)"
+msgstr ""
+
+#: currency_api/currency_api.module:255
+msgid "Hungarian Forint (HUF)"
+msgstr ""
+
+#: currency_api/currency_api.module:256
+msgid "Iceland Krona (ISK)"
+msgstr ""
+
+#: currency_api/currency_api.module:257
+msgid "Indian Rupee (INR)"
+msgstr ""
+
+#: currency_api/currency_api.module:258
+msgid "Indonesian Rupiah (IDR)"
+msgstr ""
+
+#: currency_api/currency_api.module:259
+msgid "Iran Rial (IRR)"
+msgstr ""
+
+#: currency_api/currency_api.module:260
+msgid "Iraqi Dinar (IQD)"
+msgstr ""
+
+#: currency_api/currency_api.module:261
+msgid "Israeli Shekel (ILS)"
+msgstr ""
+
+#: currency_api/currency_api.module:262
+msgid "Jamaican Dollar (JMD)"
+msgstr ""
+
+#: currency_api/currency_api.module:263
+msgid "Japanese Yen (JPY)"
+msgstr ""
+
+#: currency_api/currency_api.module:264
+msgid "Jordanian Dinar (JOD)"
+msgstr ""
+
+#: currency_api/currency_api.module:265
+msgid "Kazakhstan Tenge (KZT)"
+msgstr ""
+
+#: currency_api/currency_api.module:266
+msgid "Kenyan Shilling (KES)"
+msgstr ""
+
+#: currency_api/currency_api.module:267
+msgid "Korean Won (KRW)"
+msgstr ""
+
+#: currency_api/currency_api.module:268
+msgid "Kuwaiti Dinar (KWD)"
+msgstr ""
+
+#: currency_api/currency_api.module:269
+msgid "Lao Kip (LAK)"
+msgstr ""
+
+#: currency_api/currency_api.module:270
+msgid "Latvian Lat (LVL)"
+msgstr ""
+
+#: currency_api/currency_api.module:271
+msgid "Lebanese Pound (LBP)"
+msgstr ""
+
+#: currency_api/currency_api.module:272
+msgid "Lesotho Loti (LSL)"
+msgstr ""
+
+#: currency_api/currency_api.module:273
+msgid "Liberian Dollar (LRD)"
+msgstr ""
+
+#: currency_api/currency_api.module:274
+msgid "Libyan Dinar (LYD)"
+msgstr ""
+
+#: currency_api/currency_api.module:275
+msgid "Lithuanian Lita (LTL)"
+msgstr ""
+
+#: currency_api/currency_api.module:276
+msgid "Macau Pataca (MOP)"
+msgstr ""
+
+#: currency_api/currency_api.module:277
+msgid "Macedonian Denar (MKD)"
+msgstr ""
+
+#: currency_api/currency_api.module:278
+msgid "Malagasy Franc (MGF)"
+msgstr ""
+
+#: currency_api/currency_api.module:279
+msgid "Malawi Kwacha (MWK)"
+msgstr ""
+
+#: currency_api/currency_api.module:280
+msgid "Malaysian Ringgit (MYR)"
+msgstr ""
+
+#: currency_api/currency_api.module:281
+msgid "Maldives Rufiyaa (MVR)"
+msgstr ""
+
+#: currency_api/currency_api.module:282
+msgid "Maltese Lira (MTL)"
+msgstr ""
+
+#: currency_api/currency_api.module:283
+msgid "Mauritania Ougulya (MRO)"
+msgstr ""
+
+#: currency_api/currency_api.module:284
+msgid "Mauritius Rupee (MUR)"
+msgstr ""
+
+#: currency_api/currency_api.module:285
+msgid "Mexican Peso (MXN)"
+msgstr ""
+
+#: currency_api/currency_api.module:286
+msgid "Moldovan Leu (MDL)"
+msgstr ""
+
+#: currency_api/currency_api.module:287
+msgid "Mongolian Tugrik (MNT)"
+msgstr ""
+
+#: currency_api/currency_api.module:288
+msgid "Moroccan Dirham (MAD)"
+msgstr ""
+
+#: currency_api/currency_api.module:289
+msgid "Mozambique Metical (MZM)"
+msgstr ""
+
+#: currency_api/currency_api.module:290
+msgid "Myanmar Kyat (MMK)"
+msgstr ""
+
+#: currency_api/currency_api.module:291
+msgid "Namibian Dollar (NAD)"
+msgstr ""
+
+#: currency_api/currency_api.module:292
+msgid "Nepalese Rupee (NPR)"
+msgstr ""
+
+#: currency_api/currency_api.module:293
+msgid "Neth Antilles Guilder (ANG)"
+msgstr ""
+
+#: currency_api/currency_api.module:294
+msgid "New Zealand Dollar (NZD)"
+msgstr ""
+
+#: currency_api/currency_api.module:295
+msgid "Nicaragua Cordoba (NIO)"
+msgstr ""
+
+#: currency_api/currency_api.module:296
+msgid "Nigerian Naira (NGN)"
+msgstr ""
+
+#: currency_api/currency_api.module:297
+msgid "North Korean Won (KPW)"
+msgstr ""
+
+#: currency_api/currency_api.module:298
+msgid "Norwegian Krone (NOK)"
+msgstr ""
+
+#: currency_api/currency_api.module:299
+msgid "Omani Rial (OMR)"
+msgstr ""
+
+#: currency_api/currency_api.module:300
+msgid "Pacific Franc (XPF)"
+msgstr ""
+
+#: currency_api/currency_api.module:301
+msgid "Pakistani Rupee (PKR)"
+msgstr ""
+
+#: currency_api/currency_api.module:302
+msgid "Palladium Ounces (XPD)"
+msgstr ""
+
+#: currency_api/currency_api.module:303
+msgid "Panama Balboa (PAB)"
+msgstr ""
+
+#: currency_api/currency_api.module:304
+msgid "Papua New Guinea Kina (PGK)"
+msgstr ""
+
+#: currency_api/currency_api.module:305
+msgid "Paraguayan Guarani (PYG)"
+msgstr ""
+
+#: currency_api/currency_api.module:306
+msgid "Peruvian Nuevo Sol (PEN)"
+msgstr ""
+
+#: currency_api/currency_api.module:307
+msgid "Philippine Peso (PHP)"
+msgstr ""
+
+#: currency_api/currency_api.module:308
+msgid "Platinum Ounces (XPT)"
+msgstr ""
+
+#: currency_api/currency_api.module:309
+msgid "Polish Zloty (PLN)"
+msgstr ""
+
+#: currency_api/currency_api.module:310
+msgid "Qatar Rial (QAR)"
+msgstr ""
+
+#: currency_api/currency_api.module:311
+msgid "Romanian Leu (ROL)"
+msgstr ""
+
+#: currency_api/currency_api.module:312
+msgid "Russian Rouble (RUB)"
+msgstr ""
+
+#: currency_api/currency_api.module:313
+msgid "Rwanda Franc (RWF)"
+msgstr ""
+
+#: currency_api/currency_api.module:314
+msgid "Samoa Tala (WST)"
+msgstr ""
+
+#: currency_api/currency_api.module:315
+msgid "Sao Tome Dobra (STD)"
+msgstr ""
+
+#: currency_api/currency_api.module:316
+msgid "Saudi Arabian Riyal (SAR)"
+msgstr ""
+
+#: currency_api/currency_api.module:317
+msgid "Seychelles Rupee (SCR)"
+msgstr ""
+
+#: currency_api/currency_api.module:318
+msgid "Sierra Leone Leone (SLL)"
+msgstr ""
+
+#: currency_api/currency_api.module:319
+msgid "Silver Ounces (XAG)"
+msgstr ""
+
+#: currency_api/currency_api.module:320
+msgid "Singapore Dollar (SGD)"
+msgstr ""
+
+#: currency_api/currency_api.module:321
+msgid "Slovak Koruna (SKK)"
+msgstr ""
+
+#: currency_api/currency_api.module:322
+msgid "Slovenian Tolar (SIT)"
+msgstr ""
+
+#: currency_api/currency_api.module:323
+msgid "Solomon Islands Dollar (SBD)"
+msgstr ""
+
+#: currency_api/currency_api.module:324
+msgid "Somali Shilling (SOS)"
+msgstr ""
+
+#: currency_api/currency_api.module:325
+msgid "South African Rand (ZAR)"
+msgstr ""
+
+#: currency_api/currency_api.module:326
+msgid "Sri Lanka Rupee (LKR)"
+msgstr ""
+
+#: currency_api/currency_api.module:327
+msgid "St Helena Pound (SHP)"
+msgstr ""
+
+#: currency_api/currency_api.module:328
+msgid "Sudanese Dinar (SDD)"
+msgstr ""
+
+#: currency_api/currency_api.module:329
+msgid "Surinam Guilder (SRG)"
+msgstr ""
+
+#: currency_api/currency_api.module:330
+msgid "Swaziland Lilageni (SZL)"
+msgstr ""
+
+#: currency_api/currency_api.module:331
+msgid "Swedish Krona (SEK)"
+msgstr ""
+
+#: currency_api/currency_api.module:332
+msgid "Swiss Franc (CHF)"
+msgstr ""
+
+#: currency_api/currency_api.module:333
+msgid "Syrian Pound (SYP)"
+msgstr ""
+
+#: currency_api/currency_api.module:334
+msgid "Taiwan Dollar (TWD)"
+msgstr ""
+
+#: currency_api/currency_api.module:335
+msgid "Tanzanian Shilling (TZS)"
+msgstr ""
+
+#: currency_api/currency_api.module:336
+msgid "Thai Baht (THB)"
+msgstr ""
+
+#: currency_api/currency_api.module:337
+msgid "Tonga Pa'anga (TOP)"
+msgstr ""
+
+#: currency_api/currency_api.module:338
+msgid "Trinidad & Tobago Dollar (TTD)"
+msgstr ""
+
+#: currency_api/currency_api.module:339
+msgid "Tunisian Dinar (TND)"
+msgstr ""
+
+#: currency_api/currency_api.module:340
+msgid "Turkish Lira (TRL)"
+msgstr ""
+
+#: currency_api/currency_api.module:341
+msgid "U.S. Dollar (USD)"
+msgstr ""
+
+#: currency_api/currency_api.module:342
+msgid "UAE Dirham (AED)"
+msgstr ""
+
+#: currency_api/currency_api.module:343
+msgid "Ugandan Shilling (UGX)"
+msgstr ""
+
+#: currency_api/currency_api.module:344
+msgid "Ukraine Hryvnia (UAH)"
+msgstr ""
+
+#: currency_api/currency_api.module:345
+msgid "Uruguayan New Peso (UYU)"
+msgstr ""
+
+#: currency_api/currency_api.module:346
+msgid "Vanuatu Vatu (VUV)"
+msgstr ""
+
+#: currency_api/currency_api.module:347
+msgid "Venezuelan Bolivar (VEB)"
+msgstr ""
+
+#: currency_api/currency_api.module:348
+msgid "Vietnam Dong (VND)"
+msgstr ""
+
+#: currency_api/currency_api.module:349
+msgid "Yemen Riyal (YER)"
+msgstr ""
+
+#: currency_api/currency_api.module:350
+msgid "Yugoslav Dinar (YUM)"
+msgstr ""
+
+#: currency_api/currency_api.module:351
+msgid "Zambian Kwacha (ZMK)"
+msgstr ""
+
+#: currency_api/currency_api.module:352
+msgid "Zimbabwe Dollar (ZWD)"
+msgstr ""
+
+#: currency_api/currency_api.module:0
+msgid "currency_api"
+msgstr ""
+

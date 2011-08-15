@@ -1,0 +1,402 @@
+<?php
+// $Id: simplest_gmap.module,v 1.1.2.1 2009/04/13 17:53:40 troy Exp $
+
+/**
+ * @file
+ * CCK - Google Maps API integration.
+ */
+
+
+// global settings are used as general defaults
+// these settings are overriden by specific field settings
+$GLOBALS['_simplest_gmap_defaults'] = array(
+  'map_type' => 'G_NORMAL_MAP',
+  'map_width' => 300,
+  'map_height' => 300,
+  'map_latitude' => 20,
+  'map_longitude' => 20,
+  'map_zoom' => 2,
+  'control_overview' => FALSE,
+  'control_scale' => FALSE,
+  'control_size' => '',
+  'control_nodrag' => FALSE,
+  'control_nozoom' => FALSE
+);
+
+function simplest_gmap_menu() {
+  $items['admin/settings/simplest_gmap'] = array(
+    'title' => 'Simplest gmap',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('simplest_gmap_settings'),
+    'description' => 'Configure simplest gmap module.',
+    'access arguments' => array('administer simplest gmap'),
+  );
+  
+  return $items;
+}
+
+function simplest_gmap_settings() {
+  $form = array();
+  $form['sg_map_key']= array(
+      '#title' => t('Google Maps API key'),
+      '#type' => 'textfield',
+      '#default_value' => variable_get('sg_map_key', '')     
+  );
+  
+  return system_settings_form($form);
+}
+
+function _simplest_gmap_init() {
+  static $ready = 0;  
+  // we need to init gmaps only once
+  if (!$ready) {
+    global $_simplest_gmap_defaults;
+    $path = drupal_get_path('module', 'simplest_gmap');
+    drupal_add_css($path .'/simplest_gmap.css');
+    drupal_add_js($path .'/simplest_gmap.js');
+    
+    if (!(variable_get('sg_map_key', ''))) {
+      drupal_set_message(t('Configure your GMaps API Key <a href="@url">here</a>', array('@url' => url('admin/settings/simplest_gmap'))));
+    }
+    
+    drupal_set_html_head('<script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key='. variable_get('sg_map_key', '') .'" type="text/javascript"></script>');
+  }
+  $ready++;
+}
+
+
+
+function simplest_gmap_theme() { 
+  return array(
+    'simplest_gmap' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'simplest_gmap_formatter_default' => array(
+      'arguments' => array('element' => NULL),
+    ),
+  );
+}
+
+/* gmap rendering for admin map form */
+function theme_simplest_gmap($element) {  
+  global $_simplest_gmap_defaults;  
+  
+  // we need to get default settings for this specific field.  
+  $field = content_fields($element['#field_name'], $element['#type_name']); 
+  $default_elements = array_keys($_simplest_gmap_defaults);
+  $defaults = array();
+  foreach ($default_elements as $k) {
+    $defaults[$k] = $field[$k];
+  }
+  
+  $map_id = 'mapinput_'. $element['#field_name'] .'_'. $element['#delta'];
+  $elements_name = $element['#field_name'] .'['. $element['#delta'] .']';
+  
+  _simplest_gmap_init();  
+  $settings = array($map_id => array(
+    'map_id' => $map_id,
+    'input_mode' => TRUE, // admin mode, update textfields
+    'elements_name' => $elements_name,    
+    'latitude' => empty($element["#value"]['latitude']) ? $element["#default_value"]['latitude'] : $element["#value"]['latitude'],
+    'longitude' => empty($element["#value"]['longitude']) ? $element["#default_value"]['longitude'] : $element["#value"]['longitude'],
+    'zoom' => empty($element["#value"]['zoom']) ? $element["#default_value"]['zoom'] : $element["#value"]['zoom'],
+    'defaults' => $defaults,
+    )
+  );
+  drupal_add_js(array("simplest_gmap" => $settings), 'setting'); 
+  
+  
+  $help = t("<p>Drag map by holding left button. Zoom map by mouse scroll. Create marker by double-click. </p>");
+  
+  return '<div id="'. $map_id .'" style="width:'. $defaults['map_width'] .'px; height:'. $defaults['map_height'] .'px">'. $element['#item']['safe'] .'</div>'. $help . $element['#children'];
+  //return $element['#children'];
+}
+/*** cck integration ***/
+/**
+ * Implementation of hook_field_info().
+ */
+function simplest_gmap_field_info() {
+  return array(
+      'simplest_gmap' => array(
+      'label' => t('Simplest Gmap'),
+      'description' => t('Store gmap in the database.'),
+    ),
+  );
+}
+
+
+function simplest_gmap_field_settings($op, $field) {
+  global $_simplest_gmap_defaults;
+  switch ($op) {
+    case 'form':
+      foreach ($_simplest_gmap_defaults as $setting_name => $setting_value) {
+        if (!$field[$setting_name]) {
+          $field[$setting_name] = $setting_value;
+        }
+      }
+      
+      $form = array();
+      $form['map_width']= array(
+        '#title' => t('Map width'),
+        '#type' => 'textfield',
+        '#field_suffix' => ' px',
+        '#default_value' => $field['map_width'],
+        '#size' => 6
+      );
+      
+      $form['map_height']= array(
+        '#title' => t('Map height'),
+        '#type' => 'textfield',
+        '#field_suffix' => ' px',
+        '#default_value' => $field['map_height'],
+        '#size' => 6
+      );
+      
+      $form['map_latitude']= array(
+        '#title' => t('Map latitude'),
+        '#type' => 'textfield',
+        '#default_value' => $field['map_latitude'],
+        '#size' => 6
+      );
+      
+      $form['map_longitude']= array(
+        '#title' => t('Map longitude'),
+        '#type' => 'textfield',
+        '#default_value' => $field['map_longitude'],
+        '#size' => 6
+      );
+      
+      $form['map_zoom']= array(
+        '#title' => t('Map zoom level'),
+        '#type' => 'textfield',
+        '#default_value' => $field['map_zoom'],
+        '#size' => 3
+      );
+      
+      $form['map_type']= array(
+        '#title' => t('Map type'),
+        '#type' => 'select',
+        '#options' => array(
+            'G_NORMAL_MAP' => t('Normal map'),
+            'G_SATELLITE_MAP' => t('Satellite map'),
+            'G_HYBRID_MAP' => t('Hybrid map'),
+          ),        
+        '#default_value' => $field['map_type'],        
+      );
+      
+      $form['control_overview'] = array(
+        '#title' => 'Show map overview control',
+        '#type' => 'checkbox',
+        '#default_value' => $field['control_overview'],
+      );
+      
+      $form['control_nozoom'] = array(
+        '#title' => 'Disable zoom by scroll (for user view only)',
+        '#type' => 'checkbox',
+        '#default_value' => $field['control_nozoom'],
+      );
+      
+      $form['control_nodrag'] = array(
+        '#title' => 'Disable mouse drag (for user view only)',
+        '#type' => 'checkbox',
+        '#default_value' => $field['control_nodrag'],
+      );
+      
+      $form['control_scale'] = array(
+        '#title' => 'Show scale measure mark',
+        '#type' => 'checkbox',
+        '#default_value' => $field['control_scale'],
+      );
+      
+      $form['control_size'] = array(
+        '#title' => 'Controls size',
+        '#type' => 'select',
+        '#options' => array(
+          '' => t('No controls'),
+          'GSmallZoomControl' => t('Micro (+/-)'),
+          'GSmallMapControl' => t('Small'),
+          'GLargeMapControl' => t('Large'),          
+          ),
+        '#multiple' => FALSE,
+        '#default_value' => $field['control_size'],
+      );
+
+      
+      return $form;
+    case 'save':
+      return array_keys($_simplest_gmap_defaults);
+      
+    case 'database columns':
+      $columns['latitude'] = array('type' => 'numeric', 'precision' => 9, 'scale' => 6, 'not null' => FALSE, 'sortable' => FALSE);
+      $columns['longitude'] = array('type' => 'numeric', 'precision' => 9, 'scale' => 6, 'not null' => FALSE, 'sortable' => FALSE);
+      $columns['zoom'] = array('type' => 'int', 'default' => 2, 'not null' => FALSE, 'sortable' => FALSE, 'unsigned' => TRUE);
+      
+      return $columns; 
+  }
+}
+
+
+
+/**
+ * Implementation of hook_field().
+ */
+function simplest_gmap_field($op, &$node, $field, &$items, $teaser, $page) {
+  switch ($op) {
+    /* case 'validate':
+      $allowed_values = content_allowed_values($field);
+      if (is_array($items)) {
+        foreach ($items as $delta => $item) {
+          $error_element = isset($item['_error_element']) ? $item['_error_element'] : '';
+          if (is_array($item) && isset($item['_error_element'])) unset($item['_error_element']);
+          if (!empty($item['value'])) {
+            if (count($allowed_values) && !array_key_exists($item['value'], $allowed_values)) {
+              form_set_error($error_element, t('%name: illegal value.', array('%name' => t($field['widget']['label']))));
+            }
+            if (!empty($field['max_length']) && drupal_strlen($item['value']) > $field['max_length']) {
+              form_set_error($error_element, t('%name: the value may not be longer than %max characters.', array('%name' => $field['widget']['label'], '%max' => $field['max_length'])));
+            }
+          }
+        }
+      }
+      return $items; */
+
+    case 'sanitize':
+      foreach ($items as $delta => $item) {        
+        $text = $item['latitude'] .'x'. $item['longitude'] .':'. $item['zoom'];
+        $items[$delta]['safe'] = $text;            
+      }
+  }
+}
+
+
+/**
+ * Implementation of hook_content_is_empty().
+ */
+function simplest_gmap_content_is_empty($item, $field) {
+  if (empty($item['latitude']) || empty($item['longitude'])) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+
+function simplest_gmap_elements() {
+  return array(
+    'simplest_gmap' => array(
+      '#input' => TRUE,      
+      '#columns' => array('latitude', 'longitude', 'zoom'), '#delta' => 0,
+      '#process' => array('simplest_gmap_process')      
+    )  
+  );
+}
+
+function simplest_gmap_widget_info() {
+  return array(
+    'simplest_gmap' => array(
+      'label' => t('Simplest gmap'),
+      'field types' => array('simplest_gmap'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+      'callbacks' => array(
+        'default value' => CONTENT_CALLBACK_DEFAULT,
+      ),
+    )
+  );
+}
+
+function simplest_gmap_field_formatter_info() {  
+  return array(
+    'default' => array(
+      'label' => t('Default'),
+      'field types' => array('simplest_gmap'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    )
+  );
+}
+
+/**
+ * Theme function for 'default' gmap field formatter.
+ * so, this is a client-side Gmap rendering 
+ * check for theme_simplest_gmap to see admin-side Gmap rendering 
+ */
+function theme_simplest_gmap_formatter_default($element) {    
+  global $_simplest_gmap_defaults;
+  // we need to get default settings for this specific field.  
+  $field = content_fields($element['#field_name'], $element['#type_name']); 
+  $default_elements = array_keys($_simplest_gmap_defaults);
+  $defaults = array();
+  foreach ($default_elements as $k) {
+    $defaults[$k] = $field[$k];
+  }
+  
+  $map_id = 'map_'. $element['#field_name'] .'_'. $element['#item']['#delta'];
+  
+  _simplest_gmap_init();  
+  
+  
+  $settings = array($map_id => array(
+    'map_id' => $map_id,
+    'latitude' => $element['#item']['latitude'],
+    'longitude' => $element['#item']['longitude'],
+    'zoom' => $element['#item']['zoom'],
+    'map_type' => $field['map_type'],
+    'defaults' => $defaults,
+    )
+  );
+  drupal_add_js(array("simplest_gmap" => $settings), 'setting');
+  
+  
+  
+  return '<div id="'. $map_id .'" style="width:'. $defaults['map_width'] .'px; height:'. $defaults['map_height'] .'px">'. $element['#item']['safe'] .'</div>';
+}
+
+function simplest_gmap_widget(&$form, &$form_state, $field, $items, $delta = 0) {    
+  $element = array(
+    '#type' => 'simplest_gmap',   
+    '#default_value' => isset($items[$delta]) ? $items[$delta] : ''
+  );
+  return $element;
+}
+
+/**
+ * Process an individual element.
+ *
+ * Build the form element. When creating a form using FAPI #process,
+ * note that $element['#value'] is already set.
+ *
+ * The $fields array is in $form['#field_info'][$element['#field_name']].
+ */
+function simplest_gmap_process($element, $edit, $form_state, $form) {  
+  
+  $field = $form['#field_info'][$element['#field_name']];   
+  $delta = $element['#delta']; 
+  
+  
+  $element['latitude'] = array(
+    '#required' => $element['#required'],
+    '#type' => 'textfield',
+    '#title' => t('Latitude for @title', array('@title' => $element['#title'])),
+    '#default_value' => isset($element['#value']['latitude']) ? $element['#value']['latitude'] : NULL,
+    '#field_name' => $element['#field_name'],
+    '#type_name' => $element['#type_name'],
+  );
+  
+  $element['longitude'] = array(
+    '#required' => $element['#required'],
+    '#type' => 'textfield',
+    '#title' => t('Longitude for @title', array('@title' => $element['#title'])),
+    '#default_value' => isset($element['#value']['longitude']) ? $element['#value']['longitude'] : NULL,
+    '#field_name' => $element['#field_name'],
+    '#type_name' => $element['#type_name'],
+  );
+  
+  $element['zoom'] = array(
+    '#required' => $element['#required'],
+    '#type' => 'textfield',
+    '#title' => t('Zoom for @title', array('@title' => $element['#title'])),
+    '#default_value' => isset($element['#value']['zoom']) ? $element['#value']['zoom'] : NULL,
+    '#field_name' => $element['#field_name'],
+    '#type_name' => $element['#type_name'],
+  );
+  
+  return $element;
+}

@@ -1,0 +1,565 @@
+<?php
+// $Id: relevant_content.module,v 1.2.2.6 2008/11/06 13:37:48 njt1982 Exp $
+
+/**
+ * @file
+ * This module provides blocks to inform users of relevant content. This is done on a per-content-type basis
+ */
+
+
+/**
+ * Implementation of hook_help().
+ */
+function relevant_content_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help' :
+      return t('Provides a block using the Views module to display relevant nodes for the current page.');
+    case 'admin/settings/relevant_content' :
+      $output  = '<p>'. t('On this page you can configure which blocks should be provided on a per-content-type basis. If you enabled a content type, please make sure to provided a block title.') .'</p>';
+      $output .= '<p>'. t('The <em>Limit</em> field allows you to provide a maximum number of nodes to be displayed for that block.') .'</p>';
+      $output .= '<p>'. t('The <em>Block Header Text</em> field allows you to provide some text which can appear at the top of the block - good for explaining to the user what the block is.') .'</p>';
+      return $output;
+  }
+}
+
+
+/**
+ * Implementation of hook_perm().
+ */
+function relevant_content_perm() {
+  return array('administer relevant content');
+}
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function relevant_content_menu() {
+  $items = array();
+
+  $items['admin/settings/relevant_content'] = array(
+    'title' => 'Relevant Content',
+    'description' => 'Configure the sites <em>relevant content</em> blocks.',
+    'page callback' => 'relevant_content_admin',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer relevant content'),
+  );
+
+  $items['admin/settings/relevant_content/delete'] = array(
+    'title' => 'Delete Block?',
+    'page callback' => 'relevant_content_admin_delete',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer relevant content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+
+/**
+ * Settings page form
+ *
+ * This function provides the module settings page form which is used for enabling content type blocks.
+ */
+function relevant_content_admin($delta = NULL) {
+  $settings = variable_get('relevant_content', array());
+  if (!is_null($delta)) {
+    if (!is_array($settings[$delta])) {
+      drupal_not_found();
+      exit;
+    }
+    return drupal_get_form('relevant_content_admin_block_form', $delta);
+  }
+
+  $content_types = node_get_types('names');
+  $vocabularies = taxonomy_get_vocabularies();
+
+  $rows = array();
+  foreach ($settings as $delta => $info) {
+    array_walk($info['types'],  '_relevant_content_array_map_key_to_values', $content_types);
+    array_walk($info['vocabs'], '_relevant_content_array_map_key_to_values', $vocabularies);
+
+    $ops = array(
+      l(t('Edit'), 'admin/settings/relevant_content/'. $delta),
+      l(t('Delete'), 'admin/settings/relevant_content/delete/'. $delta),
+    );
+
+    $rows[] = array(
+      $delta,
+      theme('item_list', $info['types']),
+      theme('item_list', $info['vocabs']),
+      check_plain($info['limit']),
+      theme('item_list', $ops),
+    );
+  }
+
+  $headers = array(t('Block ID'), t('Enabled Types'), t('Enabled Vocabularies'), t('Max Results'), t('Actions'));
+
+  $output = theme('table', $headers, $rows);
+
+  $output .= drupal_get_form('relevant_content_admin_block_form');
+
+  return $output;
+}
+
+
+/**
+ * Form API based function which generated the block add AND the block edit form. The form is an 'edit' form if a delta is passed in for editing.
+ * @param $delta
+ *  The 'delta' (or ID) of the block being editted. Will effectively be the array key in the $settings array.
+ */
+function relevant_content_admin_block_form($form_state, $delta = NULL) {
+  if (!is_null($delta)) {
+    $settings = variable_get('relevant_content', array());
+  }
+
+  $form = array();
+
+  $form['settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => isset($delta) ? t('Edit Block') : t('Add Block'),
+    '#tree' => TRUE,
+  );
+
+  if (is_null($delta)) {
+    $form['settings']['delta'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Block <em>Delta</em>'),
+      '#description' => t('The <em>Delta</em> is used to uniquely identify a block. Please user uppercase & lowercase characters, numbers and underscores only'),
+      '#required' => TRUE,
+      '#maxlength' => 12,
+      '#size' => 12,
+    );
+  }
+  else {
+    $form['settings']['delta'] = array(
+      '#type' => 'value',
+      '#value' => $delta,
+    );
+    $form['settings']['delta_field'] = array(
+      '#type' => 'item',
+      '#title' => t('Block <em>Delta</em>'),
+      '#description' => t('The <em>Delta</em> is used to uniquely identify a block'),
+      '#value' => $delta,
+    );
+  }
+
+  $form['settings']['types'] = array(
+    '#type' => 'checkboxes',
+    '#title' =>  t('Enabled Content Types'),
+    '#description' => t('Check the content types you would like to search for.'),
+    '#options' => node_get_types('names'),
+    '#default_value' => is_null($delta) ? array() : $settings[$delta]['types'],
+  );
+
+
+  $vocabs = array();
+  foreach (taxonomy_get_vocabularies() as $vid => $voc) {
+    $vocabs[$vid] = $voc->name;
+  }
+
+  $form['settings']['vocabs'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Enabled Vocabularies'),
+    '#description' => t('Check the vocabularies you would like to search for'),
+    '#options' => $vocabs,
+    '#default_value' => is_null($delta) ? array() : $settings[$delta]['vocabs'],
+  );
+
+  $form['settings']['limit'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Limit'),
+    '#description' => t('What is the maximum number of results would you like returned?'),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#required' => TRUE,
+    '#default_value' => is_null($delta) ? 0 : $settings[$delta]['limit'],
+  );
+
+  $form['settings']['header_text'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Header Text'),
+    '#description' => t('Optionally provide some text to appear above the listing'),
+    '#rows' => 3,
+    '#default_value' => is_null($delta) ? '' : $settings[$delta]['header_text'],
+  );
+
+  $form['settings']['op'] = array(
+    '#type' => 'value',
+    '#value' => is_null($delta) ? 'add' : 'edit',
+  );
+  $form['settings']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save Settings'),
+  );
+
+  return $form;
+}
+
+
+/**
+ * Validate function for the above form
+ */
+function relevant_content_admin_block_form_validate($form, &$form_state) {
+  if ($form_state['values']['settings']['op'] == 'add') {
+    if (preg_match('#[^a-zA-Z0-9_]#', $form_state['values']['settings']['delta'])) {
+      form_set_error('settings][delta', t('Invalid character detected. Please only use uppercase and lowercase characters, numbers and underscores'));
+      return;
+    }
+
+    $settings = variable_get('relevant_content', array());
+    if (is_array($settings[$form_state['values']['settings']['delta']])) {
+      form_set_error('settings][delta', t('This <em>Delta</em> has already been used, please try another'));
+    }
+  }
+
+  if (!is_numeric($form_state['values']['settings']['limit']) || $form_state['values']['settings']['limit'] <= 0) {
+    form_set_error('settings][limit', t('The limit must be a positive numeric value, eg 5.'));
+  }
+
+  $a = array_filter($form_state['values']['settings']['types']);
+  if (empty($a)) {
+    form_set_error('settings][types', t('You must select at least one content type to display.'));
+  }
+
+  $a = array_filter($form_state['values']['settings']['vocabs']);
+  if (empty($a)) {
+    form_set_error('settings][vocabs', t('You must select at least one vocabulary to limit your term searching to.'));
+  }
+}
+
+
+/**
+ *  Submit handler for the block add/edit form.
+ */
+function relevant_content_admin_block_form_submit($form, &$form_state) {
+  $settings = variable_get('relevant_content', array());
+
+  $settings[$form_state['values']['settings']['delta']] = array(
+    'types'       => array_filter($form_state['values']['settings']['types']),
+    'vocabs'      => array_filter($form_state['values']['settings']['vocabs']),
+    'limit'       => (int)$form_state['values']['settings']['limit'],
+    'header_text' => $form_state['values']['settings']['header_text'],
+  );
+
+  variable_set('relevant_content', $settings);
+  $form_state['redirect'] = 'admin/settings/relevant_content';
+}
+
+
+/**
+ * Menu callback for deleting a variable. Does some basic validation first before calling the Form API.
+ */
+function relevant_content_admin_delete($delta) {
+  $settings = variable_get('relevant_content', array());
+
+  if (!is_array($settings[$delta])) {
+    drupal_not_found();
+    exit;
+  }
+
+  return drupal_get_form('relevant_content_admin_delete_confirm', $delta);
+}
+
+
+/**
+ * Form API based function for geneating the confirmation page for deleting a block from the settings.
+ */
+function relevant_content_admin_delete_confirm($form_state, $delta) {
+  $form = array();
+
+  $form['delta'] = array(
+    '#type' => 'hidden',
+    '#value' => $delta
+  );
+
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete block "%delta"?', array('%delta' => $delta)),
+    'admin/settings/relevant_content',
+    t('Note: This action cannt be undone')
+  );
+}
+
+
+/**
+ *  Delete confirmation form submission handler. Usets the block settings from the settings array based on the hidden delta field passed in from the previous funciton.
+ */
+function relevant_content_admin_delete_confirm_submit($form, &$form_state) {
+  $settings = variable_get('relevant_content', array());
+
+  unset($settings[$form_state['values']['delta']]);
+
+  variable_set('relevant_content', $settings);
+
+  $form_state['redirect'] = 'admin/settings/relevant_content';
+}
+
+
+/**
+ * Implementation of hook_block().
+ */
+function relevant_content_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    case 'list' :
+      $blocks = array();
+
+      $settings = variable_get('relevant_content', array());
+
+      if (!empty($settings)) {
+        foreach ($settings as $delta => $params) {
+          $blocks[$delta] = array(
+            'info' => t('Relevant Content: @title', array('@title' => $delta)),
+            'cache' => BLOCK_CACHE_PER_ROLE | BLOCK_CACHE_PER_PAGE,
+            'visibility' => 1,
+            'pages' => 'node/*',
+          );
+        }
+      }
+
+      return $blocks;
+
+    case 'view' :
+      $settings = variable_get('relevant_content', array());
+
+      //Get the terms for the current page using a little reusable wrapper function
+      $terms = relevant_content_get_page_terms();
+
+      //If there are no terms, not a lot of point in continuing
+      if (empty($terms)) {
+        return;
+      }
+
+      //Filter out the terms which are not in a selected vocabulary
+      foreach ($terms as $key => $term) {
+        if (isset($settings[$delta]['vocabs'][$term->vid])) {
+          $terms[$key] = $term->tid;
+        }
+        else {
+          unset($terms[$key]);
+        }
+      }
+
+      //Again - if there are no terms, no need to continue!
+      if (empty($terms)) {
+        return;
+      }
+
+      //Create a node exclusion list - this will exclude the currently viewed node - if applicable.
+      //This stops the currently viewed node appearing top of a list - afterall, it IS the most relevant!
+      $exclude = array();
+      if (arg(0) == 'node' && is_numeric(arg(1))) {
+        $exclude[] = arg(1);
+      }
+
+      if ($nodes = relevant_content_get_nodes($settings[$delta]['types'], $terms, $exclude, $settings[$delta]['limit'])) {
+        $header = isset($settings[$delta]['header_text']) ? $settings[$delta]['header_text'] : FALSE;
+        return array(
+          'subject' => t('Relevant Content'),
+          'content' => theme('relevant_content_block', $nodes, $header),
+        );
+      }
+      break;
+  }
+}
+
+
+/**
+ * Handy wrapper function to find the terms for the current page
+ */
+function relevant_content_get_page_terms($node = NULL) {
+  /**
+   * If we have passed a node in, check if this node has taxonomy and use that. If not, try to load the terms using taxonomy_node_get_terms.
+   * This is a rare situation, but sometimes happens if your module has a lower weight than taxonomy so on node_load, you get the node object pre-taxonomy. This happens with CCK Fields...
+   */
+  if ($node) {
+    // Use the node's terms....
+    if (is_array($node->taxonomy)) {
+      $terms = $node->taxonomy;
+    }
+    // If we have a revision ID on the node, then we can try to load through taxonomy node get terms...
+    elseif (isset($node->vid)) {
+      $terms = taxonomy_node_get_terms($node);
+    }
+  }
+  // If the URL is node/% then we can use Drupal 6's new menu_get_object. This method has it's risks and should be used with care. It is possible to end up in an infinit loop with one loading cycle invoking the next...
+  elseif (arg(0) == 'node' && is_numeric(arg(1))) {
+    $node = menu_get_object();
+    $terms = taxonomy_node_get_terms($node);
+  }
+  // Fall back to the term_cache if none of the above worked
+  else {
+    $terms = relevant_content_term_cache();
+  }
+
+  // Provide a hook_relelvant_content_terms where other modules can change the relevant terms if needed...
+  drupal_alter('relevant_content_terms', $terms);
+
+  return $terms;
+}
+
+
+/**
+ * Implementation of hook_theme().
+ */
+function relevant_content_theme($existing, $type, $theme, $path) {
+  return array(
+    'relevant_content_block' => array(
+      'arguments' => array($nodes => array(), $header => FALSE),
+    ),
+  );
+}
+
+
+/**
+ * Theme function for rendering the relevant nodes into a block.
+ *
+ * This is provided so that an item list is the default, however a themer can
+ * easily override this to make a teaser list or table.
+ *
+ * @param $nodes
+ *   Associative array where the key is the node id and the value is the node title
+ * @param $header
+ *   Optional string to display at the top of the block
+ */
+
+function theme_relevant_content_block($nodes, $header = FALSE) {
+  $items = array();
+  foreach ($nodes as $node) {
+    $items[] = l($node['title'], 'node/'. $node['nid']);
+  }
+
+  $output = '';
+  if ($header) {
+    $output = check_markup($header);
+  }
+
+  $output .= theme('item_list', $items);
+  return $output;
+}
+
+
+/**
+ * Function to get a set of nodes.
+ *
+ * This returns a set of nodes based on the provided type and array of term
+ * ID's.
+ *
+ * @param $type
+ *   Array representing the node types
+ * @param $terms
+ *   Array of Term ID's
+ * @param $exclude
+ *   Array - Optional: An array of Node ID's to exclude. Useful for excluding the node you might be comparing to currently. Default: No exclusions.
+ * @param $limit
+ *   Integer - Optional: Integer controlling the maximum number of nodes returned. Default: 5
+ * @return mixed
+ *   FALSE if no result or error or an associative array with node ID's as keys and the value's as arrays of nid's, vid's, title's, type's & term match counts.
+ */
+function relevant_content_get_nodes($types, $terms, $exclude = array(), $limit = 5) {
+  // If terms or types are empty, there isn't anything to match to so not a lot of point continuing.
+  if (empty($terms) || empty($types)) return FALSE;
+
+  // Initialize the values array for the SQL
+  $values = array();
+
+
+  // Define the SQL for term inclusion
+  $term_sql = 'tn.tid IN('. db_placeholders($terms, 'int') .')';
+  $values = $values + array_values($terms);
+
+
+  // Define the SQL for Node Type inclusion
+  $types_sql = 'n.type IN ('. db_placeholders($types, 'varchar') .')';
+  $values = array_merge($values, array_values($types));
+
+
+  // Define the SQL for Node Exclusion (optional)
+  $exclude_sql = '';
+  if (!empty($exclude)) {
+    $exclude_sql = 'AND n.nid NOT IN ('. db_placeholders($exclude, 'int') .')';
+    $values = array_merge($values, array_values($exclude));
+  }
+
+
+  // Add the result limit to the values array
+  $values = array_merge($values, array($limit));
+
+
+  // Define the SQL using HereDoc
+  $sql = <<<SQL
+SELECT
+  n.nid AS nid,
+  n.vid AS vid,
+  n.title AS title,
+  n.type AS type,
+  COUNT(*) AS cnt
+FROM {node} n
+LEFT JOIN {term_node} tn ON tn.nid = n.nid AND {$term_sql}
+WHERE {$types_sql} AND n.status = 1 AND tn.tid IS NOT NULL {$exclude_sql}
+GROUP BY n.nid
+ORDER BY cnt DESC, n.created DESC, n.nid DESC
+LIMIT %d
+SQL;
+
+
+  // Run the query and loop over the resultset, storing the returned nodes in an array using the Node ID as a key and the 5 fields selected as the values
+  $result = db_query($sql, $values);
+  $nodes = array();
+  while ($row = db_fetch_array($result)) {
+    $nodes[$row['nid']] = $row;
+  }
+
+  // Return the node array or FALSE if there is no result/an error.
+  return empty($nodes) ? FALSE : $nodes;
+}
+
+
+/**
+ * Function to locally cache terms
+ *
+ * This allows either this module or any other module to add terms to the cache.
+ * This cache is used to determine which nodes appear in the relevant content
+ * blocks.
+ *
+ * @param $terms
+ *   Array of term id's
+ * @param $clear
+ *   Boolean flag - can be set to force a clearing of the local cache.
+ * @return
+ *   Array of the term id's currently in the cache
+ */
+function relevant_content_term_cache($terms = array(), $clear = FALSE) {
+  static $term_cache = array();
+
+  if ($clear) {
+    $term_cache = array();
+  }
+
+  if (!empty($terms)) {
+    $term_cache = array_merge($term_cache, $terms);
+  }
+
+  return $term_cache;
+}
+
+
+/**
+ * Private function used as a callback for array_map which sets the item to the value of $value using $key as either an array offset or an object property.
+ *
+ * @param $item
+ *   This is a variable reference to the item being mapped to. Chaning this value will change the value in the array being mapped using array_map
+ * @param $key
+ *   They key of $item in the array being mapped
+ * @param $values
+ *   A user defined array passed in. In this case, it us used for reference purposes
+ */
+function _relevant_content_array_map_key_to_values(&$item, $key, $values) {
+  if (is_object($values[$key])) {
+    $item = $values[$key]->name;
+  }
+  else {
+    $item = $values[$key];
+  }
+}

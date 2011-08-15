@@ -1,0 +1,67 @@
+<?php
+// $Id: click_filter.install,v 1.1.2.3.2.6 2009/02/16 23:12:30 jeremy Exp $
+
+/**
+ * @file
+ * Click_filter module database schema.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+if (!defined('CLICK_NEW')) {
+  define('CLICK_NEW', 0);
+  define('CLICK_VALID', 1);
+  define('CLICK_DUPLICATE', 2);
+  define('CLICK_OWNER', 3);
+  define('CLICK_FILTER_ROLE', 4);
+  define('CLICK_BOT', 5);
+}
+
+/**
+ * Currently there is no click_filter schema.  However, we do need to review
+ * existing clicks for duplicates
+ */
+function click_filter_install() {
+  $valid = $duplicate = $owner = $bot = 0;
+  // Find all unfiltered clicks.
+  $result = db_query("SELECT DISTINCT(aid) FROM {ad_clicks} WHERE status = %d", CLICK_NEW);
+  while ($ad = db_fetch_object($result)) {
+    $clicks = db_query('SELECT cid, uid, hostname, timestamp, user_agent FROM {ad_clicks} WHERE status = %d AND aid = %d', CLICK_NEW, $ad->aid);
+    while ($click = db_fetch_object($clicks)) {
+      if (preg_match("/bot/i", $click->user_agent)) {
+        db_query('UPDATE {ad_clicks} SET status = %d WHERE cid = %d', CLICK_BOT, $click->cid);
+        $bot++;
+        continue;
+      }
+      // Search for clicks by one of the ad's owners.
+      $result = db_query('SELECT oid FROM {ad_owners} WHERE aid = %d AND uid = %d', $ad->aid, $click->uid);
+      if (db_result($result)) {
+        // Mark as clicked by ad owner.
+        db_query('UPDATE {ad_clicks} SET status = %d WHERE cid = %d', CLICK_OWNER, $click->cid);
+        // Decrement click from ad_statistics table.
+        db_query("UPDATE {ad_statistics} SET count = count - 1 WHERE date = %d AND aid = %d AND action = 'click' AND hostid = '%s'", date('YmdH', $click->timestamp), $ad->aid, $click->hostid);
+        $owner++;
+        continue;
+      }
+      // Search for duplicate clicks.
+      $result = db_query("SELECT cid FROM {ad_clicks} WHERE aid = %d AND status = %d AND cid <> %d AND (uid = %d OR hostname = '%s')", $ad->aid, CLICK_VALID, $click->cid, $click->uid, $click->hostname);
+      if (db_result($result)) {
+        // Mark as duplicate click.
+        db_query('UPDATE {ad_clicks} SET status = %d WHERE cid = %d', CLICK_DUPLICATE, $click->cid);
+        // Decrement click from ad_statistics table.
+        db_query("UPDATE {ad_statistics} SET count = count - 1 WHERE date = %d AND aid = %d AND action = 'click' AND hostid = '%s'", date('YmdH', $click->timestamp), $ad->aid, $click->hostid);
+        $duplicate++;
+      }
+      else {
+        db_query('UPDATE {ad_clicks} SET status = %d WHERE cid = %d', CLICK_VALID, $click->cid);
+        $valid++;
+      }
+    }
+  }
+  drupal_set_message(st('Updated existing clicks: %valid valid, filtered %duplicate duplicate, %owner by owner and %bot by search engine bots.', array('%valid' => $valid, '%duplicate' => $duplicate, '%owner' => $owner, '%bot' => $bot)));
+}
+
+/**
+ * Filter clicks from search engine bots.
+ */

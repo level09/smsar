@@ -1,0 +1,326 @@
+<?php
+// $Id: ad_embed.module,v 1.1.2.4.2.12.2.6.2.1 2009/07/06 21:12:15 jeremy Exp $
+
+/**
+ * @file
+ * Embed ads in content.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function ad_embed_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/help#ad_embed':
+      $output = '<p>'. t('The ad_embed module uses the ad module to replace special tags with random advertisements, or to automatically insert ads after a number of paragraphs in your content.  The module allows you to specify which ad group to select ads from and how many ads to display.  Instead of selecting ads from ad groups, it also allows you to specify individual ads by their node id.') .'</p>';
+      $output .= '<p><b>'. t('Replace tags:') .'</b><br />';
+      $output .= t('Content must have been created by a user with <em>embed ads in content</em> permissions for tags to be replaced.  The ad_embed module supports two different types of tags.  One uses double brackets, looking like <em>[[ad]]</em>, the other uses an html comment, looking like <em>&lt;!--ad--&gt;</em>.  Individual parameters are then separated by the | (pipe) character.  For individual parameters with multiple values, the values are separated by commas.') .'</p>';
+      $output .= '<p>'. t('Using html comments has the advantage that if you decide to disable the ad_embed module, the ads will simply disappear (as they will be html coments.  The downside to using html comments is that you need to configure your Input Filter to not filter them out.  Using brackets can be simpler to get working.') .'</p>';
+      $output .= '<p><em>'. t('Parameters:') .'</em><br />';
+      $output .= t('The following parameters can be used within embedded advertisement tages:') .'</p>';
+      $output .= '<ul>';
+      $output .= '  <li>'. t('<em>groups</em>: specify which group to select random ads from.');
+      $output .= '  <li>'. t('<em>quantity</em>: specify how many ads to display at once.');
+      $output .= '  <li>'. t('<em>hostid</em>: specify a unqiue when logging impressions and clicks.  (This is primarily intended for use when hosting ads on remote websites.)');
+      $output .= '  <li>'. t('<em>nids</em>: a list of ads from which to select from.  If <em>nids</em> is specified, the <em>groups</em> parameter will be ignored.');
+      $output .= '</ul></p>';
+      $output .= '<p><em>'. t('Examples:') .'</em><br />';
+      $output .= t('The following examples should help you to understand how to embed ads within your content.');
+      $output .= '<ul>';
+      $output .= '  <li>'. t('<em>[[ad]]</em><br />This will display one random ad from ads that are not assigned to any group.') .'</li>';
+      $output .= '  <li>'. t('<em>&lt;!--ad--&gt;</em><br />This will display one random ad from ads that are not assigned to any group.') .'</li>';
+      $output .= '  <li>'. t('<em>[[ad|quantity=2]]</em><br />This will display two random ads from ads that are not assigned to any group.') .'</li>';
+      $output .= '  <li>'. t('<em>[[ad|group=23]]</em><br />This will display one random ad from the group with a tid of 23.') .'</li>';
+      $output .= '  <li>'. t('<em>&lt!--ad|nids=1,13,42,76|quantity=4]]</em><br />This will display all four listed ads in a random order.') .'</li>';
+      $output .= '</ul>';
+      $output .= '<p><b>'. t('Automatically embedding ads:') .'</b><br />';
+      $output .= '<p>'. t('You can enable the functionality to automatically embed ads in your content at <em>administer >> ads >> settings >> embed ads</em>.  On this configuration page, you can choose which content types should contain automatically embedded ads, after which paragraph the ad should appear, and from which ad group the advertisement should be selected.') .'</p>';
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function ad_embed_perm() {
+  return array('embed ads in content');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function ad_embed_menu() {
+  $items = array();
+
+  $items['admin/content/ad/configure/embed'] = array(
+    'title' => 'Embedded ads',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_embed_admin_configure_settings'),
+    'access arguments' => array('embed ads in content'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function ad_embed_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'view':
+      $node = (object)$node;
+      // Only replace tags if content creator has 'embed' permission
+      if (user_access('embed ads in content', user_load(array('uid' => $node->uid)))) {
+        if (isset($node->content['teaser']['#value'])) {
+          $node->content['teaser']['#value'] = ad_embed_replace($node->content['teaser']['#value']);
+        }
+        if (isset($node->content['body']['#value'])) {
+          $node->content['body']['#value'] = ad_embed_replace($node->content['body']['#value']);
+        }
+      }
+      if (!($teaser) && variable_get("embed-ad-$node->type", 0)) {
+        $ad = ad(variable_get("embed-ad-$node->type".'-group', array()), variable_get("embed-ad-$node->type".'-quantity', 1));
+        $node->content['body']['#value'] = ad_embed_auto($node->content['body']['#value'], $ad, variable_get("embed-ad-$node->type".'-count', 3), variable_get("embed-ad-$node->type".'-force', 0));
+      }
+  }
+}
+
+/**
+ * Module settings page.
+ */
+function ad_embed_admin_configure_settings($form_state) {
+  $form = array();
+
+  $form['manual'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#title' => t('Manually embedded ads'),
+    '#description' => t('Configuration options for manually embedded ads using [[ad]] and &lt;!--ad--&gt; tags.'),
+  );
+
+  $form['manual']['ad_embed_replace_brackets'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Replace ad bracket tags'),
+    '#default_value' => variable_get('ad_embed_replace_brackets', 1),
+    '#description' => t('Replace [[ad]] style tags in site content with advertisements.'),
+  );
+
+  $form['manual']['ad_embed_replace_comments'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Replace ad comment tags'),
+    '#default_value' => variable_get('ad_embed_replace_comments', 1),
+    '#description' => t('Replace &lt;!--ad--&gt; style tags in site content with advertisements.'),
+  );
+
+  $form['automatic'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#title' => t('Automatically embedded ads'),
+    '#description' => t('Enable automatically embedded ads for any of the following content types, causing ads to be automatically inserted when users are viewing the content.  Configure where the ad should be placed, from which ad group(s) the ads should be selected, and how many ads to display.'),
+  );
+
+  $types = node_get_types();
+  foreach ($types as $key => $type) {
+    $form['automatic'][$key] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => variable_get("embed-ad-$key", 0) ? FALSE : TRUE,
+      '#title' => $type->name,
+    );
+
+    $form['automatic'][$key]["embed-ad-$key"] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Automatically embed ads in %type content', array('%type' => $type->name)),
+      '#default_value' => variable_get("embed-ad-$key", 0),
+    );
+
+    $form['automatic'][$key]["embed-ad-$key-count"] = array(
+      '#type' => 'select',
+      '#title' => t('Location', array('%type' => $type->name)),
+      '#options' => array(
+        0 => t('Before the first paragraph'),
+        1 => t('After the first paragraph'),
+        2 => t('After the second paragraph'),
+        3 => t('After the third paragraph'),
+        4 => t('After the fourth paragraph'),
+        5 => t('After the fifth paragraph'),
+        6 => t('After the sixth paragraph'),
+        7 => t('After the seventh paragraph'),
+        8 => t('After the eighth paragraph'),
+        9 => t('After the ninth paragraph'),
+        10 => t('After the tenth paragraph'),
+        -1 => t('After the last paragraph'),
+      ),
+      '#default_value' => variable_get("embed-ad-$key-count", array()),
+      '#description' => t('Specify where you would like to automatically embed the advertisement for this content type.'),
+    );
+
+    $form['automatic'][$key]["embed-ad-$key-force"] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Always display ad'),
+      '#default_value' => variable_get("embed-ad-$key-force", 0),
+      '#description' => t('Check this box to display an ad even if the content doesn\'t have as many paragraphs as you specified above.  In these cases the ad will appear at the end of the content.'),
+    );
+
+    $form['automatic'][$key]["embed-ad-$key-group"] = array(
+      '#type' => 'select',
+      '#multiple' => TRUE,
+      '#title' => t('Ad group'),
+      '#options' => ad_groups_list(FALSE),
+      '#default_value' => explode(',', variable_get("embed-ad-$key-group", '')),
+      '#description' => t('Specify from which ad group(s) you\'d like to display advertisements.'),
+    );
+
+    $form['automatic'][$key]["embed-ad-$key-quantity"] = array(
+      '#type' => 'select',
+      '#title' => t('Quantity'),
+      '#options' => drupal_map_assoc(array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25)),
+      '#default_value' => variable_get("embed-ad-$key-quantity", 1),
+      '#description' => t('Specify how many advertisements to display at the same time.'),
+    );
+  }
+
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  return $form;
+}
+
+/**
+ * Save changes from module settings page.
+ */
+function ad_embed_admin_configure_settings_submit($form, &$form_state) {
+  variable_set('ad_embed_replace_brackets', $form_state['values']['ad_embed_replace_brackets']);
+  variable_set('ad_embed_replace_comments', $form_state['values']['ad_embed_replace_comments']);
+
+  $types = node_get_types();
+  foreach ($types as $key => $type) {
+    variable_set("embed-ad-$key", $form_state['values']["embed-ad-$key"]);
+    variable_set("embed-ad-$key-force", $form_state['values']["embed-ad-$key-force"]);
+    if (isset($form_state['values']["embed-ad-$key-group"])) {
+      variable_set("embed-ad-$key-group", (implode(',', $form_state['values']["embed-ad-$key-group"])));
+    }
+    else {
+      variable_set("embed-ad-$key-group", '');
+    }
+    variable_set("embed-ad-$key-count", $form_state['values']["embed-ad-$key-count"]);
+    variable_set("embed-ad-$key-quantity", $form_state['values']["embed-ad-$key-quantity"]);
+  }
+  drupal_set_message(t('Embedded ad configuration options saved.'));
+}
+
+/**
+ * Replaces [[ad]] and <!--ad--> style tags with JavaScript for displaying ads.
+ */
+function ad_embed_replace($text) {
+  $tags = array(
+    '[[ad' => ']]',
+    '<!--ad' => '-->',
+  );
+
+  if (!$text) { return; }
+
+  foreach ($tags as $open => $close) {
+
+    if ($open == '[[ad' && !variable_get('ad_embed_replace_brackets', 1)) 
+      continue;
+    if ($open == '<!--ad' && !variable_get('ad_embed_replace_comments', 1)) 
+      continue;
+    if (strlen($open) > strlen($text))
+      continue;
+
+    $pos = 0;
+    while ($pos !== FALSE) {
+      // Locate the first open embed tag.
+      $pos = strpos($text, $open, $pos+1);
+      if ($pos) {
+        $start = $pos + strlen($open);
+        // Locate the matching close embed tag.
+        $pos = strpos($text, $close, $start);
+        if ($pos) {
+          // Extract the contents within the tags.
+          $contents = substr($text, $start, $pos - $start);
+          // Parse the options within the contents.
+          $options = implode('&', explode('|', $contents));
+          parse_str($options, $args);
+          // Set defaults
+          $quantity = 1;
+          $options = array();
+          $group = '';
+          foreach ($args as $key => $value) {
+            switch ($key) {
+              case 'quantity':
+                // Must be at least 1
+                $quantity = (int)$value ? (int)$value : 1;
+                break;
+              case 'group':
+                $group = $value;
+                break;
+              case 'hostid':
+                $options['hostid'] = $value;
+                break;
+              case 'nids':
+                $options['nids'] = $value;
+                break;
+            }
+          }
+          $replace = $open . $contents . $close;
+          $ad = ad($group, $quantity, $options);
+          $text = str_replace($replace, $ad, $text);
+          // Adjust position to compensate for difference in length of what
+          // we are replacing and length of what we are replacing it with.
+          if (strlen($replace) > strlen($ad)) {
+            $pos -= (strlen($replace) - strlen($ad)) - 1;
+          }
+          else if (strlen($replace) < strlen($ad)) {
+            $pos += (strlen($ad) - strlen($replace)) + 1;
+          }
+        }
+      }
+    }
+  }
+  return $text;
+}
+
+/**
+ * Automatically embed advertisement into content.
+ */
+function ad_embed_auto($text, $ad, $count, $force = FALSE) {
+  if (!$text) { return; }
+
+  if ($count == 0) {
+    $text = $ad . $text;
+  }
+  else if ($count == -1) {
+    $text = $text . $ad;
+  }
+
+  $pos = $paragraph = 0;
+  while ($pos !== FALSE) {
+    $pos = strpos($text, "\n", $pos + 1);
+    if ($pos) {
+      $paragraph++;
+      if ($paragraph == $count) {
+        $part1 = substr($text, 0, $pos);
+        $part2 = substr($text, $pos + 1, strlen($text));
+        $text = $part1 . $ad . $part2;
+        break;
+      }
+    }
+  }
+  // Not enough paragraphs to display ad, unless forced.
+  if (($paragraph < $count) && $force) {
+    $text = $text . $ad;
+  }
+
+  return $text;
+}

@@ -1,0 +1,15 @@
+<?php
+// $Id: date_authored_facet.install,v 1.5 2008/08/26 04:28:10 davidlesieur Exp $
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function date_authored_facet_uninstall() {
+  variable_del('date_authored_facet_format_y');
+  variable_del('date_authored_facet_format_ym');
+  variable_del('date_authored_facet_format_ymd');
+  if (db_table_exists('faceted_search_filters')) {
+    db_query("DELETE FROM {faceted_search_filters} WHERE filter_key = 'date_authored'");
+  }
+}
+

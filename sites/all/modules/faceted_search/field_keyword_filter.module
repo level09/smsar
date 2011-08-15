@@ -1,0 +1,93 @@
+<?php
+// $Id: field_keyword_filter.module,v 1.4 2009/01/04 23:00:01 davidlesieur Exp $
+
+/**
+ * @file
+ * Allows users to perform keyword searches restricted by field.
+ */
+
+require_once('./'. drupal_get_path('module', 'faceted_search') .'/faceted_search.inc');
+
+/**
+ * Implementation of hook_faceted_search_collect().
+ */
+function field_keyword_filter_faceted_search_collect(&$filters, $domain, $env, $selection, $arg = NULL) {
+  switch ($domain) {
+    case 'keyword filters':
+      $fields = field_indexer_load_fields(TRUE);
+      foreach ($fields as $field) {
+        $filter_key = field_indexer_type($field['fiid']);
+        // If the field's corresponding filter is allowed.
+        if (!isset($selection) || isset($selection[$filter_key]['keyword'])) {
+          $filters[] = new faceted_search_keyword_filter($filter_key, $field['label']);
+        }
+      }
+      break;
+
+    case 'text':
+      $fields = field_indexer_load_fields(TRUE);
+      foreach ($fields as $field) {
+        $filter_key = field_indexer_type($field['fiid']);
+        // If the field's corresponding filter is allowed.
+        if (!isset($selection) || isset($selection[$filter_key]['keyword'])) {
+          // Scan the given search text for a '{key}:"{value}"' token, and create
+          // filters from it.
+          if ($found_text = faceted_search_quoted_query_extract($arg, $filter_key)) {
+            $keys = faceted_search_parse_keywords($found_text);
+
+            // Create the filters.
+            foreach ($keys['positive'] as $keyword) {
+              if (is_array($keyword)) {
+                $filter = new field_keyword_filter($filter_key, $field['label'], new faceted_search_keyword_or_category($keyword));
+              }
+              elseif (strpos($keyword, ' ')) {
+                $filter = new field_keyword_filter($filter_key, $field['label'], new faceted_search_keyword_phrase_category($keyword));
+              }
+              else {
+                $filter = new field_keyword_filter($filter_key, $field['label'], new faceted_search_keyword_and_category($keyword));
+              }
+              $filters[] = $filter;
+            }
+            foreach ($keys['negative'] as $keyword) {
+              $filter = new field_keyword_filter($filter_key, $field['label'], new faceted_search_keyword_not_category($keyword));
+              $filters[] = $filter;
+            }
+            // Remove the parsed text
+            $arg = faceted_search_quoted_query_insert($arg, $filter_key);
+          }
+        }
+      }
+      return $arg;
+  }
+}
+
+/**
+ * A filter for restricting a keyword search to a specific field.
+ */
+class field_keyword_filter extends faceted_search_keyword_filter {
+  /**
+   * Constructor.
+   *
+   * @param $type
+   *   Type of the search index entries corresponding to the field.
+   * @param $label
+   *   Label of the field.
+   * @param $category
+   *   Active category of the field.
+   */
+  function field_keyword_filter($type, $label, $category = NULL) {
+    parent::faceted_search_keyword_filter($type, $label, $category);
+  }
+
+  /**
+   * Return the search text corresponding to this filter.
+   */
+  function get_text() {
+    if ($category = $this->get_active_category()) {
+      // Quote and escape the value.
+      return '"'. faceted_search_quoted_query_escape(parent::get_text()) .'"';
+    }
+    return '';
+  }
+
+}

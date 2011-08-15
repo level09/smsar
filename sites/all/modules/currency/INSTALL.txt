@@ -1,0 +1,33 @@
+Description:
+------------
+	
+This module provides visitors to your web site with currency conversion rates.
+
+It also provides an API for currency conversion that other modules can use.
+
+Requirements:
+-------------
+	
+This module requires drupal 4.7.x or greater.
+
+Installation:
+-------------
+
+1. Copy the entire currency directory under the Drupal modules/ directory.
+
+2. Go to admin/modules and enable 'currency_api' and 'currency'.
+
+3. Allow access to the module under admin/access.
+   You can enable it for authenticated and/or anonymous users, depending on
+   your web site needs.
+
+4. Configure the module under admin/settings/currency
+   - Specify the default From Currency and the To Currency. You must enter the 
+     three letter code for each. What you enter depends on your country and/or
+     audience.
+
+   - Provide a description. It can be any text you want. You can enter a disclaimer,
+     instructions, ...etc.
+
+   - You can change the navigation link text if you want. Normally leave that as
+     it is.

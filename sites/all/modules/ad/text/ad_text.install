@@ -1,0 +1,67 @@
+<?php
+// $Id: ad_text.install,v 1.2.2.2.2.4.2.4 2009/02/16 17:06:50 jeremy Exp $
+
+/**
+ * @file
+ * Ad_text module database schema.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function ad_text_schema() {
+  $schema['ad_text'] = array(
+    'description' => 'The ad_text table stores sources of text ads.',
+    'fields' => array(
+      'aid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'url' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'adheader' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'adbody' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('aid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * ad_text module installation.
+ */
+function ad_text_install() {
+  drupal_install_schema('ad_text');
+}
+
+/**
+ * Allow complete uninstallation of the ad_text module.
+ */
+function ad_text_uninstall() {
+  // Delete all ad_text content.
+  $result = db_query("SELECT aid FROM {ad_text}");
+  while ($aid = db_result($result)) {
+    node_delete($aid);
+  }
+
+  // Remove tables.
+  drupal_uninstall_schema('ad_text');
+}

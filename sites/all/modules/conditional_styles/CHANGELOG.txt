@@ -1,0 +1,11 @@
+// $Id: CHANGELOG.txt,v 1.7 2009/05/25 15:13:45 johnalbin Exp $
+
+Conditional Styles 6.x-1.1, 2009-05-25
+--------------------------------------
+- #389988 by BWPanda: Add "clear .info cache" reminder to documentation
+- #337975 by tombigel: Add missing support for RTL languages
+- Added support for maintenance theme page (pending #454462)
+
+Conditional Styles 6.x-1.0, 2008-09-15
+--------------------------------------
+- Initial release

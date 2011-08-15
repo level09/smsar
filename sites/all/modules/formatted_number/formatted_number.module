@@ -1,0 +1,605 @@
+<?php
+// $Id: formatted_number.module,v 1.1.2.5 2009/05/20 07:21:36 markuspetrux Exp $
+
+/**
+ * @file
+ * Defines CCK numeric types where thousands separator and decimal point
+ * are inherited from the Format Number API module.
+ */
+
+/**
+ * @TODO - Enable BIGINT support. O'rly?
+ *
+ * See http://www.php.net/manual/en/language.types.integer.php
+ *
+ * - PHP does not have builtin support for BIGINT, and it appears it won't.
+ *   See http://marc.info/?t=90279125900002
+ * - PHP int precision is platform dependent (CPU: x32 -vs- x64).
+ * - Since PHP 4.4.0 and 5.0.5: PHP_INT_SIZE, PHP_INT_MAX.
+ * - Numbers beyond builtin integer bounds are interpreted as a float instead.
+ * - Using floats might be a solution in certain cases, but it should be noted
+ *   that precision issues may arise.
+ * - A possible alternative could be working with BIGINTs using string type,
+ *   and use BCMath/GMP extensions to perform math operations.
+ * - Drupal Database API does not support unsigned integers.
+ *   http://drupal.org/node/333788
+ * - We should also add BIGINT support to Format Number API.
+ *
+ * WARNING:
+ *   Do not change the constant below unless you know what you're doing! ;-)
+ */
+define('FORMATTED_NUMBER_BIGINT_SUPPORT_ENABLED', 0);
+
+/**
+ * Implementation of hook_init().
+ */
+function formatted_number_init() {
+  if (module_exists('diff')) {
+    module_load_include('inc', 'formatted_number', 'includes/formatted_number.diff');
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function formatted_number_theme() {
+  return array(
+    'formatted_number' => array('arguments' => array('element' => NULL)),
+    'formatted_number_formatter_default' => array('arguments' => array('element' => NULL), 'function' => 'theme_formatted_number_formatter_generic'),
+    'formatted_number_formatter_nozeros' => array('arguments' => array('element' => NULL), 'function' => 'theme_formatted_number_formatter_generic'),
+    'formatted_number_formatter_unformatted' => array('arguments' => array('element' => NULL)),
+  );
+}
+
+/**
+ * Helper function for field info/settings.
+ */
+function formatted_number_get_fields_info($types = 'all') {
+  $fields = array();
+  if ($types == 'all' || $types == 'int') {
+    $fields += array(
+      'formatted_tinyint' => array(
+        'label' => t('Formatted tiny integer'),
+        'description' => t('Store a number in the database as a tiny integer (-128 to 127).'),
+        'maxlength' => 4,
+        'db_column' => array('type' => 'int', 'size' => 'tiny'),
+        'min' => -128, 'max' => 127,
+      ),
+      'formatted_tinyint_unsigned' => array(
+        'label' => t('Formatted tiny integer (unsigned)'),
+        'description' => t('Store a number in the database as a tiny unsigned integer (0 to 255).'),
+        'maxlength' => 4,
+        'db_column' => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE),
+        'min' => 0, 'max' => 255,
+      ),
+      'formatted_smallint' => array(
+        'label' => t('Formatted small integer'),
+        'description' => t('Store a number in the database as a small integer (-32768 to 32767).'),
+        'maxlength' => 7,
+        'db_column' => array('type' => 'int', 'size' => 'small'),
+        'min' => -32768, 'max' => 32767,
+      ),
+      'formatted_smallint_unsigned' => array(
+        'label' => t('Formatted small integer (unsigned)'),
+        'description' => t('Store a number in the database as a small unsigned integer (0 to 65535).'),
+        'maxlength' => 7,
+        'db_column' => array('type' => 'int', 'size' => 'small', 'unsigned' => TRUE),
+        'min' => 0, 'max' => 65535,
+      ),
+      'formatted_mediumint' => array(
+        'label' => t('Formatted medium integer'),
+        'description' => t('Store a number in the database as a medium integer (-8388608 to 8388607).'),
+        'maxlength' => 10,
+        'db_column' => array('type' => 'int', 'size' => 'medium'),
+        'min' => -8388608, 'max' => 8388607,
+      ),
+      'formatted_mediumint_unsigned' => array(
+        'label' => t('Formatted medium integer (unsigned)'),
+        'description' => t('Store a number in the database as a medium unsigned integer (0 to 16777215).'),
+        'maxlength' => 10,
+        'db_column' => array('type' => 'int', 'size' => 'medium', 'unsigned' => TRUE),
+        'min' => 0, 'max' => 16777215,
+      ),
+      'formatted_integer' => array(
+        'label' => t('Formatted integer'),
+        'description' => t('Store a number in the database as an integer (-2147483648 to 2147483647).'),
+        'maxlength' => 15,
+        'db_column' => array('type' => 'int'),
+        'min' => -2147483648, 'max' => 2147483647,
+      ),
+      'formatted_integer_unsigned' => array(
+        'label' => t('Formatted integer (unsigned)'),
+        'description' => t('Store a number in the database as an unsigned integer (0 to 4294967295).'),
+        'maxlength' => 15,
+        'db_column' => array('type' => 'int', 'unsigned' => TRUE),
+        'min' => 0, 'max' => 4294967295,
+      ),
+    );
+    if (FORMATTED_NUMBER_BIGINT_SUPPORT_ENABLED) {
+      $fields += array(
+        'formatted_bigint' => array(
+          'label' => t('Formatted big integer'),
+          'description' => t('Store a number in the database as a big integer (-9223372036854775808 to 9223372036854775807).'),
+          'maxlength' => 30,
+          'db_column' => array('type' => 'int', 'size' => 'big'),
+          'min' => -9223372036854775808, 'max' => 9223372036854775807,
+        ),
+        'formatted_bigint_unsigned' => array(
+          'label' => t('Formatted big integer (unsigned)'),
+          'description' => t('Store a number in the database as a big unsigned integer (0 to 18446744073709551615).'),
+          'maxlength' => 30,
+          'db_column' => array('type' => 'int', 'size' => 'big', 'unsigned' => TRUE),
+          'min' => 0, 'max' => 18446744073709551615,
+        ),
+      );
+    }
+  }
+  if ($types == 'all' || $types == 'real') {
+    $fields += array(
+      'formatted_decimal' => array(
+        'label' => t('Formatted decimal'),
+        'description' => t('Store a number in the database in a fixed decimal format.'),
+        'maxlength' => 30,
+        'db_column' => array('type' => 'numeric'),
+      ),
+      'formatted_float' => array(
+        'label' => t('Formatted float'),
+        'description' => t('Store a number in the database in a floating point format.'),
+        'maxlength' => 30,
+        'db_column' => array('type' => 'float'),
+      ),
+    );
+  }
+  return $fields;
+}
+
+/**
+ * Implementation of hook_field_info().
+ */
+function formatted_number_field_info() {
+  $fields = array();
+  foreach (formatted_number_get_fields_info() as $key => $info) {
+    $fields[$key] = array('label' => $info['label'], 'description' => $info['description']);
+  }
+  return $fields;
+}
+
+/**
+ * Implementation of hook_field_settings().
+ */
+function formatted_number_field_settings($op, $field) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+      $form['append']['prefix'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Prefix'),
+        '#size' => 40, '#maxlength' => 60,
+        '#default_value' => (!empty($field['prefix']) ? $field['prefix'] : ''),
+        '#description' => t('Define a string that should be prefixed to the value, like $ or €. Leave blank for none. Separate singular and plural values with a pipe (pound|pounds).'),
+      );
+      $form['append']['suffix'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Suffix'),
+        '#size' => 40, '#maxlength' => 60,
+        '#default_value' => (!empty($field['suffix']) ? $field['suffix'] : ''),
+        '#description' => t('Define a string that should suffixed to the value, like m², m/s², kb/s. Leave blank for none. Separate singular and plural values with a pipe (pound|pounds).'),
+      );
+
+      $fields_info = formatted_number_get_fields_info();
+      $real_field_types = array_keys(formatted_number_get_fields_info('real'));
+      $minmax_fields = array(
+        'min' => array(
+          '#title' => t('Minimum'),
+          '#description' => t('Use this option to defined the minimum value that can be accepted for this field. Leave blank for no explicit limitation.'),
+        ),
+        'max' => array(
+          '#title' => t('Maximum'),
+          '#description' => t('Use this option to defined the maximum value that can be accepted for this field. Leave blank for no explicit limitation.'),
+        ),
+      );
+      foreach ($minmax_fields as $name => $info) {
+        $default_attributes = array('class' => 'formatted-number');
+        $default_value = (isset($field[$name]) ? parse_formatted_number($field[$name]) : '');
+        if (!is_numeric($default_value)) {
+          $default_value = '';
+        }
+        else {
+          if (in_array($field['type'], $real_field_types)) {
+            // Initialize default value with as many decimal digits as necessary.
+            $decimals = (strpos($default_value, '.') !== FALSE ? drupal_strlen(preg_replace('#^.*\.(.*)$#', '\1', $default_value)) : 0);
+            $default_value = format_number($default_value, $decimals);
+          }
+          else {
+            $default_attributes['decimals'] = 0;
+            $default_value = format_number($default_value, 0);
+          }
+        }
+        $field_maxlength = $fields_info[$field['type']]['maxlength'];
+        $form[$name] = array(
+          '#type' => 'textfield',
+          '#title' => $info['#title'],
+          '#size' => $field_maxlength + 2,
+          '#maxlength' => $field_maxlength,
+          '#default_value' => $default_value,
+          '#attributes' => $default_attributes,
+          '#description' => $info['#description'],
+        );
+      }
+
+      if (in_array($field['type'], $real_field_types)) {
+        if ($field['type'] == 'formatted_decimal') {
+          $form['precision'] = array(
+            '#type' => 'select',
+            '#title' => t('Precision'),
+            '#options' => drupal_map_assoc(range(1, 20)),
+            '#default_value' => (is_numeric($field['precision']) && (int)$field['precision'] > 0 ? $field['precision'] : 10),
+            '#description' => t('The total number of digits to store in the database, including digits to the right of the decimal point.'),
+          );
+        }
+        $form['decimals'] = array(
+          '#type' => 'select',
+          '#title' => t('Decimals'),
+          '#options' => drupal_map_assoc(range(0, ($field['type'] == 'formatted_float' ? 20 : 4))),
+          '#default_value' => (is_numeric($field['decimals']) && (int)$field['decimals'] >= 0 ? $field['decimals'] : 2),
+          '#description' => t('The number of digits to the right of the decimal point.'),
+        );
+      }
+      formatted_number_add_js();
+      return $form;
+
+    case 'validate':
+      if (!empty($field['min'])) {
+        if (($field['min'] = parse_formatted_number($field['min'])) === FALSE) {
+          form_set_error('min', t('"Minimum" must be a valid number.'));
+        }
+        else if ($field['min'] != '') {
+          $limit = formatted_number_get_number_limit($field['type'], 'min', $field['precision'], $field['decimals']);
+          if ((float)$field['min'] < $limit) {
+            form_set_error('min', t('"Minimum" cannot be lower than !num.', array('!num' => format_number($limit, (isset($field['decimals']) ? $field['decimals'] : 0)))));
+          }
+        }
+      }
+      if (!empty($field['max'])) {
+        if (($field['max'] = parse_formatted_number($field['max'])) === FALSE) {
+          form_set_error('max', t('"Maximum" must be a valid number.'));
+        }
+        else if ($field['max'] != '') {
+          $limit = formatted_number_get_number_limit($field['type'], 'max', $field['precision'], $field['decimals']);
+          if ((float)$field['max'] > $limit) {
+            form_set_error('max', t('"Maximum" cannot be greater than !num.', array('!num' => format_number($limit, (isset($field['decimals']) ? $field['decimals'] : 0)))));
+          }
+        }
+      }
+      if (is_numeric($field['min']) && is_numeric($field['max']) && $field['max'] < $field['min']) {
+        form_set_error('min', t('"Minimum" may not be a greater than "Maximum".'));
+      }
+      return;
+
+    case 'save':
+      $field_option_names = array('prefix', 'suffix', 'min', 'max');
+      $real_field_types = array_keys(formatted_number_get_fields_info('real'));
+      if (in_array($field['type'], $real_field_types)) {
+        if ($field['type'] == 'formatted_decimal') {
+          $field_option_names[] = 'precision';
+        }
+        $field_option_names[] = 'decimals';
+      }
+      return $field_option_names;
+
+    case 'database columns':
+      $fields_info = formatted_number_get_fields_info();
+      $db_column = $fields_info[$field['type']]['db_column'];
+      if ($field['type'] == 'formatted_decimal') {
+        $db_column += array(
+          'precision' => (isset($field['precision']) ? $field['precision'] : 10),
+          'scale' => (isset($field['decimals']) ? $field['decimals'] : 2),
+        );
+      }
+      $db_column += array('not null' => FALSE, 'sortable' => TRUE);
+      return array('value' => $db_column);
+  }
+}
+
+/**
+ * Implementation of hook_content_is_empty().
+ */
+function formatted_number_content_is_empty($item, $field) {
+  return !is_numeric($item['value']);
+}
+
+/**
+ * Implementation of hook_field().
+ */
+function formatted_number_field($op, &$node, $field, &$items, $teaser, $page) {
+  if ($op == 'validate') {
+    if (is_array($items)) {
+      foreach ($items as $delta => $item) {
+        $error_element = (isset($item['_error_element']) ? $item['_error_element'] : '');
+        if (is_array($item) && isset($item['_error_element'])) {
+          unset($item['_error_element']);
+        }
+        $errors = formatted_number_validate_field_value($field, $item['value']);
+        if (!empty($errors)) {
+          foreach ($errors as $message) {
+            form_set_error($error_element, $message);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function formatted_number_field_formatter_info() {
+  $all_field_types = array_keys(formatted_number_get_fields_info());
+  $real_field_types = array_keys(formatted_number_get_fields_info('real'));
+  return array(
+    'default' => array('label' => t('Default'), 'field types' => $all_field_types),
+    'nozeros' => array('label' => t('Remove redundant zeros'), 'field types' => $real_field_types),
+    'unformatted' => array('label' => t('Unformatted'), 'field types' => $all_field_types),
+  );
+}
+
+/**
+ * Implementation of hook_widget_info().
+ */
+function formatted_number_widget_info() {
+  return array(
+    'formatted_number' => array('label' => t('Numeric text field'), 'field types' => array_keys(formatted_number_get_fields_info())),
+  );
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function formatted_number_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+  return array(
+    '#type' => $field['widget']['type'],
+    '#default_value' => (isset($items[$delta]) ? $items[$delta] : NULL),
+  );
+}
+
+/**
+ * Implementation of FAPI hook_elements().
+ */
+function formatted_number_elements() {
+  return array(
+    'formatted_number' => array(
+      '#input' => TRUE,
+      '#columns' => array('value'),
+      '#delta' => 0,
+      '#process' => array('formatted_number_widget_process'),
+    ),
+  );
+}
+
+/**
+ * Process an individual formatted_number element.
+ */
+function formatted_number_widget_process($element, $edit, $form_state, $form) {
+  $field_name = $element['#field_name'];
+  $field = $form['#field_info'][$field_name];
+  $field_key = $element['#columns'][0];
+
+  $field_precision = (isset($field['precision']) && (int)$field['precision'] > 0 ? (int)$field['precision'] : 12);
+  $field_decimals = (isset($field['decimals']) && (int)$field['decimals'] >= 0 ? (int)$field['decimals'] : 0);
+  $field_min = (isset($field['min']) ? parse_formatted_number($field['min']) : NULL);
+  if (!is_numeric($field_min)) {
+    $field_min = formatted_number_get_number_limit($field['type'], 'min', $field_precision, $field_decimals);
+  }
+
+  // Compute maxlength for the input textfield.
+  $field_maxlength = $field_precision;
+  $extra_length = 0;
+  if ($field_decimals > 0) {
+    $extra_length++;
+  }
+  if (isset($field_min) && $field_min < 0) {
+    $extra_length++;
+  }
+  $thousands_sep = format_number_get_options('thousands_sep');
+  if (!empty($thousands_sep)) {
+    $extra_length += ceil($field_precision / 3);
+  }
+
+  // Format the default value.
+  $default_value = (isset($element['#value'][$field_key]) ? $element['#value'][$field_key] : '');
+  if (is_numeric($default_value)) {
+    $default_value = format_number($default_value, $field_decimals);
+  }
+
+  $element[$field_key] = array(
+    '#type' => 'textfield',
+    '#default_value' => $default_value,
+    // Need to allow a slightly larger size than the field length to allow
+    // for some configurations where all characters won't fit in input field.
+    '#size' => $field_maxlength + ($extra_length * 2) + 2,
+    '#maxlength' => $field_maxlength + $extra_length,
+    '#attributes' => array('class' => 'formatted-number', 'decimals' => $field_decimals),
+    // The following values were set by the content module and need
+    // to be passed down to the nested element.
+    '#title' => $element['#title'],
+    '#description' => $element['#description'],
+    '#required' => $element['#required'],
+    '#field_name' => $element['#field_name'],
+    '#type_name' => $element['#type_name'],
+    '#delta' => $element['#delta'],
+    '#columns' => $element['#columns'],
+  );
+
+  // Add field prefix and/or suffix.
+  if (!empty($field['prefix'])) {
+    $prefixes = explode('|', $field['prefix']);
+    $element[$field_key]['#field_prefix'] = array_pop($prefixes);
+  }
+  if (!empty($field['suffix'])) {
+    $suffixes = explode('|', $field['suffix']);
+    $element[$field_key]['#field_suffix'] = array_pop($suffixes);
+  }
+
+  // Make sure we don't wipe out element validation added elsewhere.
+  if (empty($element['#element_validate'])) {
+    $element['#element_validate'] = array();
+  }
+  $element['#element_validate'][] = 'formatted_number_widget_validate';
+
+  // Used so that hook_field('validate') knows where to flag an error.
+  $element['_error_element'] = array(
+    '#type' => 'value',
+    '#value' => implode('][', array_merge($element['#parents'], array($field_key))),
+  );
+
+  return $element;
+}
+
+/**
+ * FAPI validation of an individual formatted number field.
+ */
+function formatted_number_widget_validate($element, &$form_state) {
+  $field_name = $element['#field_name'];
+  $type_name = $element['#type_name'];
+  $field = content_fields($field_name, $type_name);
+  $field_key = $element['#columns'][0];
+  $value = trim($element['#value'][$field_key]);
+
+  if ($element[$field_key]['#required'] || $value != '') {
+    $value = parse_formatted_number($value, $element[$field_key]['#required']);
+    if (!is_numeric($value)) {
+      $error_element = implode('][', $element['#parents']) .']['. $field_key;
+      form_set_error($error_element, t('The specified number !num is invalid.', array('!num' => $element['#value'][$field_key])));
+      return;
+    }
+    $errors = formatted_number_validate_field_value($field, $value);
+    if (!empty($errors)) {
+      $error_element = implode('][', $element['#parents']) .']['. $field_key;
+      foreach ($errors as $message) {
+        form_set_error($error_element, $message);
+      }
+      return;
+    }
+  }
+
+  // Update the form field with parsed number, so it gets a valid PHP number
+  // that can be used to store in the database.
+  if ($element['#value'][$field_key] != $value) {
+    form_set_value($element[$field_key], $value, $form_state);
+  }
+}
+
+/**
+ * Helper function to validate a formatted number field.
+ *
+ * @param array $field
+ *   The field array.
+ * @param number $value
+ *   The number that should be validated.
+ * @return array
+ *   An array with error messages or empty if value is correct.
+ */
+function formatted_number_validate_field_value($field, $value) {
+  $field_precision = (isset($field['precision']) && (int)$field['precision'] > 0 ? (int)$field['precision'] : 12);
+  $field_decimals = (isset($field['decimals']) && (int)$field['decimals'] >= 0 ? (int)$field['decimals'] : 0);
+  $field_min = (isset($field['min']) ? parse_formatted_number($field['min']) : NULL);
+  $field_max = (isset($field['max']) ? parse_formatted_number($field['max']) : NULL);
+  if (!is_numeric($field_min)) {
+    $field_min = formatted_number_get_number_limit($field['type'], 'min', $field_precision, $field_decimals);
+  }
+  if (!is_numeric($field_max)) {
+    $field_max = formatted_number_get_number_limit($field['type'], 'max', $field_precision, $field_decimals);
+  }
+  $errors = array();
+  $value = trim($value);
+  if ($value == '') {
+    if ($field['required']) {
+      $errors[] = t('%name: may be not be empty.', array('%name' => t($field['widget']['label'])));
+    }
+  }
+  else {
+    if ($value < $field_min) {
+      $errors[] = t('%name: the value may be no smaller than %min.', array('%name' => t($field['widget']['label']), '%min' => $field_min));
+    }
+    if ($value > $field_max) {
+      $errors[] = t('%name: the value may be no larger than %max.', array('%name' => t($field['widget']['label']), '%max' => $field_max));
+    }
+  }
+  return $errors;
+}
+
+/**
+ * Obtain the min/max possible values for the given number type.
+ *
+ * @param string $type
+ * @param string $direction
+ * @param int $precission
+ * @param int $decimals
+ * @return float
+ */
+function formatted_number_get_number_limit($type, $direction, $precision = 0, $decimals = 0) {
+  static $fields_info;
+  if (!isset($fields_info)) {
+    $fields_info = formatted_number_get_fields_info();
+  }
+  if (isset($fields_info[$type][$direction])) {
+    return $fields_info[$type][$direction];
+  }
+  // Case for decimals and floats based on specified precision and decimals.
+  return (float)(($direction == 'min' ? '-' : '') . str_repeat('9', $precision - $decimals) .'.'. str_repeat('9', $decimals));
+}
+
+/**
+ * Add javascript/styles for Formatted Number Widgets.
+ */
+function formatted_number_add_js() {
+  static $ready;
+  if (!isset($ready)) {
+    $ready = TRUE;
+    format_number_add_js();
+    drupal_add_css(drupal_get_path('module', 'formatted_number') .'/formatted_number.css');
+    drupal_add_js(drupal_get_path('module', 'formatted_number') .'/formatted_number.js');
+  }
+}
+
+/**
+ * Display a CCK Number (widget).
+ *
+ * @ingroup themeable
+ */
+function theme_formatted_number($element) {
+  formatted_number_add_js();
+  return $element['#children'];
+}
+
+/**
+ * Display a CCK Number (unformatted).
+ *
+ * @ingroup themeable
+ */
+function theme_formatted_number_formatter_unformatted($element) {
+  return isset($element['#item']['value']) ? $element['#item']['value'] : '';
+}
+
+/**
+ * Display a CCK Number (formatted).
+ *
+ * @ingroup themeable
+ */
+function theme_formatted_number_formatter_generic($element) {
+  $value = isset($element['#item']['value']) ? $element['#item']['value'] : NULL;
+  if (!is_numeric($value)) {
+    return '';
+  }
+
+  $field = content_fields($element['#field_name'], $element['#type_name']);
+  $decimals = ($element['#formatter'] == 'nozeros' ? -1 : (isset($field['decimals']) ? (int)$field['decimals'] : 0));
+  $formatted_number = format_number($value, $decimals);
+
+  $prefixes = isset($field['prefix']) ? explode('|', check_plain($field['prefix'])) : array(0 => '');
+  $suffixes = isset($field['suffix']) ? explode('|', check_plain($field['suffix'])) : array(0 => '');
+  $prefix = (count($prefixes) > 1) ? format_plural($value, $prefixes[0], $prefixes[1]) : $prefixes[0];
+  $suffix = (count($suffixes) > 1) ? format_plural($value, $suffixes[0], $suffixes[1]) : $suffixes[0];
+
+  return $prefix . $formatted_number . $suffix;
+}

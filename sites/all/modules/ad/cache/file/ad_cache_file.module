@@ -1,0 +1,307 @@
+<?php
+// $Id: ad_cache_file.module,v 1.1.4.18.2.5.2.9 2009/07/03 18:57:55 jeremy Exp $
+
+/**
+ * @file
+ * A plug in for the ad.module, providing a file cache mechanism for improved
+ * performance when displaying ads.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+// TODO: only include these files when necessary.
+require_once(drupal_get_path('module', 'ad') .'/adserve.inc');
+require_once(drupal_get_path('module', 'ad_cache_file') .'/ad_cache_file.inc');
+
+/**
+ * Implementation of hook_help().
+ */
+function ad_cache_file_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/modules#description':
+      $output = t('Can improve the performance of the ad module utilizing file caching.');
+      break;
+
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_adcacheapi().
+ */
+function ad_cache_file_cron() {
+  ad_cache_file_open();
+  $cache = ad_cache_file_cache();
+  $last_sync = isset($cache['last_sync']) ? $cache['last_sync'] : 0;
+  $lifetime = isset($cache['lifetime']) ? $cache['lifetime'] : 0;
+  if ($last_sync < time() - $lifetime) {
+    ad_cache_file_build();
+  }
+}
+
+/**
+ * Implementation of hook_adcacheapi().
+ */
+function ad_cache_file_adcacheapi($op, &$node = NULL) {
+  if ($node == NULL) {
+    $node = array();
+  }
+  switch ($op) {
+    case 'display_variables':
+      return array(
+        'f' => variable_get('ad_files', 3),
+        'p' => file_create_path(),
+      );
+    case 'method':
+      return array('file' => t('File'));
+    case 'description':
+      return t('File based caching will usually offer better performance, however, some find it difficult to enable and it may not offer valid statistics if you are using multiple load balanced web servers.');
+    case 'settings':
+      $form = array();
+      $form['file'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('File cache settings'),
+        '#collapsible' => TRUE,
+        '#collapsed' => (variable_get('ad_cache', 'none') == 'file') ? FALSE : TRUE,
+      );
+      $form['file']['ad_files'] = array(
+        '#type' => 'select',
+        '#title' => t('Number of cache files'),
+        '#default_value' => variable_get('ad_files', 3),
+        '#options' => drupal_map_assoc(array(1, 3, 5, 10, 15)),
+        '#description' => t('Please select the number of cache files the ad module should use.  Select a smaller value for better accuracy when performaing automatic actions on advertisements at specified thresholds.  Select a larger value for better performance.  This configuration option is only relevant if the file cache is enabled.')
+      );
+      $period = drupal_map_assoc(array(15,30,60,600,1800,3600,21600,43200,86400), 'format_interval');
+      $form['file']['ad_cache_file_lifetime'] = array(
+        '#type' => 'select',
+        '#title' => t('Cache lifetime'),
+        '#default_value' => variable_get('ad_cache_file_lifetime', 60),
+        '#options' => $period,
+        '#description' => t('Specify how long information should be cached before ad statistics are updated in the database.  Increasing the cache lifetime can improve overall performance.  This configuration options is only relevant if the file cache is enabled.'),
+      );
+      $form['file']['ad_cache_file_rebuild'] = array(
+        '#type' => 'submit',
+        '#value' => t('Flush cached data'),
+        '#submit' => array('ad_cache_file_force_flush'),
+      );
+      return $form;
+    case 'settings_submit':
+      variable_set('ad_cache_file_lifetime', $node['ad_cache_file_lifetime']);
+      if ($node['ad_cache'] != 'file') {
+        ad_cache_file_build(0, variable_get('ad_files', 3));
+      }
+      else {
+        ad_cache_file_build($node['ad_files'], variable_get('ad_files', 3));
+      }
+      variable_set('ad_files', $node['ad_files']);
+      break;
+
+  }
+}
+
+/*
+ * Implementation of hook_flush_caches
+ */
+function ad_cache_file_flush_caches() {
+  ad_cache_file_force_flush();
+}
+
+/*
+ * Flush the file cache to the db and clear the files
+ */
+function ad_cache_file_force_flush() {
+  ad_cache_file_build();
+  drupal_set_message(t('Ad module file-cached data has been flushed to the database.'));
+}
+
+/**
+ * Build all required cache files when using the file cache.
+ */
+function ad_cache_file_build($new_files = 0, $old_files = 0) {
+  _debug_echo('File cache: ad_cache_file_build.');
+  $files = max($new_files, $old_files);
+  $files = $files ? $files : variable_get('ad_files', 3);
+  $new_cache = serialize(_ad_build_cache());
+  for ($i = 1; $i <= $files; $i++) {
+    _debug_echo("File cache: file $i of $files.");
+    $cache_file = file_create_path(".$i.ad.cache");
+    if (!file_exists($cache_file)) {
+      // Create the cache file.
+      _debug_echo('File cache: creating cache file.');
+      file_save_data($new_cache, $cache_file, FILE_EXISTS_REPLACE);
+    }
+    else {
+      if (!$fd = @fopen($cache_file, 'r+')) {
+        drupal_set_message(t('Ad module failed to access cache <em>%file</em>.  Verify file permissions.', array('%file' => $cache_file)), 'error');
+        continue;
+      }
+      // Block until we get an exclusive lock on the cache file.
+      _debug_echo('File cache: locking cache file.');
+      flock($fd, LOCK_EX);
+
+      // Read the entire cache file into memory.
+      $cache = unserialize(file_get_contents($cache_file));
+      if ($cache && isset($cache['ad'])) {
+        foreach ($cache['ad'] as $aid => $counts) {
+          if (isset($counts['counts']) && is_array($counts['counts'])) {
+            foreach ($counts['counts'] as $adgroup => $tag) {
+              foreach($tag as $extra => $host) {
+                foreach ($host as $hostid => $ad) {
+                  $hostid = ($hostid == 'none') ? '' : $hostid;
+                  foreach ($ad as $action => $counts) {
+                    foreach ($counts as $timestamp => $count) {
+                      _debug_echo("File cache: aid($aid) adgroup($adgroup) extra($extra) hostid($hostid) action($action) timestamp($timestamp) count($count).");
+                      db_query("UPDATE {ad_statistics} SET count = count + %d WHERE aid = %d AND action = '%s' AND date = %d AND hostid = '%s' AND adgroup = '%s' AND extra = '%s'", $count, $aid, $action, $timestamp, $hostid, $adgroup, $extra);
+                      // If column doesn't already exist, we need to add it.
+                      if (!db_affected_rows()) {
+                        db_query("INSERT INTO {ad_statistics} (aid, date, action, hostid, adgroup, extra, count) VALUES(%d, %d, '%s', '%s', '%s', '%s', %d)", $aid, $timestamp, $action, $hostid, $adgroup, $extra, $count);
+                        // If another process already added this row our INSERT
+                        // will fail, if so we still need to increment it so we
+                        // don't loose a count.
+                        if (!db_affected_rows()) {
+                          db_query("UPDATE {ad_statistics} SET count = count + %d WHERE aid = %d AND action = '%s' AND date = %d AND hostid = '%s' AND adgroup = '%s' AND extra = '%s'", $count, $aid, $action, $timestamp, $hostid, $adgroup, $extra);
+                        }
+                      }
+                    }
+                  }
+                  // If counting ad views, see if we've hit a limit
+                  if ($action = 'view') {
+                    $limits = db_fetch_object(db_query('SELECT activated, maxviews, maxclicks, adstatus FROM {ads} WHERE aid = %d', $aid));
+                    if ($limits->adstatus == 'active') {
+                      if ($limits->maxviews) {
+                        $views = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND action = 'view' AND date >= %d", $aid, date('YmdH', $limits->activated)));
+                        if ($views >= $limits->maxviews) {
+                          db_query("UPDATE {ads} SET adstatus = 'expired', autoexpire = 0, autoexpired = %d, expired = %d WHERE aid = %d", time(), time(), $aid);
+                          ad_statistics_increment($aid, 'autoexpired');
+                          ad_statistics_increment($aid, 'expired');
+                        }
+                      }
+                      if ($limits->maxclicks) {
+                        $clicks = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND action = 'click' AND date >= %d", $aid, date('YmdH', $limits->activated)));
+                        if ($clicks >= $limits->maxclicks) {
+                          db_query("UPDATE {ads} SET adstatus = 'expired', autoexpire = 0, autoexpired = %d, expired = %d WHERE aid = %d", time(), time(), $aid);
+                          ad_statistics_increment($aid, 'autoexpired');
+                          ad_statistics_increment($aid, 'expired');
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      // This will rebuild a new fresh cache file, and release the lock
+      if ($old_files && $i > $new_files) {
+        unlink($cache_file);
+      }
+      else {
+        file_save_data($new_cache, $cache_file, FILE_EXISTS_REPLACE);
+      }
+    }
+  }
+}
+
+/**
+ * Returns the cache structure:
+ *
+ *   // The ad html.
+ *   $cache['ad'][$aid]['display'] = $ad
+ *   // Impressions counter.
+ *   $cache['ad'][$aid][$hostid]['view']
+ *   // Ad type.
+ *   $cache['ad'][$aid]['adtype'] = $adtype
+ *   // Synchronization timestamp.
+ *   $cache['last_sync'] = $timestamp
+ *
+ *   // Owner ID index.
+ *   $cache['uid'][$uid]['aid'][] = $aid
+ *   $cache['ad'][$aid]['uid'][] = $uid;
+ *   // Host ID index.
+ *   $cache['uid'][$uid]['hostid'] = $hostid
+ */
+function _ad_build_cache() {
+  _debug_echo('File cache: _ad_build_cache.');
+  $cache = array();
+
+_debug_echo("SELECT aid FROM ads WHERE adstatus = 'active' OR adstatus = 'approved' OR adstatus = 'offline'");
+  $result = db_query("SELECT aid FROM {ads} WHERE adstatus = 'active' OR adstatus = 'approved' OR adstatus = 'offline'");
+  $counter = 1;
+  while ($ad = db_fetch_object($result)) {
+    _debug_echo("File cache: loading node $ad->aid.");
+    $node = node_load($ad->aid);
+    _debug_echo("File cache: advertisement $counter: aid($ad->aid) type($node->adtype)");
+    $counter++;
+    // Ad information.
+    _debug_echo("File cache: invoking ad_$node->adtype('display_ad').");
+    $cache['ad'][$ad->aid]['display'] = module_invoke("ad_$node->adtype", 'display_ad', $node);
+    $cache['ad'][$ad->aid]['adtype'] = $node->adtype;
+    $cache['ad'][$ad->aid]['none']['counts']['view'] = array();
+    $cache['ad']['aid'][] = $node->aid;
+
+    // Owner indexes.
+    // TODO: Disable this query if ad_remote isn't enabled?
+    $owners = db_query('SELECT o.uid, h.hostid FROM {ad_owners} o LEFT JOIN {ad_hosts} h ON o.uid = h.uid WHERE aid = %d', $ad->aid);
+    $counter2 = 1;
+    while ($owner = db_fetch_object($owners)) {
+      $cache['uid'][$owner->uid]['aid'][] = $ad->aid;
+      $cache['ad'][$ad->aid]['uid'][] = $owner->uid;
+      $cache['ad'][$ad->aid][$owner->hostid]['view'] = array();
+      _debug_echo("File cache: owner $counter2: uid($owner->uid)");
+      $counter2++;
+    }
+
+    // Taxonomy index.
+    $terms = db_query('SELECT tid FROM {term_node} WHERE nid = %d', $ad->aid);
+    $match = FALSE;
+    $counter2 = 1;
+    while ($term = db_fetch_object($terms)) {
+      $cache['tid'][$term->tid]['aid'][$ad->aid] = $ad->aid;
+      $match = TRUE;
+      _debug_echo("File cache: term $counter2: tid($term->tid)");
+      $counter2++;
+    }
+    if (!$match) {
+      $cache['tid'][0]['aid'][] = $ad->aid;
+    }
+  }
+
+  // HostID index
+  $owners = db_query('SELECT uid, hostid FROM {ad_hosts}');
+  $counter = 1;
+  while ($owner = db_fetch_object($owners)) {
+    $cache['uid'][$owner->uid]['hostid'] = $owner->hostid;
+    $cache['ad'][0][$owner->hostid]['count'] = array();
+    if (($user = user_load(array('uid' => $owner->uid))) &&
+        (user_access('host remote advertisements', $user))) {
+      $cache['hostid'][$owner->hostid] = TRUE;
+    }
+    _debug_echo("File cache: owner $counter: uid($owner->uid) hostid($owner->hostid)");
+    $counter++;
+  }
+
+  _debug_echo('File cache: invoking external ad_build_cache hooks.');
+  $external = module_invoke_all('ad_build_cache');
+  // TODO: Move helper function adserve_cache_build_hooks from adcache.inc to
+  // ad.module to share.
+  foreach ($external as $module => $return) {
+    // supported cache hooks
+    foreach (array('hook_init', 'hook_filter', 'hook_weight', 'hook_select',
+                   'hook_init_text', 'hook_exit_text',
+                   'hook_increment_extra') as $hook) {
+      if (isset($return[$hook]) && is_array($return[$hook])) {
+        $weight = isset($return[$hook]['weight']) ? (int)$return[$hook]['weight'] : 0;
+        $cache[$hook]['file'][$weight][] = $return[$hook]['file'];
+        $cache[$hook]['function'][$weight][] = $return[$hook]['function'];
+        unset($external[$module][$hook]);
+      }
+    }
+  }
+  $cache = array_merge($cache, $external);
+  $cache['last_sync'] = time();
+  $cache['lifetime'] = variable_get('ad_cache_file_lifetime', 60);
+  return $cache;
+}

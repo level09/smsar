@@ -1,0 +1,13 @@
+; $Id: simplest_gmap.info,v 1.1.2.1 2009/04/13 17:53:40 troy Exp $
+name = Simplest gmap
+description = Simplest gmap implementation. Really.
+core = 6.x
+
+
+
+; Information added by drupal.org packaging script on 2009-04-14
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "simplest_gmap"
+datestamp = "1239669348"
+

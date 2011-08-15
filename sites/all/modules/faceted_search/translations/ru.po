@@ -1,0 +1,299 @@
+# LANGUAGE translation of Drupal (faceted_search.module)
+# Copyright 2007 Sergey Ivanov <lw_ru@mail.ru>
+# Generated from file: faceted_search.module,v 1.6 2007/06/07 19:07:30 davidlesieur
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2007-07-17 18:07+0600\n"
+"PO-Revision-Date: 2007-07-17 20:00+0600\n"
+"Last-Translator: Sergey Ivanov <lw_ru@mail.ru>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=((($n%10==1) && ($n%100!=11))?(0):((((($n%10)>=2)&&(($n%10)<=4))&&((($n%100)<10)||(($n%100)>=20)))?(1):2))\n"
+"X-Poedit-Language: Russian\n"
+"X-Poedit-Country: RUSSIAN FEDERATION\n"
+
+#: taxonomy_facets.module:19
+msgid "Taxonomy Facets"
+msgstr "Фасеты таксономии"
+
+#: taxonomy_facets.module:180
+msgid "Vocabularies to use as facets"
+msgstr "Словари, используемые как фасеты"
+
+#: taxonomy_facets.module:181
+msgid "Check the vocabularies that shall be used in faceted searches. Note that the default weight of each facet will equal the weight of its corresponding vocabulary."
+msgstr "Отметьте словари, которые должны быть использованы в фасетном поиске. По умолчанию вес каждой фасеты будет равен весу соответствующего словаря."
+
+#: taxonomy_facets.module:187
+msgid "Indexing"
+msgstr "Индексация"
+
+#: taxonomy_facets.module:194
+msgid "You must !rebuild if some content was added while the Taxonomy Facets module was disabled. This is not necessary after enabling the module for the first time."
+msgstr "Вы должны !rebuild, если какие-то материалы были добавлены, когда модуль Фасет таксономии был отключен. Это не требуется после первого включения модуля."
+
+#: taxonomy_facets.module:194
+msgid "rebuild the Taxonomy Facets index"
+msgstr "перестроить индекс Фасет таксономии"
+
+#: taxonomy_facets.module:201
+msgid "There are currently no vocabularies. Go to the !page first to create vocabularies."
+msgstr "Словари отсутствуют. Создайте словари на странице !page."
+
+#: taxonomy_facets.module:201
+msgid "Categories page"
+msgstr "Страница категорий"
+
+#: taxonomy_facets.module:218
+msgid "The Taxonomy Facets index has been updated for the %vocabulary vocabulary."
+msgstr "Индекс Фасет таксономии обновлен для словаря %vocabulary."
+
+#: taxonomy_facets.module:222
+msgid "The Taxonomy Facets index has been cleared for the %vocabulary vocabulary."
+msgstr "Индекс Фасет таксономии очищен для словаря %vocabulary."
+
+#: taxonomy_facets.module:237
+msgid "The Taxonomy Facets index has been updated."
+msgstr "Индекс Фасет таксономии обновлен."
+
+#: faceted_search.module:17
+msgid "A faceted search interface allows users to browse content in such a way that they can rapidly get acquainted with the scope and nature of the content without ever feeling lost. Such system relies on metadata (such as !categories) usually built specifically for !classification."
+msgstr "Интерфейс фасетного поиска позволяет пользователям быстро ознакомиться с обзором и природой материалов, не пропустив ничего нужного. Такая система основана на метаданных (таких, как !categories), обычно созданных специально для !classification."
+
+#: faceted_search.module:17
+msgid "categories"
+msgstr "категории"
+
+#: faceted_search.module:17
+msgid "faceted classification"
+msgstr "фасетная классификация"
+
+#: faceted_search.module:17
+msgid "Introductory information is provided in !article about when to use &mdash; and how to build &mdash; a faceted classification."
+msgstr "Вводная информация представлена в !article о том, как использовать &mdash; и как построить &mdash; фасетную классификцию."
+
+#: faceted_search.module:17
+msgid "this article"
+msgstr "эта статья"
+
+#: faceted_search.module:29
+msgid "Faceted search"
+msgstr "Фасетный поиск"
+
+#: faceted_search.module:33
+msgid "Configure faceted search settings."
+msgstr "Настройка фасетного поиска"
+
+#: faceted_search.module:38
+msgid "Settings"
+msgstr "Настройки"
+
+#: faceted_search.module:71
+msgid "Facet display"
+msgstr "Отображение фасет"
+
+#: faceted_search.module:72
+msgid "In listings, the heavier facets will sink and the lighter facets will be positioned nearer the top."
+msgstr "В списках более тяжелые фасеты будут тонуть, а более легкие - всплывать вверх."
+
+#: faceted_search.module:89
+msgid "Filter"
+msgstr "Фильтр"
+
+#: faceted_search.module:90
+msgid "You may exclude some content types from search results."
+msgstr "Вы можете исключить некоторые типы материалов из результатов поиска."
+
+#: faceted_search.module:95
+msgid "Check the content types to exclude from search results."
+msgstr "Отметьте типы материалов, которые должны быть исключени из результатов поиска."
+
+#: faceted_search.module:158
+msgid "Facet"
+msgstr "Фасета"
+
+#: faceted_search.module:158
+msgid "Weight"
+msgstr "Вес"
+
+#: faceted_search.module:158
+msgid "Number of categories in facet preview"
+msgstr "Количество категорий в предварительном обзоре фасет"
+
+#: faceted_search.module:213
+msgid "All categories"
+msgstr "Все категории"
+
+#: faceted_search.module:214
+msgid "Up to 5 categories"
+msgstr "До 5 категорий"
+
+#: faceted_search.module:215
+msgid "Up to 10 categories"
+msgstr "До 10 категорий"
+
+#: faceted_search.module:216
+msgid "Up to 15 categories"
+msgstr "До 15 категорий"
+
+#: faceted_search.module:217
+msgid "Up to 20 categories"
+msgstr "До 20 категорий"
+
+#: faceted_search.module:218
+msgid "Up to 25 categories"
+msgstr "До 25 категорий"
+
+#: faceted_search.module:219
+msgid "Up to 30 categories"
+msgstr "До 30 категорий"
+
+#: faceted_search.module:220
+msgid "Up to 40 categories"
+msgstr "До 40 категорий"
+
+#: faceted_search.module:221
+msgid "Up to 50 categories"
+msgstr "До 50 категорий"
+
+#: faceted_search.module:222
+msgid "Up to 100 categories"
+msgstr "До 100 категорий"
+
+#: faceted_search.module:0
+msgid "faceted_search"
+msgstr ""
+
+#: faceted_search_ui.module:61
+msgid "Faceted search / Current search"
+msgstr "Фасетный поиск / Текущий поиск"
+
+#: faceted_search_ui.module:62
+msgid "Faceted search / Keyword search"
+msgstr "Фасетный поиск / Текстовый поиск"
+
+#: faceted_search_ui.module:63
+msgid "Faceted search / Guided search"
+msgstr "Фасетный поиск / Направленный поиск"
+
+#: faceted_search_ui.module:64
+msgid "Faceted search / Related categories"
+msgstr "Фасетный поиск / Связанные категории"
+
+#: faceted_search_ui.module:74
+msgid "Current search"
+msgstr "Текущий поиск"
+
+#: faceted_search_ui.module:80;153
+msgid "Keyword search"
+msgstr "Текстовый поиск"
+
+#: faceted_search_ui.module:87;156
+msgid "Guided search"
+msgstr "Направленный поиск"
+
+#: faceted_search_ui.module:95
+msgid "Related categories"
+msgstr "Связанные категории"
+
+#: faceted_search_ui.module:121;150;188;416
+msgid "Search"
+msgstr "Поиск"
+
+#: faceted_search_ui.module:124
+msgid "Search results"
+msgstr "Результаты поиска"
+
+#: faceted_search_ui.module:127
+msgid "Your search yielded no results"
+msgstr "По вашему запросу ничего не найдено"
+
+#: faceted_search_ui.module:341
+msgid "With all of the words"
+msgstr "Включая все слова"
+
+#: faceted_search_ui.module:350
+msgid "Advanced search"
+msgstr "Расширенный поиск"
+
+#: faceted_search_ui.module:355
+msgid "With the exact phrase"
+msgstr "Точно фразу"
+
+#: faceted_search_ui.module:362
+msgid "With at least one of the words"
+msgstr "Как минимум с одним словом"
+
+#: faceted_search_ui.module:369
+msgid "Without the words"
+msgstr "Исключая слова"
+
+#: faceted_search_ui.module:376
+msgid "Standard search"
+msgstr "Обычный поиск"
+
+#: faceted_search_ui.module:387
+msgid "New search"
+msgstr "Новый поиск"
+
+#: faceted_search_ui.module:387
+msgid "Search within results"
+msgstr "Поиск в результатах"
+
+#: faceted_search_ui.module:730
+msgid "more..."
+msgstr "еще..."
+
+#: faceted_search_ui.module:734
+msgid "all"
+msgstr "все"
+
+#: faceted_search_ui.module:739
+msgid "Remove this term"
+msgstr "Удалить этот термин"
+
+#: faceted_search_ui.module:884
+msgid "%text."
+msgstr ""
+
+#: faceted_search_ui.module:884
+msgid "results"
+msgstr "результаты"
+
+#: faceted_search_ui.module:884
+msgid "faceted_search"
+msgstr ""
+
+#: faceted_search_ui.module:18
+msgid "use faceted search"
+msgstr "использовать фасетный поиск"
+
+#: content_type_facet.module:19
+msgid "Content Type Facet"
+msgstr "Фасета по типам материалов"
+
+#: content_type_facet.module:90
+msgid "Content types to display in the Content type facet"
+msgstr "Типы материалов для показа в фасете типов материалов"
+
+#: content_type_facet.module:91
+msgid "Check the content types that shall be displayed in the Content type facet. Note that this setting is not a filter for search results; other content types can still be searchable through other facets or from text searches."
+msgstr "Отметьте типы материалов, которые должны быть показаны в блоке фасетного отбора. Учтите, что это не фильтр для результатов поиска. Другие типы материалов могут быть найдены через другие фасеты или через текстовый поиск."
+
+#: content_type_facet.module:98
+msgid "There are currently no content types. Go to the !page first to create content types."
+msgstr "Не определены типы материалов. Сначала создайте их на странице !page."
+
+#: content_type_facet.module:98
+msgid "Content types page"
+msgstr "Страница типов материалов"
+
+#: content_type_facet.module:135
+msgid "Content type"
+msgstr "Тип материалов"
+

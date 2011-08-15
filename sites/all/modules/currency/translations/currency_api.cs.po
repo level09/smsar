@@ -1,0 +1,655 @@
+# Czech translation of Drupal (modules/currency_currency_api-module/currency_currency_api-module.po)
+# $Id: currency_api.cs.po,v 1.1.2.1 2008/09/11 04:41:39 kbahey Exp $
+# Jakub Suchy <redakce@drupal.cz>, 2007.
+msgid ""
+msgstr ""
+"Project-Id-Version: currency_currency_api-module\n"
+"POT-Creation-Date: 2007-04-14 00:51-0400\n"
+"PO-Revision-Date: 2007-09-17 18:42+0200\n"
+"Last-Translator: Jakub Suchy <redakce@drupal.cz>\n"
+"Language-Team: Czech <redakce@drupal.cz>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms:  nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+"X-Generator: KBabel 1.11.4\n"
+
+#: currency_api/currency_api.module:20
+msgid "Settings for currency API."
+msgstr "Nastavení pro API převodníku měn."
+
+#: currency_api/currency_api.module:33
+msgid "Log all currency exchange requests and errors to watchdog"
+msgstr "Logovat všechny požadavky a chyby při převodu měn"
+
+#: currency_api/currency_api.module:196
+msgid "Afghanistan Afghani (AFA)"
+msgstr "Afghánské afghání (AFA)"
+
+#: currency_api/currency_api.module:197
+msgid "Albanian Lek (ALL)"
+msgstr "Albánský lek (LEK)"
+
+#: currency_api/currency_api.module:198
+msgid "Algerian Dinar (DZD)"
+msgstr "Alžírský dinár (DZD)"
+
+#: currency_api/currency_api.module:199
+msgid "Argentine Peso (ARS)"
+msgstr "Argentinské peso (ARS)"
+
+#: currency_api/currency_api.module:200
+msgid "Aruba Florin (AWG)"
+msgstr "Arubský florin (AWG)"
+
+#: currency_api/currency_api.module:201
+msgid "Australian Dollar (AUD)"
+msgstr "Australský dolar (AUD)"
+
+#: currency_api/currency_api.module:202
+msgid "Bahamian Dollar (BSD)"
+msgstr "Bahamský dolar (BSD)"
+
+#: currency_api/currency_api.module:203
+msgid "Bahraini Dinar (BHD)"
+msgstr "Bahrainský dinár (BHD)"
+
+#: currency_api/currency_api.module:204
+msgid "Bangladesh Taka (BDT)"
+msgstr "Taka (BDT)"
+
+#: currency_api/currency_api.module:205
+msgid "Barbados Dollar (BBD)"
+msgstr "Barbadoský dolar (BBD)"
+
+#: currency_api/currency_api.module:206
+msgid "Belarus Ruble (BYR)"
+msgstr "Běloruský rubl (BYR)"
+
+#: currency_api/currency_api.module:207
+msgid "Belize Dollar (BZD)"
+msgstr "Belizský dolar (BZD)"
+
+#: currency_api/currency_api.module:208
+msgid "Bermuda Dollar (BMD)"
+msgstr "Bermudský dolar (BMD)"
+
+#: currency_api/currency_api.module:209
+msgid "Bhutan Ngultrum (BTN)"
+msgstr "Bhútánský ngultrum (BTN)"
+
+#: currency_api/currency_api.module:210
+msgid "Bolivian Boliviano (BOB)"
+msgstr "Bolívijské boliviano (BOB)"
+
+#: currency_api/currency_api.module:211
+msgid "Botswana Pula (BWP)"
+msgstr "Pula (BWP)"
+
+#: currency_api/currency_api.module:212
+msgid "Brazilian Real (BRL)"
+msgstr "Brazilský real (BRL)"
+
+#: currency_api/currency_api.module:213
+msgid "British Pound (GBP)"
+msgstr "Britská libra (GBP)"
+
+#: currency_api/currency_api.module:214
+msgid "Brunei Dollar (BND)"
+msgstr "Brunejský dolar (BND)"
+
+#: currency_api/currency_api.module:215
+msgid "Bulgarian Lev (BGN)"
+msgstr "Bulharská leva (BGN)"
+
+#: currency_api/currency_api.module:216
+msgid "Burundi Franc (BIF)"
+msgstr "Burundský frank (BIF)"
+
+#: currency_api/currency_api.module:217
+msgid "Cambodia Riel (KHR)"
+msgstr "Kambodžský riel (KHR)"
+
+#: currency_api/currency_api.module:218
+msgid "Canadian Dollar (CAD)"
+msgstr "Kanadský dolar (CAD)"
+
+#: currency_api/currency_api.module:219
+msgid "Cape Verde Escudo (CVE)"
+msgstr "Kapverdské escudo (CVE)"
+
+#: currency_api/currency_api.module:220
+msgid "Cayman Islands Dollar (KYD)"
+msgstr "Kajmanský dolar (KYD)"
+
+#: currency_api/currency_api.module:221
+msgid "CFA Franc (BCEAO) (XOF)"
+msgstr "CFA frank (BCEAO) (XOF)"
+
+#: currency_api/currency_api.module:222
+msgid "CFA Franc (BEAC) (XAF)"
+msgstr "CFA frank (BEAC) (XAF)"
+
+#: currency_api/currency_api.module:223
+msgid "Chilean Peso (CLP)"
+msgstr "Chilské peso (CLP)"
+
+#: currency_api/currency_api.module:224
+msgid "Chinese Yuan (CNY)"
+msgstr "Čínský yuan (CNY)"
+
+#: currency_api/currency_api.module:225
+msgid "Colombian Peso (COP)"
+msgstr "Kolumbijské peso (COP)"
+
+#: currency_api/currency_api.module:226
+msgid "Comoros Franc (KMF)"
+msgstr "Komorský frank (KMF)"
+
+#: currency_api/currency_api.module:227
+msgid "Costa Rica Colon (CRC)"
+msgstr "Kostarický colón (CRC)"
+
+#: currency_api/currency_api.module:228
+msgid "Croatian Kuna (HRK)"
+msgstr "Chovatská kuna (HRK)"
+
+#: currency_api/currency_api.module:229
+msgid "Cuban Peso (CUP)"
+msgstr "Kubánské peso (CUP)"
+
+#: currency_api/currency_api.module:230
+msgid "Cyprus Pound (CYP)"
+msgstr "Kyperská libra (CYP)"
+
+#: currency_api/currency_api.module:231
+msgid "Czech Koruna (CZK)"
+msgstr "Česká koruna (CZK)"
+
+#: currency_api/currency_api.module:232
+msgid "Danish Krone (DKK)"
+msgstr "Dánská koruna (DKK)"
+
+#: currency_api/currency_api.module:233
+msgid "Dijibouti Franc (DJF)"
+msgstr "Džibutský frank (DJF)"
+
+#: currency_api/currency_api.module:234
+msgid "Dominican Peso (DOP)"
+msgstr "Dominikánské peso (DOP)"
+
+#: currency_api/currency_api.module:235
+msgid "East Caribbean Dollar (XCD)"
+msgstr "Východokaribský dolar (XCD)"
+
+#: currency_api/currency_api.module:236
+msgid "Ecuador Sucre (ECS)"
+msgstr "Ekvádorský sucre (ECS)"
+
+#: currency_api/currency_api.module:237
+msgid "Egyptian Pound (EGP)"
+msgstr "Egyptská libra (EGP)"
+
+#: currency_api/currency_api.module:238
+msgid "El Salvador Colon (SVC)"
+msgstr "Salvadorský colón (SVC)"
+
+#: currency_api/currency_api.module:239
+msgid "Eritrea Nakfa (ERN)"
+msgstr "Eritejská nakfa (ERN)"
+
+#: currency_api/currency_api.module:240
+msgid "Estonian Kroon (EEK)"
+msgstr "Estonská koruna (EEK)"
+
+#: currency_api/currency_api.module:241
+msgid "Ethiopian Birr (ETB)"
+msgstr "Etiopský birr (ETB)"
+
+#: currency_api/currency_api.module:242
+msgid "Euro (EUR)"
+msgstr "Euro (EUR)"
+
+#: currency_api/currency_api.module:243
+msgid "Falkland Islands Pound (FKP)"
+msgstr "Falklandská libra (FKP)"
+
+#: currency_api/currency_api.module:244
+msgid "Fiji Dollar (FJD)"
+msgstr "Fidžijský dolar (FJD)"
+
+#: currency_api/currency_api.module:245
+msgid "Gambian Dalasi (GMD)"
+msgstr "Gambijské dalasi (GMD)"
+
+#: currency_api/currency_api.module:246
+msgid "Ghanian Cedi (GHC)"
+msgstr "Ghanský cedi (GHC)"
+
+#: currency_api/currency_api.module:247
+msgid "Gibraltar Pound (GIP)"
+msgstr "Gibraltarská libra (GIP)"
+
+#: currency_api/currency_api.module:248
+msgid "Gold Ounces (XAU)"
+msgstr "Zlato - Trojská unce (XAU)"
+
+#: currency_api/currency_api.module:249
+msgid "Guatemala Quetzal (GTQ)"
+msgstr "Guatemalský quetzal (GTQ)"
+
+#: currency_api/currency_api.module:250
+msgid "Guinea Franc (GNF)"
+msgstr "Guinejský frank (GNF)"
+
+#: currency_api/currency_api.module:251
+msgid "Guyana Dollar (GYD)"
+msgstr "Guyanský dolar (GYD)"
+
+#: currency_api/currency_api.module:252
+msgid "Haiti Gourde (HTG)"
+msgstr "Haitské gourde (HTG)"
+
+#: currency_api/currency_api.module:253
+msgid "Honduras Lempira (HNL)"
+msgstr "Honduraská lempira (HNL)"
+
+#: currency_api/currency_api.module:254
+msgid "Hong Kong Dollar (HKD)"
+msgstr "Hongkongský dolar (HKD)"
+
+#: currency_api/currency_api.module:255
+msgid "Hungarian Forint (HUF)"
+msgstr "Maďarský forint (HUF)"
+
+#: currency_api/currency_api.module:256
+msgid "Iceland Krona (ISK)"
+msgstr "Islandská koruna (ISK)"
+
+#: currency_api/currency_api.module:257
+msgid "Indian Rupee (INR)"
+msgstr "Indická rupie (INR)"
+
+#: currency_api/currency_api.module:258
+msgid "Indonesian Rupiah (IDR)"
+msgstr "Indonéská rupie (IDR)"
+
+#: currency_api/currency_api.module:259
+msgid "Iran Rial (IRR)"
+msgstr "Íránský riál (IRR)"
+
+#: currency_api/currency_api.module:260
+msgid "Iraqi Dinar (IQD)"
+msgstr "Irácký dinár (IQD)"
+
+#: currency_api/currency_api.module:261
+msgid "Israeli Shekel (ILS)"
+msgstr "Izraelský šekel (ILS)"
+
+#: currency_api/currency_api.module:262
+msgid "Jamaican Dollar (JMD)"
+msgstr "Jamajský dolar (JMD)"
+
+#: currency_api/currency_api.module:263
+msgid "Japanese Yen (JPY)"
+msgstr "Japonský jen (JPY)"
+
+#: currency_api/currency_api.module:264
+msgid "Jordanian Dinar (JOD)"
+msgstr "Jordánský dinár (JOD)"
+
+#: currency_api/currency_api.module:265
+msgid "Kazakhstan Tenge (KZT)"
+msgstr "Kazašské tenge  (KZT)"
+
+#: currency_api/currency_api.module:266
+msgid "Kenyan Shilling (KES)"
+msgstr "Keňský šilink (KES)"
+
+#: currency_api/currency_api.module:267
+msgid "Korean Won (KRW)"
+msgstr "Jihokorejský won (KRW)"
+
+#: currency_api/currency_api.module:268
+msgid "Kuwaiti Dinar (KWD)"
+msgstr "Kuvajtský dinár (KWD)"
+
+#: currency_api/currency_api.module:269
+msgid "Lao Kip (LAK)"
+msgstr "Laoský kip (LAK)"
+
+#: currency_api/currency_api.module:270
+msgid "Latvian Lat (LVL)"
+msgstr "Lotyšský lat (LVL)"
+
+#: currency_api/currency_api.module:271
+msgid "Lebanese Pound (LBP)"
+msgstr "Libanonská libra (LBP)"
+
+#: currency_api/currency_api.module:272
+msgid "Lesotho Loti (LSL)"
+msgstr "Lesothské loti (LSL)"
+
+#: currency_api/currency_api.module:273
+msgid "Liberian Dollar (LRD)"
+msgstr "Libijský dinár (LRD)"
+
+#: currency_api/currency_api.module:274
+msgid "Libyan Dinar (LYD)"
+msgstr "Liberijský dolar (LYD)"
+
+#: currency_api/currency_api.module:275
+msgid "Lithuanian Lita (LTL)"
+msgstr "Litevský lit (LTL)"
+
+#: currency_api/currency_api.module:276
+msgid "Macau Pataca (MOP)"
+msgstr "Macauská pataca (MOP)"
+
+#: currency_api/currency_api.module:277
+msgid "Macedonian Denar (MKD)"
+msgstr "Makedonský dinár (MKD)"
+
+#: currency_api/currency_api.module:278
+msgid "Malagasy Franc (MGF)"
+msgstr "Madagaskarský frank (MGF)"
+
+#: currency_api/currency_api.module:279
+msgid "Malawi Kwacha (MWK)"
+msgstr "Malawská kwacha (MWK)"
+
+#: currency_api/currency_api.module:280
+msgid "Malaysian Ringgit (MYR)"
+msgstr "Malajský ringgit (MYR)"
+
+#: currency_api/currency_api.module:281
+msgid "Maldives Rufiyaa (MVR)"
+msgstr "Maledivská rupie (MVR)"
+
+#: currency_api/currency_api.module:282
+msgid "Maltese Lira (MTL)"
+msgstr "Maltská lira (MTL)"
+
+#: currency_api/currency_api.module:283
+msgid "Mauritania Ougulya (MRO)"
+msgstr "Mauretánská ouguiya (MRO)"
+
+#: currency_api/currency_api.module:284
+msgid "Mauritius Rupee (MUR)"
+msgstr "Mauricijská rupie (MUR)"
+
+#: currency_api/currency_api.module:285
+msgid "Mexican Peso (MXN)"
+msgstr "Mexické peso (MXN)"
+
+#: currency_api/currency_api.module:286
+msgid "Moldovan Leu (MDL)"
+msgstr "Moldavský leu (MDL)"
+
+#: currency_api/currency_api.module:287
+msgid "Mongolian Tugrik (MNT)"
+msgstr "Mongolský tugrik (MNT)"
+
+#: currency_api/currency_api.module:288
+msgid "Moroccan Dirham (MAD)"
+msgstr "Marocký dirham (MAD)"
+
+#: currency_api/currency_api.module:289
+msgid "Mozambique Metical (MZM)"
+msgstr "Mosambický metical (MZM)"
+
+#: currency_api/currency_api.module:290
+msgid "Myanmar Kyat (MMK)"
+msgstr "Myanmarský kyat (MMK)"
+
+#: currency_api/currency_api.module:291
+msgid "Namibian Dollar (NAD)"
+msgstr "Namibijský dolar (NAD)"
+
+#: currency_api/currency_api.module:292
+msgid "Nepalese Rupee (NPR)"
+msgstr "Nepálská rupie (NPR)"
+
+#: currency_api/currency_api.module:293
+msgid "Neth Antilles Guilder (ANG)"
+msgstr "Gulden Nizozemských Antil (ANG)"
+
+#: currency_api/currency_api.module:294
+msgid "New Zealand Dollar (NZD)"
+msgstr "Novozélandský dolar (NZD)"
+
+#: currency_api/currency_api.module:295
+msgid "Nicaragua Cordoba (NIO)"
+msgstr "Nikaragujská cordoba (NIO)"
+
+#: currency_api/currency_api.module:296
+msgid "Nigerian Naira (NGN)"
+msgstr "Nigérijská naira (NGN)"
+
+#: currency_api/currency_api.module:297
+msgid "North Korean Won (KPW)"
+msgstr "Severokorejský won (KPW)"
+
+#: currency_api/currency_api.module:298
+msgid "Norwegian Krone (NOK)"
+msgstr "Norská koruna (NOK)"
+
+#: currency_api/currency_api.module:299
+msgid "Omani Rial (OMR)"
+msgstr "Ománský riál (OMR)"
+
+#: currency_api/currency_api.module:300
+msgid "Pacific Franc (XPF)"
+msgstr "CFP frank (XPF)"
+
+#: currency_api/currency_api.module:301
+msgid "Pakistani Rupee (PKR)"
+msgstr "Pákistánská rupie (PKR)"
+
+#: currency_api/currency_api.module:302
+msgid "Palladium Ounces (XPD)"
+msgstr "Palladium - Trojská unce (XPD)"
+
+#: currency_api/currency_api.module:303
+msgid "Panama Balboa (PAB)"
+msgstr "Panamská balboa (PAB)"
+
+#: currency_api/currency_api.module:304
+msgid "Papua New Guinea Kina (PGK)"
+msgstr "Papujsko-guinejská kina (PGK)"
+
+#: currency_api/currency_api.module:305
+msgid "Paraguayan Guarani (PYG)"
+msgstr "Paraguajský guarani (PYG)"
+
+#: currency_api/currency_api.module:306
+msgid "Peruvian Nuevo Sol (PEN)"
+msgstr "Peruánský nuevo sol (PEN)"
+
+#: currency_api/currency_api.module:307
+msgid "Philippine Peso (PHP)"
+msgstr "Filipínské peso (PHP)"
+
+#: currency_api/currency_api.module:308
+msgid "Platinum Ounces (XPT)"
+msgstr "Platina - Trojská unce (XPT)"
+
+#: currency_api/currency_api.module:309
+msgid "Polish Zloty (PLN)"
+msgstr "Polský zlotý (PLN)"
+
+#: currency_api/currency_api.module:310
+msgid "Qatar Rial (QAR)"
+msgstr "Katarský riál (QAR)"
+
+#: currency_api/currency_api.module:311
+msgid "Romanian Leu (ROL)"
+msgstr "Rumunský leu (ROL)"
+
+#: currency_api/currency_api.module:312
+msgid "Russian Rouble (RUB)"
+msgstr "Ruský rubl (RUB)"
+
+#: currency_api/currency_api.module:313
+msgid "Rwanda Franc (RWF)"
+msgstr "Rwandský frank (RWF)"
+
+#: currency_api/currency_api.module:314
+msgid "Samoa Tala (WST)"
+msgstr "Samojská tala (WST)"
+
+#: currency_api/currency_api.module:315
+msgid "Sao Tome Dobra (STD)"
+msgstr "Svatotomášská dobra (STD)"
+
+#: currency_api/currency_api.module:316
+msgid "Saudi Arabian Riyal (SAR)"
+msgstr "Saúdský riál (SAR)"
+
+#: currency_api/currency_api.module:317
+msgid "Seychelles Rupee (SCR)"
+msgstr "Seychelská rupie (SCR)"
+
+#: currency_api/currency_api.module:318
+msgid "Sierra Leone Leone (SLL)"
+msgstr "Sierro-leonský leone (SLL)"
+
+#: currency_api/currency_api.module:319
+msgid "Silver Ounces (XAG)"
+msgstr "Stříbro - Trojská unce (XAG)"
+
+#: currency_api/currency_api.module:320
+msgid "Singapore Dollar (SGD)"
+msgstr "Singapurský dolar (SGD)"
+
+#: currency_api/currency_api.module:321
+msgid "Slovak Koruna (SKK)"
+msgstr "Slovenská koruna (SKK)"
+
+#: currency_api/currency_api.module:322
+msgid "Slovenian Tolar (SIT)"
+msgstr "Slovinský tolar (SIT)"
+
+#: currency_api/currency_api.module:323
+msgid "Solomon Islands Dollar (SBD)"
+msgstr "Šalamounský dolar (SBD)"
+
+#: currency_api/currency_api.module:324
+msgid "Somali Shilling (SOS)"
+msgstr "Somálský šilink (SOS)"
+
+#: currency_api/currency_api.module:325
+msgid "South African Rand (ZAR)"
+msgstr "Jihoafrický rand (ZAR)"
+
+#: currency_api/currency_api.module:326
+msgid "Sri Lanka Rupee (LKR)"
+msgstr "Srílanská rupie (LKR)"
+
+#: currency_api/currency_api.module:327
+msgid "St Helena Pound (SHP)"
+msgstr "Svatohelenská libra (SHP)"
+
+#: currency_api/currency_api.module:328
+msgid "Sudanese Dinar (SDD)"
+msgstr "Súdánský dinár (SDD)"
+
+#: currency_api/currency_api.module:329
+msgid "Surinam Guilder (SRG)"
+msgstr "Surinamský dolar (SRG)"
+
+#: currency_api/currency_api.module:330
+msgid "Swaziland Lilageni (SZL)"
+msgstr "Svazijské lilangeni (SZL)"
+
+#: currency_api/currency_api.module:331
+msgid "Swedish Krona (SEK)"
+msgstr "Švédská koruna (SEK)"
+
+#: currency_api/currency_api.module:332
+msgid "Swiss Franc (CHF)"
+msgstr "Švýcarský frank (CHF)"
+
+#: currency_api/currency_api.module:333
+msgid "Syrian Pound (SYP)"
+msgstr "Syrská libra (SYP)"
+
+#: currency_api/currency_api.module:334
+msgid "Taiwan Dollar (TWD)"
+msgstr "Nový taiwanský dolar (TWD)"
+
+#: currency_api/currency_api.module:335
+msgid "Tanzanian Shilling (TZS)"
+msgstr "Tanzanský šilink (TZS)"
+
+#: currency_api/currency_api.module:336
+msgid "Thai Baht (THB)"
+msgstr "Thajský baht (THB)"
+
+#: currency_api/currency_api.module:337
+msgid "Tonga Pa'anga (TOP)"
+msgstr "Tonžská paanga (TOP)"
+
+#: currency_api/currency_api.module:338
+msgid "Trinidad & Tobago Dollar (TTD)"
+msgstr "Trinidadsko-tobagský dolar (TTD)"
+
+#: currency_api/currency_api.module:339
+msgid "Tunisian Dinar (TND)"
+msgstr "Tuniský dinár (TND)"
+
+#: currency_api/currency_api.module:340
+msgid "Turkish Lira (TRL)"
+msgstr "Turecká lira (TRL)"
+
+#: currency_api/currency_api.module:341
+msgid "U.S. Dollar (USD)"
+msgstr "Americký dolar (USD)"
+
+#: currency_api/currency_api.module:342
+msgid "UAE Dirham (AED)"
+msgstr "Emirátský dirham (AED)"
+
+#: currency_api/currency_api.module:343
+msgid "Ugandan Shilling (UGX)"
+msgstr "Ugandský šilink (UGX)"
+
+#: currency_api/currency_api.module:344
+msgid "Ukraine Hryvnia (UAH)"
+msgstr "Ukrajinská hřivna (UAH)"
+
+#: currency_api/currency_api.module:345
+msgid "Uruguayan New Peso (UYU)"
+msgstr "Uruguayské peso (UYU)"
+
+#: currency_api/currency_api.module:346
+msgid "Vanuatu Vatu (VUV)"
+msgstr "Vanuatské vatu (VUV)"
+
+#: currency_api/currency_api.module:347
+msgid "Venezuelan Bolivar (VEB)"
+msgstr "Venezuelský bolívar (VEB)"
+
+#: currency_api/currency_api.module:348
+msgid "Vietnam Dong (VND)"
+msgstr "Vietnamský dong (VND)"
+
+#: currency_api/currency_api.module:349
+msgid "Yemen Riyal (YER)"
+msgstr "Jemenský riál (YER)"
+
+#: currency_api/currency_api.module:350
+msgid "Yugoslav Dinar (YUM)"
+msgstr "Jugoslávský dinár (YUM)"
+
+#: currency_api/currency_api.module:351
+msgid "Zambian Kwacha (ZMK)"
+msgstr "Zambijská kwacha (ZMK)"
+
+#: currency_api/currency_api.module:352
+msgid "Zimbabwe Dollar (ZWD)"
+msgstr "Zimbabwský dolar (ZWD)"
+
+#: currency_api/currency_api.module:0
+msgid "currency_api"
+msgstr "currency_api"

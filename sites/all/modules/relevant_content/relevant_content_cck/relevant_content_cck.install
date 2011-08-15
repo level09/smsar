@@ -1,0 +1,38 @@
+<?php
+// $Id: relevant_content_cck.install,v 1.1.2.1 2008/11/06 10:33:05 njt1982 Exp $
+
+/**
+ * @file
+ * The relevant_content_cck.install file makes sure the field are installed, uninstalled, disabled and enabled correctly.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function relevant_content_cck_install() {
+  content_notify('install', 'relevant_content_cck');
+}
+
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function relevant_content_cck_uninstall() {
+  content_notify('uninstall', 'relevant_content_cck');
+}
+
+
+/**
+ * Implementation of hook_enable().
+ */
+function relevant_content_cck_enable() {
+  content_notify('enable', 'relevant_content_cck');
+}
+
+
+/**
+ * Implementation of hook_disable().
+ */
+function relevant_content_cck_disable() {
+  content_notify('disable', 'relevant_content_cck');
+}

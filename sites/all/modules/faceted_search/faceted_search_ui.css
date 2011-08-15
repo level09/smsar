@@ -1,0 +1,68 @@
+/* $Id: faceted_search_ui.css,v 1.12 2008/05/29 21:08:56 davidlesieur Exp $ */
+
+.faceted-search-numbering {
+  float:right;
+}
+.faceted-search-facet.faceted-search-guided {
+  margin-bottom:1em;
+}
+/* List of categories */
+.faceted-search-facet h3 {
+  display:inline;
+  font-family:inherit;
+  font-size:1em;
+  font-weight:bold;
+}
+.faceted-search-facet .item-list ul {
+  margin:0;
+}
+.faceted-search-facet .item-list li {
+  background:none;
+  padding:0;
+  margin:0;
+  list-style-type:none;
+  list-style-image:none;
+}
+/* List of categories in tables (multi-column lists) */
+.faceted-search-facet table.faceted-search {
+  margin:0;
+}
+/* List of facets or categories in tables (multi-column lists) */
+table.faceted-search tbody {
+  border-top:0;
+}
+table.faceted-search tr {
+  background:none;
+  border:0;
+}
+table.faceted-search td {
+  padding:0 1em 0 0;
+  vertical-align:top;
+}
+.faceted-search-stage-facet table.faceted-search td {
+  width:25%;
+}
+.faceted-search-stage-select table.faceted-search td {
+  width:50%;
+}
+.faceted-search-stage-select #edit-keywords,
+.faceted-search-stage-select #edit-field {
+  float:left;
+  margin-right:1em;
+}
+
+/* Tooltip */
+#faceted-search-tooltip {
+  display:none;
+  position:absolute;
+  z-index:100;
+  background:#fff;
+  border:1px solid #777;
+  width:270px;
+  padding:10px;
+  text-align:left;
+}
+#faceted-search-tooltip p {
+  margin-top:0;
+  margin-bottom:0.5em;
+}

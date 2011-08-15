@@ -1,0 +1,74 @@
+<?php
+// $Id: formatted_number.install,v 1.1.2.3 2009/02/24 11:57:28 markuspetrux Exp $
+
+/**
+ * @file
+ * Module installation/uninstallation hooks.
+ */
+
+/**
+ * Implementation of hook_requirements().
+ *
+ * Requirement: function format_number_get_options() was added
+ * in version 6.x-1.1 of the format_number module.
+ */
+function formatted_number_requirements($phase) {
+  if ($phase == 'install') {
+    $requirements = array();
+    // Ensure translations don't break at install time
+    $t = get_t();
+    drupal_load('module', 'format_number');
+    if (!function_exists('format_number_get_options')) {
+      $requirements['format_number'] = array(
+        'title' => $t('Format Number API'),
+        'description' => $t('%module-name requires, at least, version 6.x-1.1 of the <a href="@format-number">Format Number API</a> module.', array(
+          '%module-name' => $t('Formatter Number CCK'),
+          '@format-number' => 'http://drupal.org/project/format_number',
+        )),
+        'value' => $t('version 6.x-1.0'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+    return $requirements;
+  }
+}
+
+/**
+ * Implementation of hook_install().
+ *
+ * Notify content module when this module is installed.
+ */
+function formatted_number_install() {
+  drupal_load('module', 'content');
+  content_notify('install', 'formatted_number');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ *
+ * Notify content module when this module is uninstalled.
+ */
+function formatted_number_uninstall() {
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'formatted_number');
+}
+
+/**
+ * Implementation of hook_enable().
+ *
+ * Notify content module when this module is enabled.
+ */
+function formatted_number_enable() {
+  drupal_load('module', 'content');
+  content_notify('enable', 'formatted_number');
+}
+
+/**
+ * Implementation of hook_disable().
+ *
+ * Notify content module when this module is disabled.
+ */
+function formatted_number_disable() {
+  drupal_load('module', 'content');
+  content_notify('disable', 'formatted_number');
+}

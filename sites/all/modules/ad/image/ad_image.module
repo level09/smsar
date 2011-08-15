@@ -1,0 +1,606 @@
+<?php
+// $Id: ad_image.module,v 1.2.2.13.2.40.2.11.2.7 2009/05/15 13:27:23 jeremy Exp $
+
+/**
+ * @file
+ * Enhances the ad module to support banner ads.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Function used to display the selected ad.
+ */
+function ad_image_display_ad($ad) {
+  return theme('ad_image_ad', $ad);
+}
+
+/**
+ * Return a themed ad of type ad_image.
+ *
+ * @param @ad
+ *   The ad object.
+ * @return
+ *   A string containing the ad markup.
+ */
+function theme_ad_image_ad($ad) {
+  if (isset($ad->aid) && (isset($ad->filepath) || isset($ad->remote_image))) {
+    $output = '<div class="image-advertisement" id="ad-'. $ad->aid .'">';
+    if (isset($ad->url) && !empty($ad->url)) {
+      $image = theme('ad_image_image', !empty($ad->remote_image) ? $ad->remote_image : $ad->filepath, check_plain($ad->tooltip), check_plain($ad->tooltip));
+      $output .= l($image, $ad->redirect .'/@HOSTID___', array('attributes' => ad_link_attributes(), 'absolute' => TRUE, 'html' => TRUE));
+    }
+    else {
+      $output .= theme('ad_image_image', !empty($ad->remote_image) ? $ad->remote_image : $ad->filepath, check_plain($ad->tooltip), check_plain($ad->tooltip));
+    }
+    $output .= '</div>';
+    return $output;
+  }
+}
+
+/**
+ * Return a themed ad image.
+ *
+ * @param $path
+ *   Either the path of the ad image file (relative to base_path()) or a full
+ *   URL.
+ * @param $alt
+ *   The alternative text for text-based browsers.
+ * @param $tooltip
+ *   The tooltip text is displayed when the image is hovered in some popular
+ *   browsers.
+ * @param $attributes
+ *   Associative array of attributes to be placed in the img tag.
+ * @param $getsize
+ *   If set to TRUE, the image's dimension are fetched and added as width/height
+ *   attributes.
+ * @return
+ *   A string containing the image tag.
+*/
+function theme_ad_image_image($path, $alt = '', $tooltip = '', $attributes = NULL, $getsize = TRUE) {
+  if ($getsize) {
+    list($width, $height, $type, $image_attributes) = @getimagesize($path);
+    if (isset($width) && isset($height)) {
+      $attributes = drupal_attributes($attributes);
+      if (is_file($path)) {
+        $url = preg_replace('&'. drupal_get_path('module', 'ad') .'/&', '', file_create_url($path));
+      }
+      else {
+        $url = $path;
+      }
+      return '<img src="'. check_url($url) .'" alt="'. check_plain($alt) .'" title="'. check_plain($tooltip) .'" '. $image_attributes . $attributes .' />';
+    }
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function ad_image_theme() {
+  return array(
+    'ad_image_ad' => array(
+      'file' => 'ad_image.module',
+      'arguments' => array(
+        'ad' => NULL,
+      ),
+    ),
+    'ad_image_image' => array(
+      'file' => 'ad_image.module',
+      'arguments' => array(
+        'path' => NULL,
+        'alt' => '',
+        'tooltip' => '',
+        'attributes' => NULL,
+        'getsize' => TRUE,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function ad_image_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'node/add/ad#image':
+      $output = t('An image or banner advertisement.');
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function ad_image_access($op, $node, $account) {
+  return ad_access($op, $node, $account);
+}
+
+/**
+ * Image ad settings form.
+ */
+function ad_image_global_settings($edit = array()) {
+  $form = array();
+
+  $form['general'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('General settings'),
+    '#collapsible' => TRUE,
+  );
+  $form['general']['remote_images'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow remote hosted images'),
+    '#description' => t('Check this box to add a new field when creating image advertisements allowing you to specify a path to a remotely hosted image rather than locally uploading an image.  This option is disabled by default as it is a confusing field to someone not using it.'),
+    '#default_value' => variable_get('ad_image_remote_images', FALSE),
+  );
+
+  $groups = module_invoke('ad', 'groups_list', TRUE);
+  foreach ($groups as $tid => $group) {
+    $form["group-$tid"] = array(
+      '#type' => 'fieldset',
+      '#title' => $group->name,
+      '#collapsible' => TRUE,
+    );
+
+    $form["group-$tid"]["description-$tid"] = array(
+      '#type' => 'markup',
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+      '#value' => theme_placeholder("$group->description"),
+    );
+
+    $format = db_fetch_object(db_query('SELECT * FROM {ad_image_format} WHERE gid = %d', $tid));
+    $form["group-$tid"]["max-size-$tid"] = array(
+      '#type' => 'textfield',
+      '#title' => t('Maximum filesize'),
+      '#size' => 5,
+      '#maxlength' => 15,
+      '#default_value' => isset($format->max_size) ? $format->max_size : 0,
+      '#description' => t('Optionally specify a maximum filesize in bytes for images in this group.  To specify no maximum filesize, enter <em>0</em>.'),
+    );
+    $form["group-$tid"]["min-height-$tid"] = array(
+      '#type' => 'textfield',
+      '#title' => t('Minimum height'),
+      '#size' => 5,
+      '#maxlength' => 5,
+      '#default_value' => isset($format->min_height) ? $format->min_height : 0,
+      '#description' => t('Optionally specify a minimum height in pixels for images in this group.  To specify no minimum height, enter <em>0</em>.'),
+    );
+    $form["group-$tid"]["min-width-$tid"] = array(
+      '#type' => 'textfield',
+      '#title' => t('Minimum width'),
+      '#size' => 5,
+      '#maxlength' => 5,
+      '#default_value' => isset($format->min_width) ? $format->min_width : 0,
+      '#description' => t('Optionally specify a minimum width in pixels for images in this group.  To specify no minimum width, enter <em>0</em>.'),
+    );
+    $form["group-$tid"]["max-height-$tid"] = array(
+      '#type' => 'textfield',
+      '#title' => t('Maximum height'),
+      '#size' => 5,
+      '#maxlength' => 5,
+      '#default_value' => isset($format->max_height) ? $format->max_height : 0,
+      '#description' => t('Optionally specify a maximum height in pixels for images in this group.  To specify no maximum height, enter <em>0</em>.'),
+    );
+    $form["group-$tid"]["max-width-$tid"] = array(
+      '#type' => 'textfield',
+      '#title' => t('Maximum width'),
+      '#size' => 5,
+      '#maxlength' => 5,
+      '#default_value' => isset($format->max_width) ? $format->max_width : 0,
+      '#description' => t('Optionally specify a maximum width in pixels for images in this group.  To specify no maximum width, enter <em>0</em>.'),
+    );
+  }
+
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  $form['#submit'] = array('ad_image_global_settings_submit');
+
+  return $form;
+}
+
+/**
+ * Save min and max image width and height values for ad groups.
+ */
+function ad_image_global_settings_submit($form, &$form_state) {
+  variable_set('ad_image_remote_images', $form_state['values']['remote_images']);
+  $groups = module_invoke('ad', 'groups_list', TRUE);
+  foreach ($groups as $group) {
+    // TODO: Update the database schema, convert gid to tid.
+    $gid = db_result(db_query('SELECT gid FROM {ad_image_format} WHERE gid = %d', $group->tid));
+    if (is_numeric($gid)) {
+      db_query("UPDATE {ad_image_format} SET min_width = %d, max_width = %d, min_height = %d, max_height = %d, max_size = %d WHERE gid = %d", $form_state['values']["min-width-$group->tid"], $form_state['values']["max-width-$group->tid"], $form_state['values']["min-height-$group->tid"], $form_state['values']["max-height-$group->tid"], $form_state['values']["max-size-$group->tid"], $group->tid);
+    }
+    else {
+      db_query("INSERT INTO {ad_image_format} (gid, min_width, max_width, min_height, max_height, max_size) VALUES (%d, %d, %d, %d, %d, %d)", $group->tid, $form_state['values']["min-width-$group->tid"], $form_state['values']["max-width-$group->tid"], $form_state['values']["min-height-$group->tid"], $form_state['values']["max-height-$group->tid"], $form_state['values']["max-size-$group->tid"]);
+    }
+  }
+  drupal_set_message('Image ad global settings updated.');
+}
+
+/**
+ * Implementation of hook_adapi().
+ */
+function ad_image_adapi($op, &$node) {
+  $output = NULL;
+  switch ($op) {
+
+    case 'load':
+      $return = db_fetch_array(db_query("SELECT a.*, f.filepath FROM {ad_image} a LEFT JOIN {files} f ON a.fid = f.fid WHERE aid = %d", $node['aid']));
+      if (isset($return['remote_image']) && !empty($return['remote_image'])) {
+        $path = $return['remote_image'];
+      }
+      else {
+        $path = file_create_url($return['filepath']);
+      }
+      $return['ad'] = '<img src="'. $path .'" width="'. $return['width'] .'" height="'. $return['height'] .'" alt="'. check_plain($return['tooltip']) .'" />';
+      return $return;
+
+    case 'insert':
+    case 'update':
+      $fid = isset($node->files) ? (int)ad_image_active_file($node->files) : 0;
+      $image = ad_image_load_image($node);
+      // This is ugly, but as "a" comes before "u" we don't seem to be able
+      // to modify the upload module's form.  Instead, we check after the fact
+      // if someone is editing images when they're not allowed, and if so we
+      // prevent the ad from being saved.
+      if ($op == 'update' && !ad_permission($node->nid, 'manage active image')) {
+        // See if fid is changing -- it's okay if new images are uploaded, it's
+        // just not okay if the active fid is changed.
+        if ($fid != $image->fid) {
+          drupal_set_message('You do not have the necessary permissions to change the active advertisement.', 'error');
+          // This causes upload_save() to simply return without making any
+          // changes to the files attached to this node.
+          unset($node->files);
+        }
+      }
+      else {
+        // Check that all values are valid -- this is a kludge to work around
+        // bug #146147 until the problem is better understood.
+        $width = isset($image->width) ? $image->width : 0;
+        $height = isset($image->height) ? $image->height : 0;
+        $fid = isset($image->fid) ? $image->fid : 0;
+        if ($image !== FALSE && $width != 0 && $height != 0 && ($fid != 0 || $node->remote_image)) {
+          $node->fid = isset($image->fid) ? $image->fid : 0;
+          $node->width = $image->width;
+          $node->height = $image->height;
+        }
+        else {
+          $image = FALSE;
+        }
+      }
+      if ($op == 'insert') {
+        db_query("INSERT INTO {ad_image} (aid, fid, url, tooltip, remote_image, width, height) VALUES(%d, %d, '%s', '%s', '%s', %d, %d)", $node->nid, $node->fid, $node->url, $node->tooltip, $node->remote_image, isset($node->width) ? $node->width : 0, isset($node->height) ? $node->height : 0);
+      }
+      else {
+        db_query("UPDATE {ad_image} SET fid = %d, url = '%s', tooltip = '%s', remote_image = '%s', width = %d, height = %d WHERE aid = %d", $fid, $node->url, $node->tooltip, $node->remote_image, isset($node->width) ? $node->width : 0, isset($node->height) ? $node->height : 0, $node->nid);
+      }
+      // No valid image has been uploaded, don't allow ad to be 'active'.
+      if (($node->remote_image && $image === FALSE) ||
+          (!$node->remote_image &&
+           ($image === FALSE || !ad_image_active_file(($node->files)))
+         )) {
+        db_query("UPDATE {ads} SET adstatus = '%s' WHERE aid = %d AND adstatus = '%s'", t('pending'), $node->nid, t('active'));
+        if (db_affected_rows()) {
+          drupal_set_message(t('Image validation failed, unable to mark ad as %active.  Setting ad as %pending.', array('%active' => t('active'), '%pending' => t('pending'))), 'error');
+        }
+      }
+      else if (!$node->remote_image && !$fid) {
+        db_query("UPDATE {ads} SET adstatus = '%s' WHERE aid = %d AND adstatus = '%s'", t('pending'), $node->nid, t('active'));
+        if (db_affected_rows()) {
+          drupal_set_message(t('Unable to mark ad as <em>active</em> until uploaded image is validated.  If you do not see any more errors, you should now be able to set your ad as <em>active</em>.'), 'error');
+        }
+      }
+      break;
+
+    case 'validate':
+      if (isset($node->remote_image) && !empty($node->remote_image)) {
+        if (variable_get('ad_validate_url', 1) && (!valid_url($node->url, TRUE))) {
+          drupal_set_message('You must specify a valid path for your remote advertisement.', 'error');
+        }
+      }
+      else if (!isset($node->files) || !ad_image_active_file($node->files)) {
+        form_set_error('upload', t('It is required that you upload an image for your image advertisement.'));
+      }
+      if ($node->url && variable_get('ad_validate_url', 1) && (!valid_url($node->url, TRUE))) {
+        form_set_error('url', t('You must specify a valid %field.', array('%field' => t('Destination URL'))));
+      }
+      break;
+
+    case 'delete':
+      db_query('DELETE FROM {ad_image} WHERE aid = %d', $node->nid);
+      break;
+
+    case 'form':
+      return ad_image_node_form($node);
+
+    case 'view':
+      return ad_image_node_view($node);
+
+    case 'redirect':
+      return db_result(db_query('SELECT url FROM {ad_image} WHERE aid = %d', $node->nid));
+
+    case 'type':
+      return array(
+        'image' => array(
+          'name' => t('Image ad'),
+          'module' => 'ad_image',
+          'description' => t('An image or banner advertisement.'),
+          'help' => t('An image or banner advertisement.'),
+        ),
+      );
+    case 'permissions':
+      if (!isset($node->adtype) || $node->adtype == 'image') {
+        return array('manage active image' => TRUE);
+      }
+
+    case 'check_install':
+      if (!module_exists('upload')) {
+        drupal_set_message(t("The required <em>upload module</em> is not enabled, you will not be able to upload image ads.  Please %enable the upload module, or %disable the ad_image module.", array('%enable' => l('enable', 'admin/modules'), '%disable' => l('disable', 'admin/modules'))), 'error');
+      }
+      if (is_object($node) && !variable_get("upload_$node->type", TRUE)) {
+        drupal_set_message(t('You will not be able to upload image ads until you !enable for the advertisement content type.', array('!enable' => l(t('enable attachments'), 'admin/content/types/ad'))), 'error');
+      }
+      if (empty($node)) {
+        if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) ==  FILE_DOWNLOADS_PRIVATE) {
+          drupal_set_message(t('Your website is configured to use Drupal\'s private !method.  You have to enable "!view" permissions in addition to the ad module\'s standard "!show" permissions for all roles that you wish to view image advertisements.', array('!method' => l(t('download method'), 'admin/settings/file-system'), '!view' => l(t('view uploaded files'), 'admin/user/access'), '!show' => l(t('show advertisements'), 'admin/user/access'))));
+        }
+      }
+
+      break;
+
+  }
+
+  return $output;
+}
+
+/**
+ * Determine the currently active ad.
+ */
+function ad_image_active_file($files = array()) {
+  if (is_array($files)) {
+    foreach ($files as $fid => $data) {
+      if (is_array($data)) {
+        if ($data['list'] && !$data['remove']) {
+          return $fid;
+        }
+      }
+      else if ($data->list && !isset($data->remove)) {
+        return $fid;
+      }
+    }
+  }
+  return 0;
+}
+
+/**
+ * Loads image format object from DB.
+ */
+function ad_image_format_load($gid) {
+  static $format;
+  if (isset($format[$gid])) {
+    return $format[$gid];
+  }
+  $format[$gid] = db_fetch_object(db_query('SELECT min_width, max_width, min_height, max_height, max_size FROM {ad_image_format} WHERE gid = %d', $gid));
+  return $format[$gid];
+}
+
+/**
+ * Validate that the size of the uploaded image is within the defined limits.
+ */
+function ad_image_validate_size($file, $nid) {
+  $size = NULL;
+  $error = FALSE;
+  $edit = isset($_POST['edit']) ? $_POST['edit'] : array();
+  if (is_object($file)) {
+    // TODO: Detect if new terms have been set, and if so validate against
+    // them, not the old ones.  See what's in $edit['taxonomy'].
+    $node = node_load($nid);
+    $terms = module_invoke('taxonomy', 'node_get_terms', $node);
+    if (count($terms) == 0) {
+      // We need at least a single (NULL) term to be ensure we still get the
+      // default image size.
+      $terms[] = NULL;
+    }
+    foreach ($terms as $tid => $term) {
+      list($size->width, $size->height) = getimagesize($file->filepath);
+      $size->bytes = strlen(join('', file($file->filepath)));
+      if ($format = ad_image_format_load($tid)) {
+        if ($size->width < $format->min_width) {
+          drupal_set_message(t('The image %name is only %current pixels wide, which is less than the minimum of %minimum pixels allowed in the %group ad group.', array('%name' => $file->filename, '%current' => $size->width, '%minimum' => $format->min_width, '%group' => isset($term->name) ? $term->name : t('default'))), 'error');
+          $error = TRUE;
+        }
+        else if ($format->max_width && ($size->width > $format->max_width)) {
+          drupal_set_message(t('The image %name is %current pixels wide, which is more than the maximum of %maximum pixels allowed in the %group ad group.', array('%name' => $file->filename, '%current' => $size->width, '%maximum' => $format->max_width, '%group' => isset($term->name) ? $term->name : t('default'))), 'error');
+          $error = TRUE;
+        }
+        if ($size->height < $format->min_height) {
+          drupal_set_message(t('The image %name is only %current pixels high, which is less than the minimum of %minimum pixels allowed in the %group ad group.', array('%name' => $file->filename, '%current' => $size->height, '%minimum' => $format->min_height, '%group' => isset($term->name) ? $term->name : t('default'))), 'error');
+          $error = TRUE;
+        }
+        else if ($format->max_height && $size->height > $format->max_height) {
+          drupal_set_message(t('The image %name is %current pixels high, which is more than the maximum of %maximum pixels allowed in the %group ad group.', array('%name' => $file->filename, '%current' => $size->height, '%maximum' => $format->max_height, '%group' => isset($term->name) ? $term->name : t('default'))), 'error');
+          $error = TRUE;
+        }
+        if ($format->max_size && $size->bytes > $format->max_size) {
+          drupal_set_message(t('The image %name is %current bytes in size, which is more than the maximum of %maximum bytes allowed in the %group ad group.', array('%name' => $file->filename, '%current' => $size->bytes, '%maximum' => $format->max_size, '%group' => isset($term->name) ? $term->name : t('default'))), 'error');
+          $error = TRUE;
+        }
+      }
+    }
+  }
+  else {
+    $error = TRUE;
+    drupal_set_message('Please report error: $file is not an object, bug #146147.');
+  }
+  if ($error) {
+    return FALSE;
+  }
+  else {
+    return $size;
+  }
+}
+
+/**
+ * Returns image object from given ad node.
+ */
+function ad_image_load_image($node) {
+  if (isset($node->remote_image) && !empty($node->remote_image)) {
+    $file->filename = $node->remote_image;
+    $file->filepath = $node->remote_image;
+    $image = ad_image_validate_size($file, $node->nid);
+    if ($image !== FALSE) {
+      return $image;
+    }
+  }
+  else if (isset($node->files) && is_array($node->files)) {
+    foreach ($node->files as $file) {
+      if (is_array($file)) {
+        if ($file['list'] && file_exists($file['filepath'])) {
+          $image = ad_image_validate_size((object)$file, $node->nid);
+          if ($image !== FALSE) {
+            $image->fid = $file['fid'];
+            return $image;
+          }
+        }
+      }
+      else {
+        if ($file->list && file_exists($file->filepath)) {
+          $image = ad_image_validate_size($file, $node->nid);
+          if ($image !== FALSE) {
+            $image->fid = $file->fid;
+            return $image;
+          }
+        }
+      }
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Adapi helper function for displaying a node form.
+ */
+function ad_image_node_form(&$node) {
+  $form = array();
+
+  ad_image_adapi('check_install', $node);
+
+  $form['ad_image'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Image'),
+    '#collapsible' => TRUE,
+  );
+
+  if (!empty($node->remote_image)) {
+    $file->filename = $node->remote_image;
+    $file->filepath = $node->remote_image;
+    $image = ad_image_validate_size($file, $node->nid);
+    $path = '<img src="'. $node->remote_image .'" alt="'. t('image') .'" /> ';
+    if ($image === FALSE) {
+      $path .= t('(invalid image)'). '<br />';
+    }
+  }
+  else if (isset($node->files)) {
+    $files = $node->files;
+  }
+  else {
+    if (!isset($node->vid)) {
+      $node->vid = '';
+    }
+    $files = module_invoke('upload', 'load', $node);
+  }
+  $num = isset($files) ? sizeof($files) : 0;
+
+  if ($num) {
+    $path = NULL;
+    $active = 0;
+    foreach ($files as $file) {
+      if ($file->list && file_exists($file->filepath)) {
+        $path .= '<img src="'. file_create_url($file->filepath) .'" alt="'. check_plain($file->filename) .'" /> ';
+        $image = ad_image_validate_size($file, $node->nid);
+        if ($image === FALSE) {
+          $path .= t('(invalid image)'). '<br />';
+        }
+        else if (!$active++) {
+          $path .= t('(active)'). '<br />';
+        }
+        else {
+          $path .= t('(inactive)'). '<br />';
+        }
+      }
+      else if (!file_exists($file->filepath)) {
+        drupal_set_message(t('Unable to locate image %image.', array('%image' => "$file->filepath")));
+        $path .= t('Unable to locate the uploaded image.');
+      }
+    }
+  }
+  if (!isset($path) || $path == NULL) {
+    $path = t('No images have been uploaded.  Please upload an image via the <em>File attachments</em> form section below.<br />');
+    // Only set error if node has been previewed or submitted.
+    if (isset($_POST['edit'])) {
+      form_set_error('upload', t('It is required that you upload an image for your image advertisement.'));
+    }
+  }
+  else if ($num) {
+    $path .= t('<br />Only the first uploaded image that has <em>List</em> checked in the <em>File attachments</em> form section below will be displayed as an advertisement.  The image that will be displayed is marked as <em>active</em> above.');
+  }
+
+  $form['ad_image']['image'] = array(
+    '#type' => 'markup',
+    '#value' => $path,
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+  );
+
+  $form['ad_image']['url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Destination URL'),
+    '#required' => FALSE,
+    '#default_value' => isset($node->url) ? $node->url : '',
+    '#description' => t('Enter the complete URL where you want people to be redirected when they click on this advertisement.  The URL must be valid and begin with http:// or https://, for example %url, unless you !disable.  If you do not enter a URL, the advertisement will not be clickable.', array('%url' => t('http://www.sample.org/'), '!disable' => l(t('disable URL validation'), 'admin/content/ad/configure', array('fragment' => 'edit-ad-validate-url-wrapper')))),
+  );
+
+  $form['ad_image']['tooltip'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mouseover'),
+    '#required' => FALSE,
+    '#default_value' => isset($node->tooltip) ? $node->tooltip : '',
+    '#description' => t('Optionally enter text to appear when a mouse pointer hovers over the ad image.'),
+  );
+
+  if (variable_get('ad_image_remote_images', FALSE)) {
+    $form['ad_image']['remote_image'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Remote image path'),
+      '#required' => FALSE,
+      '#default_value' => isset($node->remote_image) ? $node->remote_image : '',
+      '#description' => t('Instead of uploading an image, you may optionally specify a complete URL to a remotely hosted image.  For example, %example.  If you do not specify a remotely hosted image, you must attach an image to this advertisement in the %attachment section below.', array('%example' => 'http://sample.com/images/ad.png', '%attachment' => t('File attachements'))),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Adapi helper function for displaying ad itself.
+ */
+function ad_image_node_view(&$node) {
+  $node->content['ad'] = array(
+    '#value' => preg_replace('&@HOSTID___&', '0', ad_image_display_ad($node)),
+    '#weight' => -1,
+  );
+  if (!empty($node->url)) {
+    $link = t('Links to !url.', array('!url' => $node->url));
+    $link = check_plain($link, $node->format, FALSE);
+    $node->content['ad-link'] = array(
+      '#value' => "<div class=\"links-to\">$link</div>",
+      '#weight' => 0,
+    );
+  }
+}

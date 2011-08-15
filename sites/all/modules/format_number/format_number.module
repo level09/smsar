@@ -1,0 +1,324 @@
+<?php
+// $Id: format_number.module,v 1.1.2.8 2009/02/24 11:55:32 markuspetrux Exp $
+
+/**
+ * @file
+ * This module provides a method to configure number formats (site default and
+ * user defined) with configurable decimal point and thousand separators.
+ * It also exposes several functions that can be used by other contributed or
+ * custom modules to display numbers accordingly.
+ */
+
+/**
+ * Maximum allowed decimal digits.
+ */
+define('FORMAT_NUMBER_MAX_PRECISION', 8);
+
+/**
+ * Implementation of hook_help().
+ */
+function format_number_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#format_number':
+      return '<p>'. t('The <em>Format Number API</em> module provides a method to configure number formats (site default and user defined) with configurable decimal point and thousand separators. It also exposes several functions that can be used by other contributed or custom modules to display numbers accordingly.') .'</p>';
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function format_number_perm() {
+  return array('configure default number format');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function format_number_menu() {
+  $items = array();
+  $items['admin/settings/format_number'] = array(
+    'title' => 'Number format',
+    'description' => 'Configure site wide number format settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('format_number_settings_site'),
+    'access arguments' => array('configure default number format'),
+    'file' => 'format_number.settings.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_user().
+ *
+ * Allows users to individually set their number format.
+ */
+function format_number_user($type, &$edit, &$user, $category = NULL) {
+  if ($type == 'form' && $category == 'account' && variable_get('format_number_user_configurable', 0)) {
+    module_load_include('inc', 'format_number', 'format_number.settings');
+    return format_number_settings_user($edit);
+  }
+  else if ($type == 'validate' && $category == 'account' && variable_get('format_number_user_configurable', 0)) {
+    module_load_include('inc', 'format_number', 'format_number.settings');
+    format_number_settings_user_validate($edit);
+    return;
+  }
+}
+
+/**
+ * Get decimal point options.
+ *
+ * @see http://www.unicode.org/cldr/data/charts/by_type/number.symbol.html
+ */
+function format_number_get_decimal_point_options() {
+  return array(
+    "\x2E" => t('full stop (.)'),
+    "\x2C" => t('comma (,)'),
+    "\xD9\xAB" => t('arabic decimal separator (٫)'),
+  );
+}
+
+/**
+ * Get thousands separator options.
+ *
+ * @see http://www.unicode.org/cldr/data/charts/by_type/number.symbol.html
+ */
+function format_number_get_thousands_separator_options() {
+  return array(
+    '' => t('none'),
+    "\x2E" => t('full stop (.)'),
+    "\x2C" => t('comma (,)'),
+    "\x27" => t("apostrophe (')"),
+    "\xC2\xA0" => t('no-break space ( )'),
+    "\xEF\xBC\x8C" => t('full width comma (，)'),
+    "\xD9\xAC" => t('arabic thousands separator (٬)'),
+    "\xE1\x8B\x88" => t('ethiopic syllable wa (ወ)'),
+  );
+}
+
+/**
+ * Get the site/user defined thousands separator and decimal point characters.
+ *
+ * @param string $name
+ *   The name of the option to retrieve (optional). Available options:
+ *   - 'thousands_sep'  A one character string (it could be empty).
+ *   - 'decimal_point'  A one character string.
+ * @return mixed
+ *   If name is not specified, an array with all options is returned.
+ *   If name does not exist, NULL is returned.
+ *   If name exists, its value is returned.
+ */
+function format_number_get_options($name = NULL) {
+  static $format_options;
+  global $user;
+  if (!isset($format_options)) {
+    $format_options = array(
+      'thousands_sep' => variable_get('format_number_thousands_sep', ','),
+      'decimal_point' => variable_get('format_number_decimal_point', '.'),
+    );
+    if (variable_get('format_number_user_configurable', 0) && $user->uid) {
+      if (strlen($user->thousands_sep)) {
+        $format_options['thousands_sep'] = $user->thousands_sep;
+      }
+      if (strlen($user->decimal_point)) {
+        $format_options['decimal_point'] = $user->decimal_point;
+      }
+    }
+  }
+  if (isset($name)) {
+    return isset($format_options[$name]) ? $format_options[$name] : NULL;
+  }
+  return $format_options;
+}
+
+/**
+ * Expose a javascript version of the Format Number API.
+ */
+function format_number_add_js() {
+  static $ready;
+  if (!isset($ready)) {
+    $ready = TRUE;
+    drupal_add_js(drupal_get_path('module', 'format_number') .'/format_number.js');
+    drupal_add_js(array('format_number' => format_number_get_options()), 'setting');
+  }
+}
+
+/**
+ * Format a number with (site default or user defined) thousands separator and
+ * decimal point.
+ *
+ * @param float $number
+ *   The number being formatted.
+ * @param int $decimals
+ *   Number of decimal digits. Use -1 for any number if decimals.
+ * @return string
+ *   The formatted number.
+ */
+function format_number($number, $decimals = 0) {
+  static $format_options;
+  if (!isset($format_options)) {
+    $format_options = format_number_get_options();
+  }
+
+  // Perform an initial conversion using PHP's number_format() that
+  // seems to work better than sprintf().
+  $number = number_format((float)$number, FORMAT_NUMBER_MAX_PRECISION, '.', '');
+
+  if ($decimals < 0) {
+    // Count decimal places (ignoring trailing zeros to the right of the decimal point).
+    $decimals = (strpos($number, '.') === FALSE ? 0 : strlen(preg_replace('#^.*\.([0-9]*?)0*$#', '\1', $number)));
+  }
+  // Avoid issues caused by PHP rounding limitations.
+  if ($decimals > FORMAT_NUMBER_MAX_PRECISION) {
+    $decimals = FORMAT_NUMBER_MAX_PRECISION;
+  }
+
+  // number_format() can only deal with one chararcter symbols, so that
+  // we tell him to use the placeholders X and Z that we replace later.
+  return str_replace(array('X', 'Z'), array($format_options['decimal_point'], $format_options['thousands_sep']), number_format($number, $decimals, 'X', 'Z'));
+}
+
+/**
+ * Parse a formatted number.
+ *
+ * This function implements lenient parsing when possible, and only falls
+ * back to site/user defined symbols when in doubt.
+ * See http://www.unicode.org/reports/tr35/tr35-11.html#Lenient_Parsing
+ *
+ * @todo
+ *  The algorithm probably needs optimization (using regular expressions?).
+ *
+ * @param string $formatted_number
+ *   A number formatted with localized thousands separator and decimal point.
+ * @param boolean $required
+ *   If input is empty string, return FALSE when number is strictly required,
+ *   otherwise an empty string is returned as 0.
+ * @return number
+ *   A valid PHP number. FALSE when input cannot be deciphered.
+ */
+function parse_formatted_number($formatted_number, $required = TRUE) {
+  static $format_options, $decimal_point_options, $thousands_separator_options;
+  if (!isset($format_options)) {
+    $format_options = format_number_get_options();
+    $decimal_point_options = format_number_get_decimal_point_options();
+    $thousands_separator_options = format_number_get_thousands_separator_options();
+  }
+
+  // Trim input.
+  $formatted_number = trim($formatted_number);
+  if ($formatted_number === '') {
+    return ($required ? FALSE : 0);
+  }
+
+  // When no-break space is the site/user defined thousands separator, then
+  // ascii space may also be accepted.
+  if ($format_options['thousands_sep'] == "\xC2\xA0") {
+    $thousands_separator_options[' '] = TRUE;
+  }
+
+  // Extract the sign.
+  $is_negative = FALSE;
+  if ($formatted_number[0] == '-' || $formatted_number[0] == '+') {
+    $is_negative = ($formatted_number[0] == '-' ? TRUE : FALSE);
+    $formatted_number = drupal_substr($formatted_number, 1);
+  }
+  else {
+    $last_char = $formatted_number[drupal_strlen($formatted_number)-1];
+    if ($last_char == '-' || $last_char == '+') {
+      $is_negative = ($last_char == '-' ? TRUE : FALSE);
+      $formatted_number = drupal_substr($formatted_number, 0, -1);
+    }
+  }
+
+  // Extract non-numeric symbols.
+  preg_match_all('#[^0-9]#u', $formatted_number, $matches);
+  $non_numeric_symbols = array_count_values($matches[0]);
+  $non_numeric_symbols_count = count($non_numeric_symbols); 
+  if ($non_numeric_symbols_count > 2) {
+    // More than two different non-numeric symbols.
+    return FALSE;
+  }
+
+  // When 2 non-numeric symbols are present, the first one should be the
+  // thousands separator, the second one should be a decimal separator.
+  if ($non_numeric_symbols_count == 2) {
+    // Extract and validate thousands separator.
+    $thousands_sep = array_keys($non_numeric_symbols);
+    $thousands_sep = array_shift($thousands_sep);
+    if (!isset($thousands_separator_options[$thousands_sep])) {
+      // This is not a valid thousands separator symbol.
+      return FALSE;
+    }
+    // Strip out thousands separators.
+    $formatted_number = str_replace($thousands_sep, '', $formatted_number);
+
+    // Extract and validate decimal point.
+    unset($non_numeric_symbols[$thousands_sep]);
+    $decimal_point = array_keys($non_numeric_symbols);
+    $decimal_point = array_shift($decimal_point);
+    if ($non_numeric_symbols[$decimal_point] > 1) {
+      // Decimal point symbol is used more than once.
+      return FALSE;
+    }
+    if (!isset($decimal_point_options[$decimal_point])) {
+      // This is not a valid decimal point symbol.
+      return FALSE;
+    }
+    // Convert decimal point into dot, if necessary.
+    if ($decimal_point != '.') {
+      $formatted_number = str_replace($decimal_point, '.', $formatted_number);
+    }
+  }
+
+  // When only one non-numeric symbol is present, we need to figure out
+  // if it is a thousands separator or a decimal point.
+  else if ($non_numeric_symbols_count == 1) {
+    $unknown_symbol = array_keys($non_numeric_symbols);
+    $unknown_symbol = array_shift($unknown_symbol);
+
+    // When unknown symbol is used more than once, it can only be a
+    // thousands separator, but it should be valid one.
+    if ($non_numeric_symbols[$unknown_symbol] > 1) {
+      if (!isset($thousands_separator_options[$unknown_symbol])) {
+        // This symbol is not a valid thousands separator.
+        return FALSE;
+      }
+      // Strip out unknown symbol (aka. thousands separators in this case).
+      $formatted_number = str_replace($unknown_symbol, '', $formatted_number);
+    }
+
+    // When unknown symbol is not a dot (.), nor a comma (,)...
+    else if ($unknown_symbol != '.' && $unknown_symbol != ',') {
+      if (isset($decimal_point_options[$unknown_symbol])) {
+        // This is a valid decimal point symbol.
+        $formatted_number = str_replace($unknown_symbol, '.', $formatted_number);
+      }
+      if (isset($thousands_separator_options[$unknown_symbol])) {
+        // This is a valid thousands separator symbol.
+        $formatted_number = str_replace($unknown_symbol, '', $formatted_number);
+      }
+      else {
+        // This is an invalid symbol.
+        return FALSE;
+      }
+    }
+
+    // Unknown symbol is used once and it is a dot (.) or a comma (,), then
+    // fall back to check site/user settings to figure out its meaning.
+    else {
+      if ($unknown_symbol == $format_options['decimal_point']) {
+        // This is a valid decimal point symbol.
+        $formatted_number = str_replace($unknown_symbol, '.', $formatted_number);
+      }
+      else if ($unknown_symbol == $format_options['thousands_sep']) {
+        // This is a valid thousands separator symbol.
+        $formatted_number = str_replace($unknown_symbol, '', $formatted_number);
+      }
+      else {
+        // This is an invalid symbol.
+        return FALSE;
+      }
+    }
+  }
+
+  return ($is_negative && 0 != $formatted_number ? '-' : '') . $formatted_number;
+}

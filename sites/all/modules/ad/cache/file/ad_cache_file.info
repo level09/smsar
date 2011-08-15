@@ -1,0 +1,13 @@
+; $Id: ad_cache_file.info,v 1.1.2.1.2.1.2.2 2009/04/17 19:20:52 jeremy Exp $
+name = Ad file cache
+package = Ad
+dependencies[] = ad_owners
+description = Provides a file-caching mechanism to improve ad serving performance.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-08-05
+version = "6.x-2.1"
+core = "6.x"
+project = "ad"
+datestamp = "1249431906"
+

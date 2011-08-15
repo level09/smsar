@@ -1,0 +1,190 @@
+<?php
+// $Id: ad_notify.install,v 1.1.2.2.2.6.2.3.2.3 2009/03/29 20:17:21 jeremy Exp $
+
+/**
+ * @file
+ * Ad_notify module database schema.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function ad_notify_schema() {
+  $schema['ad_notify'] = array(
+    'description' => 'The ad_notify table stores notifications data such as recepient, message body, event, etc.',
+    'fields' => array(
+      'notid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'aid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'oid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'event' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'delay' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'queued' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'sent' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'counter' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'locked' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'expire' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'address' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'subject' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'body' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'roles' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'template' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('notid'),
+    'unique keys' => array(
+      'oid' => array('oid', 'event', 'delay'),
+    ),
+    'indexes' => array(
+      'delay' => array('delay'),
+      'event' => array('event'),
+      'oid_2' => array('oid'),
+      'queued' => array('queued'),
+      'sent' => array('sent'),
+      'status' => array('status'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * ad_notify module installation.
+ */
+function ad_notify_install() {
+  drupal_install_schema('ad_notify');
+}
+
+/**
+ * Allow complete uninstallation of the ad_notify module.
+ */
+function ad_notify_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('ad_notify');
+}
+
+/**
+ * Introduce new roles field to allow per-role notifications.
+ * Replace nonstandard %sitename with standard %site-name.
+ * Replace nonstandard %siteurl with standard %site-url.
+ */
+function ad_notify_update_6001() {
+  $ret = array();
+  db_add_field($ret, 'ad_notify', 'roles', array('type' => 'varchar', 'length' => '255', 'not null' => TRUE, 'default' => ''));
+
+  $ret[] = update_sql('UPDATE {ad_notify} SET subject = REPLACE(subject, "%sitename", "%site-name")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%siteurl", "%site-url")');
+
+}
+
+/**
+ * Introduce new template field.
+ */
+function ad_notify_update_6002() {
+  $ret = array();
+  db_add_field($ret, 'ad_notify', 'template', array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0));
+  return $ret;
+}
+
+/**
+ * Replace nonstandard %sitename with standard %site-name.
+ * Replace nonstandard %siteurl with standard %site-url.
+ * (Repeating update_6001 as there were more instances of these old variables
+ * in the code.)
+ */
+function ad_notify_update_6003() {
+  $ret = array();
+  $ret[] = update_sql('UPDATE {ad_notify} SET subject = REPLACE(subject, "%%sitename", "%%site-name")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%sitename", "%%site-name")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%max_views", "%%max_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%global_views", "%%global_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%last_year_views", "%%last_year_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%this_year_views", "%%this_year_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%last_month_views", "%%last_month_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%this_month_views", "%%this_month_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%yesterday_views", "%%yesterday_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%today_views", "%%today_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%last_hour_views", "%%last_hour_impressions")');
+  $ret[] = update_sql('UPDATE {ad_notify} SET body = REPLACE(body, "%%this_hour_views", "%%this_hour_impressions")');
+  return $ret;
+}
+

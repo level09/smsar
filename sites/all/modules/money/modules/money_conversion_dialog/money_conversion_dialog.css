@@ -1,0 +1,68 @@
+/* $Id: money_conversion_dialog.css,v 1.1.2.1 2008/11/23 18:03:03 markuspetrux Exp $ */
+
+.money-converter-icon {
+  margin-bottom: .25em;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.money-conversion-wrapper {
+  background-color: #fff;
+  border: 4px solid #bbb;
+  border-right-color: #666;
+  border-bottom-color: #666;
+}
+.money-conversion-wrapper .ui-dialog-container {
+  color: #000000;
+  background-color: #fff;
+}
+.money-conversion-wrapper .ui-dialog-titlebar {
+  height: 28px;
+  color: #f8f8f8;
+  background-color: #369;
+  font-weight: bold;
+  cursor: move;
+}
+.money-conversion-wrapper .ui-dialog-title {
+  display: block;
+  float: left;
+  margin: 2px 4px;
+}
+.money-conversion-wrapper .ui-dialog-titlebar-close {
+  display: block;
+  float: right;
+  margin: 2px 4px;
+  color: #f8f8f8;
+  background-color: #666;
+  text-decoration: none;
+}
+.money-conversion-wrapper .ui-dialog-titlebar-close-hover {
+  color: #ffffff;
+  background-color: #888;
+}
+.money-conversion-wrapper .ui-dialog-titlebar-close span {
+  display: block;
+  padding: 0 .6em;
+}
+.money-conversion-wrapper .ui-dialog-content {
+  padding: 1.2em;
+}
+#money-conversion-label {
+  display: block;
+  font-weight: bold;
+}
+#money-conversion-form {
+  display: none;
+  margin-bottom: 2em;
+}
+#money-conversion-select {
+  display: block;
+  margin-top: .2em;
+}
+#money-conversion-result div {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+#money-conversion-error {
+  color: #f00;
+}

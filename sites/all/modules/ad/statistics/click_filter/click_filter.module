@@ -1,0 +1,94 @@
+<?php
+// $Id: click_filter.module,v 1.1.2.3.2.6.2.2 2009/07/29 22:18:00 jeremy Exp $
+
+/**
+* @file
+ * Filter duplicate and other unwanted clicks from ad statistics.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * TODO:
+ *  - Filter out bots and spiders using user_agent field.
+ *  - Add administrative ability to enter IP or range to filter.
+ */
+
+if (!defined('CLICK_NEW')) {
+  define('CLICK_NEW', 0);
+  define('CLICK_VALID', 1);
+  define('CLICK_DUPLICATE', 2);
+  define('CLICK_OWNER', 3);
+  define('CLICK_FILTER_ROLE', 4);
+  define('CLICK_BOT', 5);
+}
+/**
+ * Provide text version for statistics output.
+ */
+function click_filter_status_text($status) {
+  $output = '<div class="click-status">';
+  switch ($status) {
+    case 0:
+      $output .= '<div class="click-new">'. t('New') .'</div>';
+      break;
+    case 1:
+      $output .= '<div class="click-valid">'. t('Valid') .'</div>';
+      break;
+    case 2:
+      $output .= '<div class="click-duplicate">'. t('Duplicate') .'</div>';
+      break;
+    case 3:
+      $output .= '<div class="click-owner">'. t('Ad owner') .'</div>';
+      break;
+    case 4:
+      $output .= '<div class="click-filtered-role">'. t('Filtered role') .'</div>';
+      break;
+    case 5:
+      $output .= '<div class="click-bot">'. t('Bot') .'</div>';
+      break;
+    default:
+      $output .= '<div class="click-unknown">'. t('Unknown') .'</div>';
+      break;
+  }
+  $output .= '</div>';
+  return $output;
+}
+
+/**
+ * Perform on-the-fly click filtering.
+ */
+function click_filter_status($aid, $hostid) {
+  global $user;
+  if (user_access('filter clicks')) {
+    return CLICK_FILTER_ROLE;
+  }
+  if (preg_match('/bot|crawl|spider/i', $_SERVER['HTTP_USER_AGENT'])) {
+    return CLICK_BOT;
+  }
+  // See if the click came from an owner of the ad.
+  if (module_exists('ad_owners')) {
+    $result = db_query('SELECT oid FROM {ad_owners} WHERE aid = %d AND uid = %d', $aid, $user->uid);
+    if (db_result($result)) {
+      return CLICK_OWNER;
+    }
+  }
+  // See if the click came from a duplicate uid or ip address.
+  if ($user->uid) {
+    $result = db_query("SELECT cid FROM {ad_clicks} WHERE aid = %d AND status = %d AND (uid = %d OR hostname = '%s')", $aid, CLICK_VALID, $user->uid, ip_address());
+  }
+  else {
+    $result = db_query("SELECT cid FROM {ad_clicks} WHERE aid = %d AND status = %d AND hostname = '%s'", $aid, CLICK_VALID, ip_address());
+  }
+  if (db_result($result)) {
+    return CLICK_DUPLICATE;
+  }
+  return CLICK_VALID;
+}
+
+/** 
+ * Implementation of hook_perm().
+ */
+function click_filter_perm() {
+  return array('view filtered clicks', 'filter clicks');
+}

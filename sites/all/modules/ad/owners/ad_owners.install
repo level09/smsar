@@ -1,0 +1,128 @@
+<?php
+// $Id: ad_owners.install,v 1.1.2.2.2.1 2009/02/23 22:39:04 jeremy Exp $
+
+/**
+ * @file
+ * Ad_owners module database schema.
+ *
+ * Copyright (c) 2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function ad_owners_schema() {
+  $schema['ad_owners'] = array(
+    'description' => 'Stores information about ad owners. Every ad can have one or more owners.',
+    'fields' => array(
+      'oid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' => 'Unique owner pair ID.',
+      ),
+      'aid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Ad id.',
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'The {users}.uid that owns ad.',
+      ),
+    ),
+    'primary key' => array('oid'),
+    'indexes' => array(
+      'aid' => array('aid'),
+      'uid' => array('uid'),
+    ),
+  );
+
+ /**
+  * Permissions can be granted to each owner of each ad.  The same owner
+  * can own multiple ads, and can have different permissions for each ad.
+  */
+  $schema['ad_permissions'] = array(
+    'description' => 'Permissions can be granted to each owner of each ad. The same owner can own multiple ads, and can have different permissions for each ad.',
+    'fields' => array(
+      'oid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Owner pair ID.',
+      ),
+      'permissions' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'Ad permission info.',
+      ),
+    ),
+    'primary key' => array('oid'),
+  );
+
+ /**
+  * The ad_hosts table is used to configure users that can display ads
+  * remotely.
+  */
+  $schema['ad_hosts'] = array(
+    'description' => 'The ad_hosts table is used to configure users that can display ads remotely. ',
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => '',
+      ),
+      'hostid' => array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Host from which acion was made.',
+      ),
+      'status' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => '',
+      ),
+      'description' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'description' => 'Host from which acion was made.',
+      ),
+    ),
+    'primary key' => array('uid'),
+    'indexes' => array(
+      'status' => array('status'),
+      'hostid' => array('hostid'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * ad_external module installation.
+ */
+function ad_owners_install() {
+  drupal_install_schema('ad_owners');
+}
+
+/**
+ * Allow complete uninstallation of the ad_external module.
+ */
+function ad_owners() {
+  drupal_uninstall_schema('ad_owners');
+}

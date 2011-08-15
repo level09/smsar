@@ -1,0 +1,122 @@
+# $Id: format_number.pot,v 1.1.2.1 2008/11/13 13:25:57 markuspetrux Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  format_number.settings.inc: n/a
+#  format_number.module,v 1.1.2.3 2008/11/10 00:52:32 markuspetrux
+#  format_number.info,v 1.1.2.1 2008/11/02 14:20:26 markuspetrux
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-11-13 13:54+0100\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: format_number.settings.inc:16;66
+msgid "Decimal point"
+msgstr ""
+
+#: format_number.settings.inc:19;69
+msgid "Select the character that will be used as decimal point."
+msgstr ""
+
+#: format_number.settings.inc:23;73
+msgid "Thousands separator"
+msgstr ""
+
+#: format_number.settings.inc:26;76
+msgid "Select the character that will be used as thousands separator."
+msgstr ""
+
+#: format_number.settings.inc:30
+msgid "User-configurable number format"
+msgstr ""
+
+#: format_number.settings.inc:32
+msgid "Disabled"
+msgstr ""
+
+#: format_number.settings.inc:32
+msgid "Enabled"
+msgstr ""
+
+#: format_number.settings.inc:33
+msgid "When enabled, users can set their own number formatting options."
+msgstr ""
+
+#: format_number.settings.inc:44;86
+msgid "Decimal point and thousands separator cannot be defined to use the same symbol."
+msgstr ""
+
+#: format_number.settings.inc:60
+msgid "Number format settings"
+msgstr ""
+
+#: format_number.module:18
+msgid "The <em>Format Number API</em> module provides a method to configure number formats (site default and user defined) with configurable decimal point and thousand separators. It also exposes several functions that can be used by other contributed or custom modules to display numbers accordingly."
+msgstr ""
+
+#: format_number.module:68;82
+msgid "full stop (.)"
+msgstr ""
+
+#: format_number.module:69;83
+msgid "comma (,)"
+msgstr ""
+
+#: format_number.module:70
+msgid "arabic decimal separator (٫)"
+msgstr ""
+
+#: format_number.module:81
+msgid "none"
+msgstr ""
+
+#: format_number.module:84
+msgid "apostrophe (')"
+msgstr ""
+
+#: format_number.module:85
+msgid "no-break space ( )"
+msgstr ""
+
+#: format_number.module:86
+msgid "full width comma (，)"
+msgstr ""
+
+#: format_number.module:87
+msgid "arabic thousands separator (٬)"
+msgstr ""
+
+#: format_number.module:88
+msgid "ethiopic syllable wa (ወ)"
+msgstr ""
+
+#: format_number.module:26
+msgid "configure default number format"
+msgstr ""
+
+#: format_number.module:35
+msgid "Number format"
+msgstr ""
+
+#: format_number.module:0
+msgid "format_number"
+msgstr ""
+
+#: format_number.info:0
+msgid "Format Number API"
+msgstr ""
+
+#: format_number.info:0
+msgid "This module provides a method to configure number formats (site default and user defined) with configurable decimal point and thousand separators. It also exposes several functions that can be used by other contributed or custom modules to display numbers accordingly."
+msgstr ""
+

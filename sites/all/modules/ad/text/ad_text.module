@@ -1,0 +1,346 @@
+<?php
+// $Id: ad_text.module,v 1.2.2.7.2.24.2.13.2.3 2009/03/31 04:41:03 jeremy Exp $
+
+/**
+ * @file
+ * Enhances the ad module to support static text ads.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Function used to display the selected ad.
+ */
+function ad_text_display_ad($ad) {
+  return theme('ad_text_ad', $ad);
+}
+
+/**
+ * Return a themed ad of type ad_text.
+ *
+ * @param @ad
+ *   The ad object.
+ * @return
+ *   A string containing the ad markup.
+ */
+function theme_ad_text_ad($ad) {
+  if (isset($ad->aid)) {
+    if (!isset($ad->adheader)) {
+      $ad = node_load($ad->aid);
+    }
+    $output = '<div class="text-advertisement" id="ad-'. $ad->aid .'">';
+    if (isset($ad->url) && !empty($ad->url)) {
+      $output .= theme('ad_text_text', ad_text_display_prepare($ad->adheader, $ad->format), ad_text_display_prepare($ad->adbody, $ad->format), $ad->redirect .'/@HOSTID___');
+    }
+    else {
+      $output .= theme('ad_text_text', ad_text_display_prepare($ad->adheader, $ad->format), ad_text_display_prepare($ad->adbody, $ad->format));
+    }
+    $output .= '</div>';
+    return $output;
+  }
+}
+
+/**
+ * Return a themed text ad.
+ *
+ * @param $header
+ *  The header of the text ad.
+ * @param $body
+ *  The body of the text ad.
+ * @param $link
+ *  Optional link URL for header.
+ * @return
+ *  A string containing the text ad.
+ */
+function theme_ad_text_text($header, $body, $link = NULL) {
+  $output  = '<div class="ad-header">';
+  if (isset($link) && !empty($link)) {
+    $output .= l($header, $link, array('attributes' => ad_link_attributes(), 'html' => TRUE));
+  }
+  else {
+    $output .= $header;
+  }
+  $output .= '</div>';
+  $output .= '<div class="ad-body">'. $body .'</div>';
+  return $output;
+}
+
+/**
+ * Strip illegal characters, apply input filters, then encode the rest UTF-8.
+ */
+function ad_text_display_prepare($string, $format) {
+  $string = preg_replace("/[\b\f\n\r\t]/", ' ', $string);
+  $string = check_markup($string, $format, FALSE);
+  return $string;
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function ad_text_theme() {
+  return array(
+    'ad_text_ad' => array(
+      'file' => 'ad_text.module',
+      'arguments' => array(
+        'ad' => NULL,
+      ),
+    ),
+    'ad_text_text' => array(
+      'file' => 'ad_text.module',
+      'arguments' => array(
+        'header' => NULL,
+        'body' => NULL,
+        'link' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function ad_text_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'node/add/ad#text':
+      $output = t('A text advertisement.');
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function ad_text_access($op, $node, $account) {
+  return ad_access($op, $node, $account);
+}
+
+/**
+ * Text ad settings form.
+ */
+function ad_text_global_settings($form_state) {
+  $form = array();
+
+  $form['header_min'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Header minimum length'),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#default_value' => variable_get('header_min', 0),
+    '#description' => t('Optionally specify the minimum number of characters allowed in the header of a text ad.  Set to <em>0</em> to specify no minimum length.'),
+  );
+  $form['header_max'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Header maximum length'),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#default_value' => variable_get('header_max', 0),
+    '#description' => t('Optionally specify the maximum number of characters allowed in the header of a text ad.  Set to <em>0</em> to specify no maximum length.'),
+  );
+  $form['body_min'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Body minimum length'),
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#default_value' => variable_get('body_min', 0),
+    '#description' => t('Optionally specify the minimum number of characters allowed in the body of a text ad.  Set to <em>0</em> to specify no minimum length.'),
+  );
+  $form['body_max'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Body maximum length'),
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#default_value' => variable_get('body_max', 0),
+    '#description' => t('Optionally specify the maximum number of characters allowed in the body of a text ad.  Set to <em>0</em> to specify no maximum length.'),
+  );
+
+
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  return $form;
+}
+
+/**
+ * Settings form validation handler.
+ */
+function ad_text_global_settings_validate($form, &$form_state) {
+  if ((int)$form_state['values']['header_min'] > (int)$form_state['values']['header_max']) {
+    form_set_error('header_min', t('The header minimum length can not be greater than the header maximum length.'));
+  }
+  if ((int)$form_state['values']['body_min'] > (int)$form_state['values']['body_max']) {
+    form_set_error('body_min', t('The body minimum length can not be greater than the body maximum length.'));
+  }
+}
+
+/**
+ * Settings form submit handler.
+ */
+function ad_text_global_settings_submit($form, &$form_state) {
+  variable_set('header_min', $form_state['values']['header_min']);
+  variable_set('header_max', $form_state['values']['header_max']);
+  variable_set('body_min', $form_state['values']['body_min']);
+  variable_set('body_max', $form_state['values']['body_max']);
+}
+
+/**
+ * Implementation of hook_adapi().
+ */
+function ad_text_adapi($op, &$node) {
+  switch ($op) {
+    case 'load':
+      $return = db_fetch_array(db_query('SELECT aid, url, adheader, adbody FROM {ad_text} WHERE aid = %d', $node['aid']));
+      $return['ad'] = ad_text_display_prepare($return['adheader'], $node['format']) .'<br />'. ad_text_display_prepare($return['adbody'], $node['format']);
+      return $return;
+
+    case 'insert':
+      db_query("INSERT INTO {ad_text} (aid, url, adheader, adbody) VALUES(%d, '%s', '%s', '%s')", $node->nid, $node->url, $node->adheader, $node->adbody);
+      break;
+
+    case 'update':
+      if (ad_permission($node->nid, 'manage ad text')) {
+        db_query("UPDATE {ad_text} SET url = '%s', adheader = '%s', adbody = '%s' WHERE aid = %d", $node->url, $node->adheader, $node->adbody, $node->nid);
+      }
+      break;
+
+    case 'delete':
+      db_query('DELETE FROM {ad_text} WHERE aid = %d', $node->nid);
+      break;
+
+    case 'form':
+      return ad_text_node_form($node);
+
+    case 'view':
+      return ad_text_node_view($node);
+
+    case 'redirect':
+      return db_result(db_query('SELECT url FROM {ad_text} WHERE aid = %d', $node->nid));
+
+    case 'validate':
+      $todo = array();
+      return ad_text_node_validate($node, $todo);
+
+    case 'type':
+      return array(
+        'text' => array(
+          'name' => t('Text ad'),
+          'module' => 'ad_text',
+          'description' => t('A text advertisement.'),
+          'help' => t('A text advertisement.'),
+        ),
+      );
+
+    case 'permissions':
+      if (!isset($node->adtype) || $node->adtype == 'text') {
+        return array('manage ad text' => TRUE);
+      }
+  }
+}
+
+/**
+ * Adapi helper function for displaying a node form.
+ */
+function ad_text_node_form(&$node) {
+  $form = array();
+
+  $form['ad_text'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Text'),
+    '#collapsible' => TRUE,
+  );
+
+  if (arg(1) == 'add' && user_access('create advertisements') || ad_permission($node->nid, 'manage ad text')) {
+    $access = TRUE;
+  }
+  else {
+    $access = FALSE;
+    $form['ad_text']['notice'] = array(
+      '#type' => 'markup',
+      '#value' => '<p>'. t('You do not have permission to edit this advertisement.') .'</p>',
+    );
+  }
+
+  $form['ad_text']['text'] = array(
+    '#type' => 'markup',
+    '#value' => ad_text_display_ad($node),
+  );
+
+  $form['ad_text']['url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Destination URL'),
+    '#maxlength' => 255,
+    '#default_value' => isset($node->url) ? $node->url : '',
+    '#description' => t('Enter the complete URL where you want people to be redirected when they click on this advertisement.  The URL must be valid and begin with http:// or https://, for example %url, unless you !disable.  If you do not enter a URL, the advertisement will not be clickable.', array('%url' => t('http://www.sample.org/'), '!disable' => l(t('disable URL validation'), 'admin/content/ad/configure', array('fragment' => 'edit-ad-validate-url-wrapper')))),
+    '#disabled' => !$access,
+  );
+
+  $form['ad_text']['adheader'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Ad header'),
+    '#required' => $access,
+    '#default_value' => isset($node->adheader) ? $node->adheader : '',
+    '#description' => t('This is the first line of the ad which will be linked to the URL entered above.'),
+    '#disabled' => !$access,
+  );
+  $form['ad_text']['adbody'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Ad body'),
+    '#required' => $access,
+    '#default_value' => isset($node->adbody) ? $node->adbody : '',
+    '#description' => t('This is the rest of the ad.'),
+    '#disabled' => !$access,
+  );
+
+  return $form;
+}
+
+/**
+ * Adapi helper function for displaying ad itself.
+ */
+function ad_text_node_view(&$node) {
+  $node->content['ad'] = array(
+    '#value' => theme('box', '', preg_replace('&@HOSTID___&', '0', (ad_text_display_ad($node)))),
+    '#weight' => -1,
+  );
+  if (!empty($node->url)) {
+    $link = t('Links to !url.', array('!url' => $node->url));
+    $link = check_plain($link, $node->format, FALSE);
+    $node->content['ad-link'] = array(
+      '#value' => "<div class=\"links-to\">$link</div>",
+      '#weight' => 1,
+    );
+  }
+}
+
+/**
+ * Text ads node validator.
+ */
+function ad_text_node_validate($node, &$form_state) {
+  // Enforce minimum and maximum lengths.
+  $header_len = isset($node->adheader) ? strlen($node->adheader) : 0;
+  $header_min = variable_get('header_min', 0);
+  $header_max = variable_get('header_max', 0);
+  if ($header_min && ($header_len < $header_min)) {
+    form_set_error('adheader', t('Your text ad header is only %cur characters but must be at least %min characters.', array('%cur' => $header_len, '%min' => $header_min)));
+  }
+  else if ($header_max && ($header_len > $header_max)) {
+    form_set_error('adheader', t('Your text ad header is %cur characters but can not be more than %max characters.', array('%cur' => $header_len, '%max' => $header_max)));
+  }
+  $body_len = strlen($node->adbody);
+  $body_min = variable_get('body_min', 0);
+  $body_max = variable_get('body_max', 0);
+  if ($body_min && ($body_len < $body_min)) {
+    form_set_error('adbody', t('Your text ad body is only %cur characters but must be at least %min characters.', array('%cur' => $body_len, '%min' => $body_min)));
+  }
+  else if ($body_max && ($body_len > $body_max)) {
+    form_set_error('adbody', t('Your text ad body is %cur characters but can not be more than %max characters.', array('%cur' => $body_len, '%max' => $body_max)));
+  }
+
+  if ($node->url && variable_get('ad_validate_url', 1) && (!valid_url($node->url, TRUE))) {
+    form_set_error('url', t('You must specify a valid %field.', array('%field' => t('Destination URL'))));
+  }
+}

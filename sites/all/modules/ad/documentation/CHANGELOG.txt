@@ -1,0 +1,728 @@
+$Id: CHANGELOG.txt,v 1.2.2.40.2.176.2.41.2.101 2009/08/05 00:13:37 jeremy Exp $
+
+August 4th, 2009
+ - ad.module
+    o bug #527658: don't require user to choose ad type if only one is available
+    o bug #445264: fix jQuery display method
+
+July 29th, 2009
+ - click_filter.module
+    o bug #433432: only query ad_owners table if the ad_owners module is enabled
+      Patch thanks to mehmeta
+    o feature #519784: consider user agents with 'spider' or 'crawl' to be bots
+      Patch thanks to pebosi
+ - ad_channel.module
+    o bug #511762: properly document accepted paths for configuring channels
+    o bug #499522: document shortcoming regarding url aliases
+ - ad.module
+    o bug #496406: don't display body field if disabled
+      Patch thanks to perarnet
+
+July 28th, 2009
+ - ad_channel.install
+    o bug #532262: add missing ad_channel_remnant table definition
+
+July 17th, 2009
+ - ad_channel.module
+    o feature #506512: filter reports on ads not assigned to any channel
+    o bug #511200: document <front> as an acceptable path
+
+July 11th, 2009
+ - ad_channel.module
+    o feature #487966: provide inventory for channels, allowing remnant ads to
+      fill in missing inventory
+
+July 9th, 2009
+ - imageserve.inc
+    o bug #491324: remove unnecessary object
+
+July 6th, 2009
+ - ad_embed.module
+    o bug #476480: add missing ';' to properly display '<' in form.
+ - ad.module
+    o bug #480884: remove unnecessary call to ad_groups_list().
+      Patch thanks to 'lonelyrobot'.
+
+July 3rd, 2009
+ - ad_report.module
+    o bug #485218: proper filtering by group and by both group and channel
+ - ad_cache_file.module
+    o feature #485236: provide manual mechanism for flushing file cache
+ - ad_weight_probability.module
+    o feature #485244: display probability on ad overview page
+
+May 21st, 2009
+ - ad.channel.module
+    o replace probability with percentage to ease administration
+ - ad_channel.inc
+    o remove non-channel probabilities, replace with percentages.  improve
+      channel selection to ensure proper weighting regardless of how many
+      channels and how many ads in channels and not in channels.
+ - ad_channel.install
+    o replace no_channel_weight row with no_channel_percentage.  Automatically
+      convert existing configurations from weight to percentage.
+
+May 15th, 2009
+ - ad_image.module
+    o bug #437580: properly validate remote image, allowing it to be set as
+      active
+
+May 7th, 2009
+ - adcache.inc
+    o bug #453236: properly cast db query so can filter on multiple nids or tids
+ - ad_channel.inc
+    o bug: validate that a non-zero channel weight has been set, otherwise fall
+      back to default weight
+
+April 22nd, 2009 (6.x-2.0)
+ - ad_channel.module
+    o bug #436234: allow nodes to save properly on creation
+ - ad_weight_percentage.module
+    o bug #436234: allow nodes to save properly on creation
+
+April 17th, 2009
+ - ad_cache_file.install
+    o bug #436926: be sure the file cache is disabled when the ad file cache
+      module is disabled (patch thanks to Garrett Albright)
+
+April 16th, 2009 (6.x-2.0-rc1)
+ - ad.module
+    o feature #170497: introduce configurable option to remove ad nodes from
+      search results, enabled by default.  Advertisements will still show up
+      in search results for users with 'administer advertisements' or 'edit any
+      advertisement' permissions.
+    o feature #321184: introduce configurable option to remove ad nodes from
+      remote search engines using the 'noindex' meta tag, enabled by default
+
+April 15th, 2009
+ - ad_channel.install
+    o bug #433432: add missing no_channel_weight column to schema definition
+ - ad.module
+    o bug #400734: get aid from node->nid if available
+
+April 14th, 2009 (6.x-2.0-beta6)
+ - ad.module
+    o bug #431806: use valid XHTML when displaying advertisements
+
+April 9th, 2009
+ - ad.module
+    o bug #404888: properly increment impressions when using the raw method to
+      display advertisements
+ - adserve.inc
+    o bug #404888: properly display advertisements in Raw mode
+ - imageserve.inc
+    o bug #404888: properly increment impressions when using the raw method to
+      display advertisements
+ - ad_channel.inc
+    o feature #421038: allow weighting of non-channel advertisements
+ - ad_channel.install
+    o feature #421038: allow weighting of non-channel advertisements
+ - ad_channel.module
+    o feature #421038: allow weighting of non-channel advertisements
+
+April 7th, 2009
+ - ad_cache_file
+    o bug #425482: support older versions of PHP when building cache
+ - ad_channel.module
+    o #426292: sanitize urls trimming white space from start and end of lines
+      to be sure they match as expected
+ - ad_cache_file.info
+    o bug #376924: list ad_owner as ad_cache_file dependency
+ - ad_channel.module
+    o bug #426300: allow the deletion of channels and containers
+ - ad_channel.install
+    o bug #426300: rebuild menu so channels and containers can be deleted
+
+April 3rd, 2009
+ - ad_channel.module
+    o feature #421046: optionally limit the number of channels that can be
+      assigned to a single advertisement
+ - ad.install
+    o bug #422936: add missing extra fields from table definitions
+
+April 2nd, 2009
+ - ad_channel.module
+    o bug #421008: make premier status configurable to anyone with 'configure
+      premier status' permission
+ - ad.module
+    o feature #421026: add notification event for an advertisement being taken
+      offline
+    o feature #421026: add notification event for an advertisement being updated
+ - ad_notify.module
+    o remove outdated notification references to _views, changing to the new
+      _impressions syntax
+ - ad_image.module
+    o feature #421054: enforce optional maximum filesize
+    o enforce maximum size, and minimum/maximum height and width o422936n remotely
+      hosted images in addition to locally hosted images
+ - ad_image.install
+    o feature #421054: add new max_size field for enforcing maximum filesize
+
+March 31st, 2009
+ - ad_owners.module
+    o bug #419140: always be sure $permissions is an array
+ - ad_file_cache.inc
+    o bug #400734: validate cache element exists before using it
+
+March 30th, 2009 (6.x-2.0-beta5)
+ - ad_channel.module
+    o bug #418758: validate that $group is an array before treating it as one
+ - ad_owners.module
+    o feature #418382: make per-ad-type default permissions also per-role
+    o feature #418382: introduce 'grant default per ad type permissions' permission
+ - ad.module
+    o feature #418382: introduce 'edit any advertisements', 'delete own advertisement',
+      and 'delete any advertisements' permissions
+ - ad_text.module
+    o properly display advertisement in reports
+
+March 28th, 2009
+ - ad.module
+    o bug #417414: properly save autoactivate and autoexpire timestamps
+ - ad_notify.module
+    o bug #417512: implement hook_mail so that notifications are actually sent
+    o bug #417512: use proper variable names in emails
+ - ad_token.inc
+    o bug #417512: (renamed from token_ad.inc to match the ad module's naming
+      standards) cleanup logic to always return a value even if 0, remove
+      nonexistent this_week_impressions and this_week_clicks variables
+ - ad_token.install
+    o bug #417512: replace old variables with new variables in already
+      existing notifications
+
+March 27th, 2009 (6.x-2.0-beta4)
+ - adserve.inc
+    o bug #406278: fix PHP E_ALL notices
+      (fix includes patch by Garrett Albright)
+ - ad_cache_file.module
+    o fix PHP E_ALL notices
+ - token_ad.inc
+    o fix PHP E_ALL notices
+ - adcache.inc
+    o fix PHP E_ALL notices
+ - ad_channel.module
+    o fix PHP E_ALL notices
+    o bug #416110: build proper joins when filtering by channel or premiere
+    o feature #416164: a configurable option to display channels along with
+      or instead of groups on the admin ads listing page
+ - ad_weight_probability.module
+    o fix PHP E_ALL notices
+ - ad_report.module
+    o bug #404892: only display reports tab on advertisements
+ - ad_notify.module
+    o bug #404892: only display notify tab on advertisements
+    o feature #173176: complete implementation of default notifications
+ - ad_notify.install
+    o feature #173176: new "template" column to allow per-role notifications
+ - ad.install
+    o remove unintentional call-time pass-by-reference
+ - ad_image.install
+    o remove unintentional call-time pass-by-reference
+
+March 26th, 2009
+ - ad.module
+    o by default, only rebuild cache file when cron runs -- to rebuild
+      immediately set 'ad_cache_file_rebuild_realtime' to TRUE in your $conf
+      array in settings.php.
+ - ad_weight_probability.module
+    o only add/update probability information when working with ads
+    o don't rebuild cache twice, it will be rebuilt on save by the ad module
+
+March 18th, 2009
+ - adserve.inc
+    o add timestamp to debug output
+    o add memory information to debug output
+ - ad_cache_file.inc
+    o by default, only rebuil cache file when cron runs -- to rebuild
+      immediately set 'ad_cache_file_rebuild_realtime' to TRUE in your $conf
+      array in settings.php.
+ - ad_cache_file.module
+    o rebuild file cache in cron hook
+    o add debug output when rebuilding cache
+
+March 11th, 2009
+ - ad.module
+    o feature #382928: select ad type with inline AHAH switcher
+                       (patch thanks to "neochief")
+ - ad.install
+    o feature #382928: flush cache so AHAH switcher will work
+ - ad_channel.module
+    o feature #386796: allow per-channel reports
+ - ad_report.module
+    o feature #386796: allow external modules to modify reports
+
+March 5th, 2009 (6.x-2.0-beta3)
+ - ad.module
+    o simplify ad redirect path to avoid mismatched parameters
+    o feature #173176: use token module when generating notifications
+ - ad_cache.inc
+    o properly display $extra parameters
+    o simplify ad redirect path to avoid mismatched parameters
+ - ad_report.module
+    o bug #386794: generate proper report when selecting group(s)
+ - ad_channel.module
+    o add filter by premiere status to administrative ad overview page
+ - ad_notify.install
+    o feature #173176: new "roles" column to allow per-role notifications
+ - ad_notify.module
+    o feature #173176: add global per-role notifications, integrate token module
+
+March 4th, 2009
+ - ad_image.module
+    o bug #389724: properly display locally hosted images
+    o bug #391392: properly display locally hosted images
+ - ad_channel.module
+    o bug #389700: fix filtering by ad channel
+
+March 3rd, 2009 (6.x-2.0-beta2)
+ - ad_cache_file.module
+    o fix PHP E_ALL notices
+ - ad_image.install
+    o feature #388712: add remote_image field for remotely hosting images
+ - ad_image.module
+    o feature #388712: optionally allow images to be hosted remotely
+      (must go to "Administer > Content management > Ads > Settings > Image ad"
+       and check "Allow remote hosted images" to use this feature.)
+ - ad.module
+    o allow ad-type module global settings changes to be saved
+ - ad_owners.module
+    o allow ad-type module global settings changes to be saved
+
+March 2nd, 2009
+ - ad_channel
+    o bug #388720: display channels by name, not by description
+ - ad_remote
+    o bug #387164: generate proper snippet for tracking remote url
+
+March 1st, 2009 (6.x-2.0-beta1)
+ - ad_remote.module
+    o bug #387164: display advertisements with javascript to capture remote
+                   URL and properly support ad_channels
+ - ad_channel.module
+    o feature #386832: allow filtering by channel on ad admin page
+
+February 28th, 2009 (6.x-2.0-alpha2)
+ - ad_owners.module
+    o rename ad_host_id_create to ad_owners_create_hostid for consistency
+ - ad_remote.module
+    o replace call to ad_host_id_create with ad_owners_create_hostid
+ - ad_weight_probability.module
+    o bug #386816: new ads default to a weight of 1
+ - ad_html.module
+    o fix PHP E_ALL notices
+ - ad.pages.inc
+    o bug #386824: fix grammatical typo
+ - ad_channel.module
+    o feature #386810: set channel after ad group
+    o feature #386820: display channels when viewing node (if have 'administer
+      channels' permissions)
+
+February 27th, 2009 (6.x-2.0-alpha1)
+ - ad_report.module
+    o fix PHP notice, validate element before using it
+ - ad.module
+    o bug #382970: ad_permission must handle aid as int or node object
+    o bug #383008: ad_status_display should only return allowed permissions
+    o fix PHP E_ALL notices
+ - ad_html.module
+    o fix PHP E_ALL notices
+ - ad_text.module
+    o fix PHP E_ALL notices
+ - ad_owners.module
+    o make it possible to set default permissions
+    o make it possible to set per-advertisement permissions
+ - ad_weight_probability.module
+    o update form_alter to work with Drupal 6
+ - ad_weight_probability.inc
+    o fix PHP E_ALL notices
+ - ad_channel.module
+    o port to Drupal 6
+ - ad_cache_file.module
+    o bug #383836: fix typo in adapi
+    o fix PHP E_ALL notices
+ - ad_cace_memcache.info
+    o REMOVED: module needs a major update, it is currently unusable
+
+February 24th, 2009
+ - ad_report.module
+    o complete porting to 6.x, fixup paths
+
+February 23rd, 2009
+ - ad_report.module
+    o porting to 6.x
+
+February 23rd, 2009 (branched 6.x-2.x)
+ - imported changes from 5.x-2.x-dev branch
+
+February 17th, 2009 (1.1)
+ - ad.module
+    o bug #375742: support manual IFrame configuration
+    o feature #298608: return ad_link_attributes as array so ad_display_TYPE
+                   functions can call l() rather than custom building links
+ - ad.admin.inc
+    o feature #346454: replace "views" with "impressions"
+ - ad.install
+    o feature #298608: flush all caches for new ad display functions
+ - adserve.inc
+    o bug #375765: do not auto-expire ads unless configured to auto-expire
+    o bug #375377: remove references to no longer existing views files
+ - ad_external.module
+    o feature #298608: display external ad with themeable function
+ - ad_html.module
+    o feature #298608: display html ad with themeable function
+ - ad_image.module
+    o feature #298608: display image ad with themeable function
+ - ad_text.module
+    o feature #298608: display text ad with themeable function
+
+February 16th, 2009
+ - ad_text.module
+    o bug #375377: remove references to no longer existing ad_text_views.inc
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_image.module
+    o bug #375377: remove references to no longer existing ad_image_views.inc
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad.module
+    o bug #375270: cleanup code for E_ALL compliance (new patch by Webchick)
+    o bug #375474: don't automatically set autoactive/autoexpire date
+ - ad.admin.inc
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_owners.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_embed.module
+    o bug #294035: fixup ad_embed module to work with Drupal 6
+ - ad.install
+    o bug #294035: rebuild menu so ad_embed settings page is visible
+
+February 16th, 2009 (1.0)
+ - ad.admin.inc
+    o bug #374044: when editing group, don't display "create group" button
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad.pages.inc
+    o bug #375270: cleanup code for E_ALL compliance
+ - adserve.inc
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_cache_file.inc
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_cache_file.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_cache_memcache.inc
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_cache_memcache.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_embed.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_remote.module
+    o bug #375221: generate valid HTML snippet
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_external.module
+    o bug #375221: generate valid HTML snippet
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_image.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_text.module
+    o bug #375241: allow ad owners to change ad status
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_html.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_remote.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_report.module
+    o bug #375270: cleanup code for E_ALL compliance
+ - ad_owners.module
+    o bug #375244: automatically make ad creator an ad owner with default perms
+    o bug #375270: cleanup code for E_ALL compliance
+ - click_filter.install
+    o bug #375270: cleanup code for E_ALL compliance
+ - click_filter.module
+    o bug #375270: cleanup code for E_ALL compliance
+
+February 12th, 2009 (1.0-rc2)
+ - ad_remote.info
+    o bug #294044: module dependent on ad_owners module
+ - ad.module
+    o bug #304326: fix permissions so user can view click details
+ - ad.pages.inc
+    o feature #304326: display username in overview and details
+ - ad_memcache.inc
+    o bug #294040: order of ad_memcache_set() parameters was swapped
+
+February 11th, 2009
+ - ad_text.module
+    o feature #373016: don't require destination URL, cleanup help text
+    o bug #373065: cleanup URL on ad node page
+    o bug #373046: allow roles with 'create advertisements' to create ads
+ - ad_image.module
+    o feature #373016: cleanup help text for destination URL
+    o bug #373065: cleanup URL on ad node page
+    o bug #373046: allow roles with 'create advertisements' to create ads
+ - ad_html.module
+    o bug #373046: allow roles with 'create advertisements' to create ads
+ - ad_external.module
+    o bug #373046: allow roles with 'create advertisements' to create ads
+ - ad_text.install
+    o bug #373057: uninstall fails to remove text ads
+ - ad_image.install
+    o bug #373057: uninstall fails to remove image ads
+ - ad_html.install
+    o bug #373057: uninstall fails to remove html ads
+ - adserve.inc
+    o bug #373065: do not add trailing slash if there is no hostid
+ - ad_cache_file.inc
+    o bug #373065: generate proper redirect link
+
+February 11th, 2009 (1.0-rc1)
+  SA-CONTRIB-2009-007: http://drupal.org/node/372977
+
+February 10th, 2009
+ - ad_notify.module
+    o bug #360432: don't display error if no notifications have been created
+ - ad.admin.inc
+    o bug #372211: fix multi-delete of advertisements via admin interface
+ - adserve.inc
+    o bug #277286: document how to set DRUPAL_ROOT for Windows servers, get
+      path directly from DURPAL_ROOT if set
+
+February 9th, 2009
+ - ad.module
+    o bug #369327: allow creation of advertisements
+ - ad_notify.info
+    o bug #370194: properly format dependencies
+ - ad_report.info
+    o properly format dependencies
+
+December 18th, 2008
+ - ad.module
+    o generate click history in a function
+    o remove administrative statistics page (replaced by configurable reports)
+ - ad_report.module
+    o display click history along with other report data
+    o provide administrative reports, with downloadable CSV's
+    o put year first in path for reports, to avoid issue with # of digits
+    o default all reports to current month
+ - ad_report.install
+    o flush cache_menu to register new administrative paths
+
+December 17th, 2008
+ - ad.install
+    o introduce 'extra' field in 'ad_statistics' and 'ad_clicks' tables
+ - ad.module
+    o store 'extra' data when advertisements are clicked
+ - adcache.inc
+    o support 'hook_increment_extra' allowing add-ons to add granularity
+    o modify click URL to include 'extra' field
+    o store 'extra' field when incrementing counters
+ - ad_cache_file.inc
+    o store 'extra' field when incrementing counters
+ - ad_cache_file.module
+    o support 'hook_increment_extra' allowing add-ons to add granularity
+    o store 'extra' field when incrementing counters
+ - ad_channel.module
+    o declare _increment_extra hook
+ - ad_channel.inc
+    o track which channels displayed advertisements were selected from
+    o implement _increment_extra hook to track per-channel granularity
+
+December 16th, 2008
+ - ad_report.module
+    o prevent division by zero when generating reports
+
+December 12th, 2008
+ - ad_report.module
+    o feature #333040: make report range configurable (optionally enable the
+      jstools jscalendar module for popup calendar selection)
+    o feature #333040: provide per-group table breakdown of ad statistics
+
+December 11th, 2008
+ - ad.module
+    o provide new granular status permissions with logical workflow:
+        set status as pending, set status as denied,
+        set status from pending to approved, set status from pending to denied,
+        set status from approved to active, set status from approved to offline,
+        set status from active to offline, set status from active to expired,
+        set status from offline to active, set status from offline to expired
+    o remove 'unpublished' adstatus, an uppublished node is now an 'expired' ad
+    o flush the cache when admin modifies ad status in bulk operation
+    o when editing ad, only display ad status options have perms to control
+    o feature #167042: provide access to statistics and clicks by default if
+      the ad_permission module is not enabled
+ - ad_image.module
+    o rename 'manage active ad' to 'manage active image'
+    o grant permission to new ad owners by default
+ - ad_text.module
+    o grant 'manage ad text' permission to new ad owners by default
+ - ad_html.module
+    o grant 'manage ad html' permission to new ad owners by default
+ - ad_notify.module
+    o grant 'manage own notifications' permission to new ad owners by default
+    o grant 'edit notification email' permission to new ad owners by default
+ - ad_permission.module
+    o allow control of per-ad type default permissions
+ - ad_permission.install
+    o use CREATE TABLE IF NOT EXISTS correctly (was resulting in an error)
+    o update old permission names to new permission names ('manage status'
+      gets changed to the default status permissions for that ad type.)
+
+December 10th, 2008
+ - ad_remote.module
+    o add javascript for recording remote url on which remote ads are served
+ - ad.module
+    o use single quotes when displaying javascript, so we can display it within
+      other javascript (for ad_remote)
+    o provide option to display ad url without any <div> wrappers
+    o provide mechanism for flushing cache
+    o automatically flush cache when ads are updated
+ - adserve.inc
+    o make best effort attempt at setting a proper remote url when serving
+      ads with the ad_remote module
+ - ad_channel.module
+    o provide configuration option for how to treat ads not in a channel
+    o flush cache when channel information changes
+ - ad_channel.inc
+    o respect configuration option for ads not in a channel
+ - ad_cache_file.module
+    o ad module now auto-flushes cache when ad is updated
+ - ad_weight_probability.module
+    o flush cache when weight changes
+
+December 9th, 2008
+ - ad.module
+    o replace call to old ad_owners_add() with new ad_permission_owners_add()
+ - ad_permission.install
+    o only create tables if not already existing (on upgrades, these tables
+      were already created by the core ad module)
+ - ad_remote.info
+    o ad_remote now dependent on new ad_permission module
+ - ad_remote.module
+    o replace call to ad_host_id_create() with new ad_permission_create_hostid()
+
+December 8th, 2008
+ - ad_permission.install
+    o fix namespace collision
+ - ad_permission.module
+    o for consistency, don't change title as updating permissisons
+ - adserve.php
+    o define debug error handler
+    o when debugging display all warnings except for misleading header and
+      session warnings caused by debugging
+ - ad_cache_file.inc
+    o fix strict PHP warnings
+ - adcache.inc
+    o fix strict PHP warnings
+ - ad_channel.inc
+    o fix strict PHP warnings
+
+December 7th, 2008
+ - ad.install
+    o move permissions schema into ad_permission module
+ - ad.module
+    o move permissions logic into ad_permission module
+ - ad_html.module
+    o replace call to ad_adaccess() with call to ad_permission()
+ - ad_image.module
+    o replace call to ad_adaccess() with call to ad_permission()
+ - ad_text.module
+    o replace call to ad_adaccess() with call to ad_permission()
+ - ad_permission.module
+    o provide granular permissions for advertisements
+
+December 6th, 2008
+ - adcache.inc
+    o introduce hook_weight
+ - ad_cache_file.module
+    o introduce hook_weight
+ - ad_channel.inc
+    o allow the display of more than one premiere advertisement
+ - ad_channel.module
+    o support 'configure ad premiere status' permission
+ Feature #139928:
+ - ad_weight_probability.module
+    o support weighting the probability that a given ad will be displayed
+
+
+December 5th, 2008
+ - serve.php
+    o include new adcache.inc file
+ - adserve.inc
+    o divide ad serving functions into hooks
+    o move display functionality into adcache.inc to standardize caching
+    o rework hook functionality
+    o fix debug output to include adserve.inc and adcache.inc
+ - adcache.inc
+    o standardize caching and debugging code
+ - ad_cache_file.inc
+    o simplify by utilizing functions provided in adcache.inc
+    o properly track views and clicks with group-level granularity
+ - ad_cache_file.module
+    o properly track views and clicks with group-level granularity
+ - ad_channel.inc
+    o utilize functions provided by adcache.inc
+    o add support for premiere advertisements
+ - ad_channel.module
+    o cleanup wording and fieldsets
+    o fix group validation when no groups are selected
+    o add support for premiere advertisements
+ - ad_channel.install
+    o add support for premiere advertisements
+
+November 28th, 2008
+ Feature #337505:
+ - ad.module
+    o track URL where serving advertisements
+ - adserve.inc
+    o introduce adserve_filter hook
+ - ad_cache_file.inc
+    o introduce adserve_filter hook
+    o convert include_hook_init, include_hook_select to hook_init, hook_select
+ - ad_cache_file.module
+    o support multiple hook_init, hook_filter, and hook_select hooks
+ - ad_channel.module
+    o add cache support
+ - ad_channel.inc
+    o implement cache support
+
+November 27th, 2008
+ Feature #337505:
+ - ad_channel.module
+    o implement ability to assign ads to channels
+
+November 21st, 2008
+ Feature #337505:
+ - ad_channel.module
+    o implement creation, editing and deletion of channels
+    o implement creation, editing and deletion of containers
+    o implement channel overview page
+
+November 20th, 2008
+ Feature #337505:
+ - ad_channel.module
+    o draft administrative pages for ad channels.
+    o administrative interface for creating channels
+    o administrative interface for creating channel containers
+ - ad_channel.install
+    o define ad_channel schema
+
+November 19th, 2008
+ - ad.module
+    o bug #329475: remove translations on internal status names
+ - ad_text.module
+    o bug #335466: fix unclosed div
+ - ad.install
+    o bug #330173: fix infinite loop when uninstalling the ad module
+ - click_filter.module
+    o bug #294037: remove calls to db_num_rows
+      (patch thanks to James Glasgow, aka jrglasgow)
+ - ad_report.module
+    o bug #330104: port module to Drupal 6
+      (patch by Mehmet Alkanlar, aka mehmeta)
+
+October 30th 2008
+ - ad.module
+    o bug #294029: Display theme, properly redirect
+ - click_filter.module
+    o bug #294037
+
+August 11th 2008
+Branched 6.x from 5.x-1.6

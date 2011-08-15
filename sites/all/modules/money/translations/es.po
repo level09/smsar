@@ -1,0 +1,145 @@
+# $Id: es.po,v 1.1.2.1 2008/11/16 11:33:58 markuspetrux Exp $
+#
+# Spanish translation of Money CCK field module
+# Copyright 2008 markus_petrux <EMAIL@ADDRESS>
+# Generated from files:
+#  money.module,v 1.1.4.3 2008/11/15 14:54:41 markuspetrux
+#  money.install,v 1.1.2.2 2008/11/15 14:08:43 markuspetrux
+#  money.info,v 1.1.4.2 2008/11/15 14:08:43 markuspetrux
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: money 6.x-1.x\n"
+"POT-Creation-Date: 2008-11-16 10:54+0100\n"
+"PO-Revision-Date: 2008-11-16 10:54+0100\n"
+"Last-Translator: markus_petrux <EMAIL@ADDRESS>\n"
+"Language-Team: Spanish <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+#: money.module:26
+msgid "Money"
+msgstr "Dinero"
+
+#: money.module:38
+msgid "Precision"
+msgstr "Precisión"
+
+#: money.module:41
+msgid "The total number of digits to store in the database, including digits to the right of the decimal point."
+msgstr "Número total de dígitos que se almacenan en la base de datos, incluyendo los dígitos a la derecha del punto decimal."
+
+#: money.module:45
+msgid "Decimals"
+msgstr "Decimales"
+
+#: money.module:48
+msgid "The number of digits to the right of the decimal point."
+msgstr "Número de dígitos a la derecha del punto decimal."
+
+#: money.module:103
+msgid "Default"
+msgstr "Predeterminado"
+
+#: money.module:104
+msgid "Remove redundant zeros"
+msgstr "Sin ceros redundantes"
+
+#: money.module:105
+msgid "Unformatted"
+msgstr "Sin formatear"
+
+#: money.module:114
+msgid "Amount and currency"
+msgstr "Cantidad y moneda"
+
+#: money.module:125;134
+msgid "Currency code"
+msgstr "Código de la moneda"
+
+#: money.module:125
+msgid "Currency name"
+msgstr "Nombre de la moneda"
+
+#: money.module:128
+msgid "Currency selection mode"
+msgstr "Modo de selección de la moneda"
+
+#: money.module:132
+msgid "Choose the format of the label that will be displayed for options of the currency select list."
+msgstr "Selecciona el formato del texto que se utiliza para las opciones de selección de la modena."
+
+#: money.module:134
+msgid "Currency symbol"
+msgstr "Símbolo de la moneda"
+
+#: money.module:137
+msgid "Currency display mode"
+msgstr "Modo de visualización de la moneda"
+
+#: money.module:141
+msgid "Choose the format that will be used to display the currency when a node is rendered."
+msgstr "Selecciona el formato con el cual se mostrará la moneda cuando un nodo es visualizado."
+
+#: money.module:145
+msgid "Available currencies"
+msgstr "Monedas disponibles"
+
+#: money.module:147
+msgid "Choose the currencies that you want to enable for this field. Do not select any currency to enable them all."
+msgstr "Marca las monedas que deseas habilitar para este campo. No seleccionar ninguna implica que todas están habilitadas."
+
+#: money.module:240
+msgid "%name: Currency is required."
+msgstr "%name: La moneda es un dato obligatorio."
+
+#: money.module:243
+msgid "%name: Currency is required when an amount is specified."
+msgstr "%name: Cuando se especifica una cantidad es también necesario informar la moneda."
+
+#: money.module:250
+msgid "%name: The currency %currency is not allowed."
+msgstr "%name: La moneda %currency no está permitida."
+
+#: money.module:254
+msgid "%name: A valid amount is required when a currency is specified."
+msgstr "%name: Cuando se especifica una moneda es también necesario informar una cantidad válida."
+
+#: money.module:285
+msgid "-- Select currency --"
+msgstr "-- Seleccionar moneda --"
+
+#: money.module:0
+msgid "money"
+msgstr "dinero"
+
+#: (duplicate) money.install:18 
+msgid "Format Number API"
+msgstr ""
+
+#: (duplicate) money.install:20 
+msgid "%module-name requires, at least, version 6.x-1.1 of the <a href=\"@format-number\">Format Number API</a> module."
+msgstr "%module-name requiere, al menos, la versión 6.x-1.1 del módulo <a href=\"@format-number\">Format Number API</a>."
+
+#: (duplicate) money.install:21 ;31  money.info:0
+msgid "Money CCK field"
+msgstr ""
+
+#: (duplicate) money.install:28 
+msgid "Formatted Number CCK"
+msgstr ""
+
+#: (duplicate) money.install:30 
+msgid "%module-name requires, at least, version 6.x-1.0 of the <a href=\"@formatted-number\">Formatted Number CCK</a> module."
+msgstr "%module-name requiere, al menos, la versión 6.x-1.0 del módulo <a href=\"@formatted-number\">Formatted Number CCK</a>."
+
+#: money.info:0
+msgid "Defines a CCK field with an amount and a currency."
+msgstr "Define un tipo de campo CCK que permite especificar una cantidad y una moneda."
+
+#: money.info:0
+msgid "CCK"
+msgstr ""

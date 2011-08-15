@@ -1,0 +1,166 @@
+<?php
+function advanced_init() 
+{
+
+
+
+
+}
+
+
+
+
+function advanced_form_alter(&$form,&$form_state,$form_id) {
+ 
+	
+	if($form_state['view']->name == 'Property_Search' )
+	
+	{
+	
+		
+		//drupal_set_message('<pre>'.print_r($form,1));
+		
+		$form['field_price_value']['min']['#title'] = 'Min Price';
+		$form['field_price_value']['max']['#title'] = 'Max Price';
+		$form['submit']['#value'] = "Search";
+	}
+	
+if($form_state['view']->name == 'Simple_Search' )
+	
+	{
+	
+		
+	
+		//drupal_set_message('<pre>'.print_r($form,1));
+		$form['#info']['filter-tid_4']['label'] = "Looking For";
+		$form['#info']['filter-tid_1']['label'] = "In";
+		$form['#info']['filter-tid_3']['label'] = "Property Type";
+		//$form['tid_4']['#pre_render'][]= 'status_render';
+		$form['submit']['#value'] = "Search";
+		
+	}
+	
+	
+}
+
+
+
+function status_render($element){
+	
+	//$element['#title'] = "Im Looking for";
+}
+
+
+
+
+function advanced_block ($op = 'list', $delta = 0, $edit = array()){
+	
+	if($delta == 0){
+	switch($op) {
+		case 'list':
+		$blocks[0]['info'] = t('Contact Information');
+		$blocks[0]['cache'] = BLOCK_NO_CACHE;
+		
+		$blocks[1]['info'] = t('List with us');
+		$blocks[1]['cache'] = BLOCK_NO_CACHE;
+		
+			$blocks[2]['info'] = t('Property Map');
+		$blocks[2]['cache'] = BLOCK_NO_CACHE;
+		
+		return $blocks;
+		break;
+		
+		case 'configure':
+			//drupal_set_message('<pre>'.print_r($delta,1));
+			$form['contact_num'] = array(
+			'#type' => 'textfield',
+			'#title' => 'Phone Number',
+			'#default_value' => variable_get('contact_num',123456),
+			);
+			return $form;
+			break;
+		
+		case 'save':
+			variable_set('contact_num',$edit['contact_num']);
+			break;
+			
+		case 'view':
+			
+			//$block['subject'] = 'Call us';
+			$num = variable_get('contact_num',123456);
+			$block['content'] = "<div id='contact-block'><div id='phone-num'>$num</div></div>";
+			return $block;
+			
+		break;
+		}
+	}
+	
+	else if ($delta ==1 )
+	{
+		switch($op) {
+
+		
+
+		case 'view':
+			
+			//$block['subject'] = 'Call us';
+		
+			$block['content'] = "<div id='list-block'></div>";
+			return $block;
+			
+		break;
+		}
+		
+		
+	}
+	
+	else if ($delta == 2)
+	{
+		if(arg(0)=='node' && is_numeric(arg(1)))
+		{
+			$n = node_load(arg(1));
+			
+			if($n->type =='property')
+			
+			{
+		
+		switch($op) {
+			
+	
+		
+
+		case 'view':
+			
+			//$block['subject'] = 'Call us';
+		//	drupal_set_message('<pre>' .	print_r($n,1));
+			
+		 $element = array(
+		 '#field_name'=> 'map',
+		 '#type_name' => 'property',
+		 '#item' => $n->field_map[0]
+		 
+		);
+		$element['#item']['#delta'] = 0;
+    
+			$block['content'] = theme_simplest_gmap_formatter_default($element);
+			return $block;
+			
+		break;
+		}
+			}
+		
+		}
+		
+		
+	}
+	
+	
+	
+}
+	
+	
+	function advanced_preprocess_node(&$vars){
+		
+		
+		
+	}

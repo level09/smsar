@@ -1,0 +1,13 @@
+; $Id: ad_weight_probability.info,v 1.1.4.2 2009/02/27 21:57:21 jeremy Exp $
+name = Ad Weight Probability
+package = Ad
+dependencies[] = ad
+description = Allow admin to adjust the probability that an ad will be displayed.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-08-05
+version = "6.x-2.1"
+core = "6.x"
+project = "ad"
+datestamp = "1249431906"
+

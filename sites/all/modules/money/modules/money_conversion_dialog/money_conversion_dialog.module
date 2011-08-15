@@ -1,0 +1,160 @@
+<?php
+// $Id: money_conversion_dialog.module,v 1.1.2.4 2009/04/24 21:14:02 markuspetrux Exp $
+
+/**
+ * @file
+ * Provides a 'Click to convert!' addon for Money CCK fields.
+ */
+
+/**
+ * Implementation of hook_perm().
+ */
+function money_conversion_dialog_perm() {
+  return array('use money conversion dialog');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function money_conversion_dialog_menu() {
+  $items = array();
+  $items['money-conversion-dialog'] = array(
+    'title' => 'Money conversion dialog (ajax)',
+    'access arguments' => array('use money conversion dialog'),
+    'page callback' => 'money_conversion_dialog_ajax_callback',
+    'page arguments' => array(1, 2), 
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Menu callback to deal with our own ajax requests.
+ */
+function money_conversion_dialog_ajax_callback($op, $arg = '') {
+  if ($op == 'currency-list') {
+    return drupal_json(array('currency-list' => currency_api_get_list()));
+  }
+  if ($op != 'convert') {
+    drupal_json(array('error' => t('Invalid operation: @operation', array('@operation' => $op))));
+  }
+
+  // Expected items:
+  //   0 => amount
+  //   1 => decimals
+  //   2 => currency_display_mode
+  //   3 => from_currency
+  //   4 => to_currency
+  // See theme_money_conversion_dialog().
+  $settings = explode('|', $arg);
+
+  // Validate amount, decimals and currency_display_mode.
+  $display_mode = str_replace(array(':', ' '), array('|', '+'), $settings[2]);
+  $display_modes = money_get_display_modes();
+  if (!is_numeric($settings[0]) || !is_numeric($settings[1]) || !isset($display_modes[$display_mode])) {
+    return drupal_json(array('error' => t('Invalid money data in operation settings: @settings', array('@settings' => $arg))));
+  }
+
+  // Validate from_currency and to_currency.
+  $currency_symbols = currency_api_get_symbols();
+  if (!isset($currency_symbols[$settings[3]]) || !isset($currency_symbols[$settings[4]])) {
+    return drupal_json(array('error' => t('Invalid currencies in operation settings: @settings', array('@settings' => $arg))));
+  }
+
+  // Use the Currency API to perform the conversion.
+  $ret = currency_api_convert($settings[3], $settings[4], $settings[0]);
+  if ($ret['status'] == FALSE) {
+    return drupal_json(array('error' => t('Currency exchange error: ') . t($ret['message'])));
+  }
+
+  // Format the amount.
+  $formatted_number = format_number($ret['value'], (int)$settings[1]);
+
+  // Build formatted result.
+  return drupal_json(array(
+    'money' => theme('money_field', $formatted_number, $settings[4], $display_mode),
+    'from' => $settings[3],
+    'to' => $settings[4],
+  ));
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function money_conversion_dialog_theme() {
+  return array(
+    'money_conversion_dialog_formatter_conversion_dialog' => array('arguments' => array('element' => NULL), 'function' => 'theme_money_conversion_dialog'),
+  );
+}
+
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function money_conversion_dialog_field_formatter_info() {
+  return array(
+    'conversion_dialog' => array('label' => t('Conversion dialog'), 'field types' => array('money')),
+  );
+}
+
+/**
+ * Helper function to add javascript/stylesheet components.
+ */
+function money_conversion_dialog_add_js() {
+  static $ready;
+  if (!isset($ready)) {
+    $ready = TRUE;
+
+    // Add jQuery UI Dialog widget.
+    jquery_ui_add(array('ui.dialog', 'ui.draggable'));
+
+    // Reuse ajax functionality in Drupal's autocomplete behavior.
+    drupal_add_js('misc/autocomplete.js');
+
+    // Add our own stylesheet/javascript.
+    $module_path = drupal_get_path('module', 'money_conversion_dialog');
+    $settings = array(
+      'uri' => url('money-conversion-dialog', array('absolute' => TRUE)),
+      'path' => base_path() . $module_path,
+    );
+    drupal_add_css($module_path .'/money_conversion_dialog.css');
+    drupal_add_js($module_path .'/money_conversion_dialog.js');
+    drupal_add_js(array('moneyConversionDialog' => $settings), 'setting');
+  }
+}
+
+/**
+ * Display a CCK Money field with currency conversion dialog.
+ *
+ * Appends a "Click here to convert!" icon to formatted money fields.
+ * When the user clicks on the icon, a jQuery UI dialog pops up with a small
+ * form that uses Ajax to provide online currency converions using the
+ * Currency API.
+ *
+ * @ingroup themeable
+ */
+function theme_money_conversion_dialog($element) {
+  // Use the default money formatter.
+  $output = theme('money_formatter_default', $element);
+  if (empty($output)) {
+    return $output;
+  }
+
+  // Check user permission to use money conversion dialog.
+  if (!user_access('use money conversion dialog')) {
+    return $output;
+  }
+
+  // Add javascript/stylesheet components.
+  money_conversion_dialog_add_js();
+
+  // Prepare field settings. See money_conversion_dialog_ajax_callback()
+  $field = content_fields($element['#field_name'], $element['#type_name']);
+  $settings = implode('|', array(
+    $element['#item']['amount'],
+    (isset($field['decimals']) ? (int)$field['decimals'] : 0),
+    str_replace('|', ':', $field['widget']['currency_display_mode']),
+    $element['#item']['currency'],
+  ));
+
+  return '<span class="money-item ['. $settings .']">'. $output .'</span>';
+}

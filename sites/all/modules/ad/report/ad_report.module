@@ -1,0 +1,903 @@
+<?php
+// $Id: ad_report.module,v 1.1.2.3.2.7.2.6.2.8 2009/07/03 18:37:44 jeremy Exp $
+
+/**
+ * @file
+ * Provides comprehensive charts and reports about advertising statistics.
+ *
+ * Copyright (c) 2007-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function ad_report_menu() {
+  $items = array();
+  $items['admin/content/ad/report'] = array(
+    'title' => t('Reports'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_report_admin'),
+    'access arguments' => array('generate administrative reports'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1
+  );
+  $items['admin/content/ad/report/display'] = array(
+    'page callback' => 'ad_report_admin_display',
+    'access arguments' => array('generate administrative reports'),
+    'type' => MENU_CALLBACK
+  );
+  $items['admin/content/ad/report/csv'] = array(
+    'page callback' => 'ad_report_admin_ad_table',
+    'page arguments' => array('0', '0', array(), TRUE),
+    'access arguments' => array('generate administrative reports'),
+    'type' => MENU_CALLBACK
+  );
+  $items['node/%node/report'] = array(
+    'title' => t('Reports'),
+    'page callback' => 'ad_report_bargraph_handler',
+    'page arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'access callback' => 'ad_report_bargraph_access',
+    'access arguments' => array(1),
+  );
+  $items['ad_report/%node/bargraph/node/%/%'] = array(
+    'title' => 'Bar graph',
+    'page callback' => 'ad_report_generate_bargraph',
+    'page arguments' => array(1, 'node', 4, 5),
+    'type' => MENU_CALLBACK,
+    'access callback' => 'ad_report_bargraph_access',
+    'access arguments' => array(1),
+  );
+  return $items;
+}
+
+/**
+ * Drupal hook_perm implementation.
+ */
+function ad_report_perm() {
+  return array(t('generate administrative reports'));
+}
+
+/**
+ * Menu system callback, determine if current user can generate reports.
+ */
+function ad_report_bargraph_access($node) {
+  if (isset($node->adtype)) {
+    return ad_permission($node->nid, 'generate reports');
+  }
+}
+
+/**
+ *
+ */
+function ad_report_bargraph_handler($node) {
+  return ad_report_bargraph($node, "node/$node->nid/report", 'node', arg(3), arg(4));
+}
+
+/**
+ * Ad module hook_adapi.
+ */
+function ad_report_adapi($op, $node = NULL) {
+  switch ($op) {
+    case 'permissions':
+      return array(
+        'generate reports' => TRUE,
+      );
+  }
+}
+
+/**
+ *
+ */
+function ad_report_admin() {
+  $form = array();
+
+  $start = isset($_SESSION['ad_report_start']) ? strtotime($_SESSION['ad_report_start']) : _ad_report_first_day_of_month();
+  $end = isset($_SESSION['ad_report_end']) ? strtotime($_SESSION['ad_report_end']) : _ad_report_last_day_of_month();
+  $group = isset($_SESSION['ad_report_group']) ? $_SESSION['ad_report_group'] : array('all');
+
+  $form['dates'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Report dates'),
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+  );
+  $form['dates']['start'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Start'),
+    '#size' => 24,
+    '#maxlength' => 64,
+    '#default_value' => _ad_report_format_date_human($start),
+    // display pop up calendar if jstools jscalendar module enabled
+    '#attributes' => array('class' => 'jscalendar'),
+    '#jscalendar_ifFormat' => '%Y-%m-%d %H:%M',
+    '#jscalendar_timeFormat' => '24',
+  );
+  $form['dates']['space1'] = array(
+    '#value' => '&nbsp;&nbsp;',
+  );
+  $form['dates']['end'] = array(
+    '#type' => 'textfield',
+    '#title' => t('End'),
+    '#size' => 24,
+    '#maxlength' => 64,
+    '#default_value' => _ad_report_format_date_human($end),
+    // display pop up calendar if jstools jscalendar module enabled
+    '#attributes' => array('class' => 'jscalendar'),
+    '#jscalendar_ifFormat' => '%Y-%m-%d %H:%M',
+  );
+  $form['dates']['space2'] = array(
+    '#value' => '&nbsp;&nbsp;&nbsp;',
+  );
+
+  // groups
+  $groups = ad_groups_list();
+  $form['groups'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Groups'),
+  );
+  $options = array();
+  $options['all'] = t('- All -');
+  $options = $options + $groups;
+  $form['groups']['group'] = array(
+    '#type' => 'select',
+    '#title' => t('Ad groups'),
+    '#options' => $options,
+    '#multiple' => TRUE,
+    '#required' => TRUE,
+    '#default_value' => $group,
+  );
+
+  // submit
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Generate report'),
+    '#weight' => 10,
+  );
+  $form['reset'] = array(
+    '#type' => 'submit',
+    '#value' => t('Reset report'),
+    '#weight' => 10,
+  );
+
+  return $form;
+}
+
+/**
+ * Sanity check the date range.
+ */
+function ad_report_admin_validate($form, $form_state) {
+  if ($form_state['clicked_button']['#value'] == t('Reset report')) {
+    unset($_SESSION['ad_report_start']);
+    unset($_SESSION['ad_report_end']);
+    unset($_SESSION['ad_report_group']);
+  }
+  else {
+    $start = isset($form_state['values']['start']) ? strtotime($form_state['values']['start']) : 0;
+    $end = isset($form_state['values']['start']) ? strtotime($form_state['values']['end']) : 0;
+    if (!$start) {
+      form_set_error('start', t('You must enter a valid start date.'));
+    }
+    else if ($start >= (time() - 3600)) {
+      form_set_error('start', t('The report must start at least one hour before the current time.'));
+    }
+    else if ($start >= $end) {
+      form_set_error('start', t('The report must start before it ends.'));
+    }
+    if (!$end) {
+      form_set_error('end', t('You must enter a valid end date.'));
+    }
+  }
+}
+
+/**
+ * Redirect to a path to generate the requested report.
+ */
+function ad_report_admin_submit($form, $form_state) {
+  if ($form_state['clicked_button']['#value'] == t('Generate report')) {
+    $start = date('YmdHi', strtotime($form_state['values']['start']));
+    $end = date('YmdHi', strtotime($form_state['values']['end']));
+    $group = $form_state['values']['group'];
+    $_SESSION['ad_report_start'] = $start;
+    $_SESSION['ad_report_end'] = $end;
+    $_SESSION['ad_report_group'] = $group;
+
+    drupal_goto('admin/content/ad/report/display');
+  }
+}
+
+/**
+ * Display the administrative report.
+ */
+function ad_report_admin_display() {
+  $start = isset($_SESSION['ad_report_start']) ? $_SESSION['ad_report_start'] : 0;
+  $end = isset($_SESSION['ad_report_end']) ? $_SESSION['ad_report_end'] : 0;
+  $group = isset($_SESSION['ad_report_group']) ? $_SESSION['ad_report_group'] : array();
+  if (!$start && !$end) {
+    drupal_goto('admin/content/ad/report');
+  }
+  $output  = '<div class="image"><img src="'. url("ad_report/0/bargraph/admin/$start/$end") .'" /></div>';
+  $output .= ad_report_admin_ad_table(strtotime($start), strtotime($end), $group);
+  $output .= '<div>'. l(t('Modify report'), 'admin/content/ad/report') .'</div>';
+  return $output;
+}
+
+/**
+ *
+ */
+function ad_report_admin_ad_table($start = 0, $end = 0, $group = array(), $csv = FALSE) {
+  if (!$start) {
+    $start = isset($_SESSION['ad_report_start']) ? strtotime($_SESSION['ad_report_start']) : 0;
+  }
+  if (!$end) {
+    $end = isset($_SESSION['ad_report_end']) ? strtotime($_SESSION['ad_report_end']) : 0;
+  }
+  if (empty($group)) {
+    $group = isset($_SESSION['ad_report_group']) ? $_SESSION['ad_report_group'] : array();
+  }
+  // prepare dates
+  $start = _ad_report_format_date_db($start);
+  $end = _ad_report_format_date_db($end);
+
+  // prepare groups
+  $groups = ad_groups_list();
+  $all = FALSE;
+  $none = FALSE;
+  if (is_array($group)) {
+    if (in_array('all', $group)) {
+      $all = TRUE;
+    }
+    if (!$all) {
+      if (sizeof($group) == sizeof($groups)) {
+        $all = TRUE;
+      }
+    }
+    if (in_array('0', $group)) {
+      unset($group[0]);
+      $none = TRUE;
+    }
+  }
+
+  $select = 'SELECT DISTINCT(aid) as nid FROM {ad_statistics} a';
+  if ($all) {
+    $where = array(
+      "a.action = 'view'",
+      'a.date >= %d',
+      'a.date <= %d',
+      'a.aid > 0',
+    );
+    $join = array();
+    $args = array($start, $end);
+  }
+  else if ($none) {
+    if (sizeof($group)) {
+      $where = array(
+        '(t.tid IN (%s) OR ISNULL(t.tid))',
+        "a.action = 'view'",
+        'a.date >= %d',
+        'a.date <= %d',
+      );
+      $join = array(
+        'LEFT JOIN {term_node} t ON a.aid = t.nid',
+      );
+      $args = array(implode(',', $group), $start, $end);
+    }
+    else {
+      $where = array(
+        'ISNULL(t.tid)',
+        "a.action = 'view'",
+        'a.date >= %d',
+        'a.date <= %d',
+      );
+      $join = array(
+        'LEFT JOIN {term_node} t ON a.aid = t.nid',
+      );
+      $args = array($start, $end);
+    }
+  }
+  else {
+    $where = array(
+      't.tid IN (%s)',
+      "a.action = 'view'",
+      'a.date >= %d',
+      'a.date <= %d',
+    );
+    $join = array(
+      'LEFT JOIN {term_node} t ON a.aid = t.nid',
+    );
+    $args = array(implode(',', $group), $start, $end);
+  }
+
+  $return = module_invoke_all('adreport', $join, $where, $args, $select);
+  foreach ($return as $type => $value) {
+    switch ($type) {
+      case 'join':
+        if (is_array($value)) {
+          foreach ($value as $option) {
+            $join[] = $option;
+          }
+        }
+        break;
+      case 'where':
+        if (is_array($value)) {
+          foreach ($value as $option) {
+            $where[] = $option;
+          }
+        }
+        break;
+      case 'args':
+        if (is_array($value)) {
+          foreach ($value as $option) {
+            $args[] = $option;
+          }
+        }
+        break;
+    }
+  }
+
+  // Build the query.
+  $query = $select .' '. implode(' ', $join) .' WHERE '. implode(' AND ', $where);
+  $ads = array();
+  $result = db_query($query, $args);
+  while ($ad = db_fetch_object($result)) {
+    if ($ad->nid) {
+      $ads[$ad->nid] = $ad->nid;
+    }
+  }
+
+  if ($csv) {
+    header('Content-type: application/octet-stream');
+    header("Content-Disposition: attachment; filename=report-$start-$end.csv");
+    echo "ad id, title, first view, last view, clicks, views, click-thru\n";
+  }
+  else {
+    $output = '<div class="describe">' . t('There !count matching your parameters.', array('!count' => format_plural(sizeof($ads), 'was 1 active ad', 'were @count active ads'))) . '</div>';
+
+    $headers = array(t('Advertisement'), t('Active dates'), t('Views'), t('Clicks'), t('Click-thru'));
+    // get counts for each ad
+    $rows = array();
+  }
+  $total_views = $total_clicks = 0;
+  foreach ($ads as $nid) {
+    $ad = node_load($nid);
+    if ($ad->nid) {
+      $views = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND action = 'view' AND date >= %d AND date <= %d", $nid, $start, $end));
+      $first = _ad_report_get_date_from_path((int)db_result(db_query("SELECT MIN(date) FROM {ad_statistics} WHERE aid = %d AND action = 'view' AND date >= %d AND date <= %d", $nid, $start, $end)));
+      $first = format_date($first, 'small');
+      $last = _ad_report_get_date_from_path((int)db_result(db_query("SELECT MAX(date) FROM {ad_statistics} WHERE aid = %d AND action = 'view' AND date >= %d AND date <= %d", $nid, $start, $end)));
+      $last = format_date($last, 'small');
+      $clicks = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND action = 'click' AND date >= %d AND date <= %d", $nid, $start, $end));
+      if ($views) {
+        $clickthru = number_format($clicks / $views, 2) .'%';
+      }
+      else {
+        $clickthru = '0%';
+      }
+      if ($views || $clicks) {
+        if ($csv) {
+          echo "$ad->nid, $ad->title, $first, $last, $views, $clicks, $clickthru\n";
+        }
+        else {
+          $row = array();
+          $row[] = l($ad->title, "node/$ad->nid");
+          $row[] = "first view: $first<br />last view: $last";
+          $row[] = number_format($views);
+          $row[] = number_format($clicks);
+          $row[] = $clickthru;
+          $rows[] = $row;
+          $total_views += $views;
+          $total_clicks += $clicks;
+        }
+      }
+    }
+  }
+  if ($csv) {
+    return (0);
+  }
+  if ($total_views || $total_clicks) {
+    $row = array();
+    $row[] = '<strong>'. t('Total') .'</strong>';
+    $row[] = '';
+    $row[] = '<strong>'. number_format($total_views) .'</strong>';
+    $row[] = '<strong>'. number_format($total_clicks) .'</strong>';
+    if ($total_views) {
+      $row[] = '<strong>'. number_format($total_clicks / $total_views, 2) .'%' .'</strong>';
+    }
+    else {
+      $row[] = '<strong>'. '0%' .'</strong>';
+    }
+    $rows[] = $row;
+  }
+  $output  .= theme('table', $headers, $rows);
+  $output .= l(t('Download CSV'), 'admin/content/ad/report/csv');
+  return $output;
+}
+
+/**
+ * Returns a timestamp for the first hour of the first day of the month.
+ */
+function _ad_report_first_day_of_month($time = NULL) {
+  if ($time === NULL) {
+    $time = time();
+  }
+  return strtotime(date('Ym010000', $time));
+}
+
+/**
+ * Returns a timestamp for the last hour of the last day of the month.
+ */
+function _ad_report_last_day_of_month($time = NULL) {
+  if ($time === NULL) {
+    $time = time();
+  }
+  $month = date('m', $time);
+  $year = date('Y', $time);
+  $day = date('d', mktime(0, 0, 0, ($month + 1), 0, $year));
+  return strtotime("{$year}{$month}{$day}2359");
+}
+
+/**
+ * Page to display ad with bargraph.
+ */
+function ad_report_bargraph($data, $url, $type = 'node', $start = 0, $end = 0) {
+  if ($type == 'node') {
+    drupal_set_title($data->title);
+  }
+  $start_date = _ad_report_get_date_from_path($start);
+  $end_date = _ad_report_get_date_from_path($end);
+  $output = drupal_get_form('ad_report_range_form', $type, $url, $start_date, $end_date);
+  if ($start && $end) {
+    switch ($type) {
+      case 'node':
+        $ad = db_fetch_object(db_query('SELECT aid, redirect, adtype FROM {ads} WHERE aid = %d', $data->nid));
+        if ($ad->aid) {
+          $output .= '<img src="'. url("ad_report/$data->nid/bargraph/node/$start/$end") .'" />';
+          $output .= theme('box', '', module_invoke("ad_$data->adtype", 'display_ad', $ad));
+          $output .= ad_report_group_table($data->nid, $type, $start, $end);
+        }
+        $output .= module_invoke('ad', 'click_history', $data->nid);
+        break;
+      default:
+        $output = '<img src="'. url("ad_report/$data->uid/bargraph/$granularity/$type") .'" />';
+        break;
+    }
+  }
+  return $output;
+}
+
+/**
+ * Return a form for selecting a date range for generating a report.
+ */
+function ad_report_range_form($form_state, $type, $url = NULL, $start = NULL, $end = NULL) {
+  $form = array();
+
+  $start = $start ? $start : _ad_report_first_day_of_month();
+  $end = $end ? $end : _ad_report_last_day_of_month();
+
+  $form['report'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Report dates'),
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+  );
+  $form['report']['type'] = array(
+    '#value' => $type,
+    '#type' => 'hidden',
+  );
+  $form['report']['url'] = array(
+    '#value' => $url,
+    '#type' => 'hidden',
+  );
+  $form['report']['start'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Start'),
+    '#size' => 24,
+    '#maxlength' => 64,
+    '#default_value' => _ad_report_format_date_human($start),
+    // display pop up calendar if jstools jscalendar module enabled
+    '#attributes' => array('class' => 'jscalendar'),
+    '#jscalendar_ifFormat' => '%Y-%m-%d %H:%M',
+    '#jscalendar_timeFormat' => '24',
+  );
+  $form['report']['space1'] = array(
+    '#value' => '&nbsp;&nbsp;',
+  );
+  $form['report']['end'] = array(
+    '#type' => 'textfield',
+    '#title' => t('End'),
+    '#size' => 24,
+    '#maxlength' => 64,
+    '#default_value' => _ad_report_format_date_human($end),
+    // display pop up calendar if jstools jscalendar module enabled
+    '#attributes' => array('class' => 'jscalendar'),
+    '#jscalendar_ifFormat' => '%Y-%m-%d %H:%M',
+  );
+  $form['report']['space2'] = array(
+    '#value' => '&nbsp;&nbsp;&nbsp;',
+  );
+  $form['report']['generate'] = array(
+    '#type' => 'submit',
+    '#value' => t('Generate report'),
+  );
+
+  return $form;
+}
+
+/**
+ * Validate the form range.
+ */
+function ad_report_range_form_validate($form, $form_state) {
+  $start = isset($form_state['values']['start']) ? strtotime($form_state['values']['start']) : 0;
+  $end = isset($form_state['values']['start']) ? strtotime($form_state['values']['end']) : 0;
+  if (!$start) {
+    form_set_error('start', t('You must enter a valid start date.'));
+  }
+  else if ($start >= (time() - 3600)) {
+    form_set_error('start', t('The report must start at least one hour before the current time.'));
+  }
+  else if ($start >= $end) {
+    form_set_error('start', t('The report must start before it ends.'));
+  }
+  if (!$end) {
+    form_set_error('end', t('You must enter a valid end date.'));
+  }
+}
+
+/**
+ * Redirect to URL for displaying report.
+ */
+function ad_report_range_form_submit($form, $form_state) {
+  $start = date('YmdHi', strtotime($form_state['values']['start']));
+  $end = date('YmdHi', strtotime($form_state['values']['end']));
+  drupal_goto($form_state['values']['url'] ."/$start/$end");
+}
+
+/**
+ * Helper function to extract date from URL.
+ */
+function _ad_report_get_date_from_path($path) {
+  if (isset($path) && $path) {
+    $year = substr($path, 0, 4);
+    $month = substr($path, 4, 2);
+    $day = substr($path, 6, 2);
+    $hour = substr($path, 8, 2);
+    if (strlen($path) == 12) {
+      $minute = substr($path, 10, 2);
+    }
+    else {
+      $minute = 0;
+    }
+    $date =  strtotime("$month/$day/$year $hour:$minute");
+    if ($date > 0) {
+      return $date;
+    }
+    drupal_set_message(t('Invalid date specified in range.'), 'error');
+  }
+}
+
+/**
+ * Helper function to format date.
+ */
+function _ad_report_format_date_human($date) {
+  return date('Y-m-d H:i', $date);
+}
+
+/**
+ * Helper function to format date.
+ */
+function _ad_report_format_date_db($date) {
+  return date('YmdH', $date);
+}
+
+/**
+ * Display table with per-group statistics.
+ */
+function ad_report_group_table($id, $type, $start, $end) {
+  $start_date = _ad_report_format_date_db(_ad_report_get_date_from_path($start));
+  $end_date = _ad_report_format_date_db(_ad_report_get_date_from_path($end));
+  // TODO: Support other types than nodes
+  $result = db_query('SELECT DISTINCT(adgroup) FROM {ad_statistics} WHERE aid = %d AND date >= %d AND date <= %d', $id, $start_date, $end_date);
+  // extract all groups that this advertisement has been displayed in
+  while ($group = db_fetch_object($result)) {
+    if ($group->adgroup) {
+      $first = substr($group->adgroup, 0, 1);
+      if ($first == 't') {
+        $tids = $tids = explode(',', substr($group->adgroup, 1, strlen($group->adgroup)));
+        foreach ($tids as $tid) {
+          if ($tid) {
+            $adgroups[$tid][] = $group->adgroup;
+          }
+        }
+      }
+      else {
+        // handle this type of "group"
+        $adgroups['other'][] = $group->adgroup;
+      }
+    }
+    else {
+      $adgroups[0][] = $group->adgroup;
+    }
+  }
+  $headers = array(t('Group'), t('Active dates'), t('Views'), t('Clicks'), t('Click-thru'));
+  // get counts for each group
+  $groups = ad_groups_list();
+  $rows = array();
+  $total_views = $total_clicks = 0;
+  foreach ($groups as $tid => $group) {
+    $views = $clicks = 0;
+    if (isset($adgroups[$tid]) && is_array($adgroups[$tid])) {
+      foreach ($adgroups[$tid] as $adgroup) {
+        $views += (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND adgroup = '%s' AND action = 'view' AND date >= %d AND date <= %d", $id, $adgroup, $start_date, $end_date));
+        $clicks += (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND adgroup = '%s' AND action = 'click' AND date >= %d AND date <= %d", $id, $adgroup, $start_date, $end_date));
+      }
+    }
+    if ($views || $clicks) {
+      $begin = (int)db_result(db_query("SELECT MIN(date) FROM {ad_statistics} WHERE (adgroup LIKE '%%t%s' OR adgroup LIKE '%%,%s') AND action = 'view' AND date >= %d AND date <= %d", $tid, $tid, $start_date, $end_date));
+      if ($begin) {
+        $begin = format_date(_ad_report_get_date_from_path($begin), 'small');
+        $finish = (int)db_result(db_query("SELECT MAX(date) FROM {ad_statistics} WHERE (adgroup LIKE '%%t%s' OR adgroup LIKE '%%,%s') AND action = 'view' AND date >= %d AND date <= %d", $tid, $tid, $start_date, $end_date));
+        if ($finish) {
+          $finish = format_date(_ad_report_get_date_from_path($finish), 'small');
+        }
+      }
+      if ($begin && $finish) {
+        $row = array();
+        $row[] = $group;
+        $row[] = "first view: $begin<br />last view: $finish";
+        $row[] = number_format($views);
+        $row[] = number_format($clicks);
+        if ($views) {
+          $row[] = number_format($clicks / $views, 2) .'%';
+        }
+        else {
+          $row[] = '0%';
+        }
+        $rows[] = $row;
+        $total_views += $views;
+        $total_clicks += $clicks;
+      }
+    }
+  }
+  if ($total_views || $total_clicks) {
+    $row = array();
+    $row[] = '<strong>'. t('Total') .'</strong>';
+    $row[] = '';
+    $row[] = '<strong>'. number_format($total_views) .'</strong>';
+    $row[] = '<strong>'. number_format($total_clicks) .'</strong>';
+    if ($total_views) {
+      $row[] = '<strong>'. number_format($total_clicks / $total_views, 2) .'%' .'</strong>';
+    }
+    else {
+      $row[] = '<strong>'. '0%' .'</strong>';
+    }
+    $rows[] = $row;
+  }
+
+  return theme('table', $headers, $rows);
+}
+
+/**
+ * Page that utilizes gd to generate a bargraph.
+ */
+function ad_report_generate_bargraph($id, $type, $start, $end) {
+  header("Content-type: image/png");
+
+  if ($type == 'node' && is_object($id)) {
+    $id = $id->nid;
+  }
+  $start = _ad_report_get_date_from_path($start);
+  $end = _ad_report_get_date_from_path($end);
+
+  // be sure we've been passed in valid parameters
+  $elapse = $end - $start;
+  if ($elapse <= 0 || $start <= 0 || $end <= 0) {
+    return NULL;
+  }
+  $increments = (int)($elapse / 3600);
+
+  // image size
+  $image_width = 700;
+  $image_height = 360;
+
+  // graph size
+  $graph_width = 600;
+  $graph_height = 250;
+  $graph_x_offset = 8;
+  $graph_y_offset = 8;
+  $graph_y = 8;
+
+  // calculate slices to extract from database
+  $width = $graph_width / $increments;
+  $number = $increments;
+  $factor = 1;
+  if ($width < 1) {
+    $factor = 1 / $width;
+  }
+  $number = $number / $factor;
+  $width = $width * $factor;
+  $slice = $elapse / $number;
+
+  // retrieve views and clicks from the database
+  $views = array();
+  $clicks = array();
+  $max_views = 0;
+  $max_clicks = 0;
+  $key = 0;
+  for ($i = $start; $i < $end; $i += $slice) {
+    $start_date = _ad_report_format_date_db($i);
+    $end_date = _ad_report_format_date_db($i + $slice);
+    switch ($type) {
+      case 'node':
+        $views[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND action = 'view' AND date >= %d AND date <= %d", $id, $start_date, $end_date));
+        $clicks[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND action = 'click' AND date >= %d AND date <= %d", $id, $start_date, $end_date));
+        break;
+      case 'user':
+        $views[] = (int)db_result(db_query("SELECT SUM(a.count) FROM {ad_statistics} a LEFT JOIN {node} n ON a.aid = n.nid WHERE n.uid = %d AND n.type = 'ad' AND a.action = 'view' AND a.date >= %d AND a.date <= %d", $id, $start_date, $end_date));
+        $clicks[] = (int)db_result(db_query("SELECT SUM(a.count) FROM {ad_statistics} a LEFT JOIN {node} n ON a.aid = n.nid WHERE n.uid = %d AND n.type = 'ad' AND a.action = 'click' AND a.date >= %d AND a.date <= %d", $id, $start_date, $end_date));
+        break;
+      case 'admin':
+        $group = $_SESSION['ad_report_group'];
+        $all = FALSE;
+        $none = FALSE;
+        if (is_array($group)) {
+          if (in_array('all', $group)) {
+            $all = TRUE;
+          }
+          if (!$all) {
+            $groups = ad_groups_list();
+            if (sizeof($group) == sizeof($groups)) {
+              $all = TRUE;
+            }
+          }
+          if (in_array('0', $group)) {
+            unset($group[0]);
+            $none = TRUE;
+          }
+        }
+        if ($all) {
+          $views[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE action = 'view' AND date >= %d AND date <= %d", $start_date, $end_date));
+          $clicks[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE action = 'click' AND date >= %d AND date <= %d", $start_date, $end_date));
+        }
+        else if ($none) {
+          if (sizeof($group)) {
+            $views[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} a LEFT JOIN {term_node} t ON a.aid = t.tid WHERE (t.tid IN (%s) OR ISNULL(t.tid)) AND action = 'view' AND date >= %d AND date <= %d", implode(',', $group), $start_date, $end_date));
+            $clicks[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} a LEFT JOIN {term_node} t ON a.aid = t.tid WHERE (t.tid IN (%s) OR ISNULL(t.tid)) AND action = 'click' AND date >= %d AND date <= %d", implode(',', $group), $start_date, $end_date));
+          }
+          else {
+            $views[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} a LEFT JOIN {term_node} t ON a.aid = t.tid WHERE ISNULL(t.tid) AND action = 'view' AND date >= %d AND date <= %d", $start_date, $end_date));
+            $clicks[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} a LEFT JOIN {term_node} t ON a.aid = t.tid WHERE ISNULL(t.tid) AND action = 'click' AND date >= %d AND date <= %d", $start_date, $end_date));
+          }
+        }
+        else {
+          $views[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} a LEFT JOIN {term_node} t ON a.aid = t.tid WHERE tid IN (%s) AND action = 'view' AND date >= %d AND date <= %d", implode(',', $group), $start_date, $end_date));
+          $clicks[] = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} a LEFT JOIN {term_node} t ON a.aid = t.tid WHERE t.tid IN (%s) AND action = 'click' AND date >= %d AND date <= %d", implode(',', $group), $start_date, $end_date));
+        }
+        break;
+      default:
+        $function = "ad_report_views_$type";
+        if (function_exists("$function")) {
+          $views[] = $function($id, $day_start, $day_end);
+        }
+        $function = "ad_report_clicks_$type";
+        if (function_exists("$function")) {
+          $clicks[] = $function($id, $day_start, $day_end);
+        }
+        break;
+    }
+    $max_views =  $views[$key] > $max_views ? $views[$key] : $max_views;
+    $max_clicks =  $clicks[$key] > $max_clicks ? $clicks[$key] : $max_clicks;
+    $key++;
+  }
+
+  // create graph
+  $graph = imagecreate($image_width, $image_height);
+
+  // configure colors to use in chart
+  $color = array(
+    'white' => imagecolorallocate($graph, 255, 255, 255),
+    'black' => imagecolorallocate($graph, 0, 0, 0),
+    'grey' => imagecolorallocate($graph, 192, 192, 192),
+    'blue' => imagecolorallocate($graph, 0, 0, 255),
+    'orange' => imagecolorallocate($graph, 220, 210, 60),
+    'red' => imagecolorallocate($graph, 255, 0, 0),
+  );
+
+  // determine how big the spacers should be
+  $max = $max_views > $max_clicks ? $max_views : $max_clicks;
+  $y_map = ceil($max / $graph_y / $graph_y) * $graph_y;
+  $y_total = $y_map * $graph_y;
+
+  if ($y_total) {
+    // plot views and clicks on graph
+    foreach ($views as $key => $value) {
+      $view_height = $graph_height / $y_total * $value;
+      if ($view_height) {
+        imagefilledrectangle($graph, $graph_x_offset + $key * $width, $graph_y_offset + $graph_height - $view_height, $graph_x_offset + ($key + 1) * $width - 1, $graph_y_offset + $graph_height - 1, $color['blue']);
+      }
+      $click_height = $graph_height / $y_total * $clicks[$key];
+      if ($click_height) {
+        imagefilledrectangle($graph, $graph_x_offset + $key * $width, $graph_y_offset + $graph_height - $click_height, $graph_x_offset + ($key + 1) * $width - 1, $graph_y_offset + $graph_height - 1, $color['red']);
+      }
+    }
+  }
+
+  // add scale to y
+  if ($y_map) {
+    $graph_y_width = $graph_height / $graph_y;
+    for ($i = 1; $i <= $graph_y; $i++) {
+      $text = number_format($i * $y_map);
+      $len = strlen($text);
+      $x_offset = $graph_width + 14;
+      $y_pos = $graph_height - $i * $graph_y_width;
+      //imagestring($graph, 1, $x_offset, $graph_y_offset + $y_pos - 3, $text, $color['black']);
+      imagestring($graph, 2, $x_offset, $graph_y_offset + $y_pos - 7, $text, $color['black']);
+    }
+  }
+  else {
+    $graph_y_width = 0;
+  }
+
+  // add scale to x
+  $graph_x = _ad_report_select_x($number, 8, 0);
+  $offset = $elapse / $graph_x;
+  $graph_x_width = $graph_width / $graph_x;
+  $x_offset = $graph_x_width / 2;
+  for ($i = 1; $i <= $graph_x; $i++) {
+    $text = date('M d, Y H', $start + ($offset * $i) - $offset / 2);
+    $len = strlen($text);
+    $x_pos = $graph_x_offset - $x_offset + $i * $graph_x_width - 7;
+    $y_pos = $graph_height + $graph_y_offset + ($len * 6) + 3;
+    imagestringup($graph, 2, $x_pos, $y_pos, $text, $color['black']);
+    //$x_pos = $graph_x_offset - $x_offset + $i * $graph_x_width - 4;
+    //$y_pos = $graph_height + $graph_y_offset + ($len * 5) + 3;
+    //imagestringup($graph, 1, $x_pos, $y_pos, $text, $color['black']);
+  }
+
+  // draw a grid
+  $style = array($color['grey'], IMG_COLOR_TRANSPARENT, IMG_COLOR_TRANSPARENT);
+  imagesetstyle($graph, $style);
+  for ($i = 1; $i <= $graph_x; $i++) {
+    imageline($graph, $graph_x_offset + $i * $graph_x_width - $graph_x_width / 2, $graph_y_offset, $graph_x_offset + $i * $graph_x_width - $graph_x_width / 2, $graph_y_offset + $graph_height - 1, IMG_COLOR_STYLED);
+  }
+  for ($i = 1; $i < $graph_y; $i++) {
+    imageline($graph, $graph_x_offset, $graph_y_offset + $i * $graph_y_width, $graph_x_offset + $graph_width, $graph_y_offset + $i * $graph_y_width, IMG_COLOR_STYLED);
+  }
+  // left, right, top, and bottom borders, respectively
+  imageline($graph, $graph_x_offset, $graph_y_offset, $graph_x_offset, $graph_y_offset + $graph_height, $color['grey']);
+  imageline($graph, $graph_x_offset + $graph_width - 1, $graph_y_offset, $graph_x_offset + $graph_width - 1, $graph_y_offset + $graph_height, $color['grey']);
+  imageline($graph, $graph_x_offset, $graph_y_offset, $graph_x_offset + $graph_width - 1, $graph_y_offset, $color['grey']);
+  imageline($graph, $graph_x_offset, $graph_y_offset + $graph_height, $graph_x_offset + $graph_width - 1, $graph_y_offset + $graph_height, $color['grey']);
+
+  // display the graph
+  imagepng($graph);
+  imagedestroy($graph);
+}
+
+/**
+ * Figure out how many x columns to display.
+ * TODO: Find a better algorithm than this slop.
+ */
+function _ad_report_select_x($number, $divisor, $diff) {
+  if ($divisor < 2) {
+    return $number;
+  }
+  $divisor = $divisor + $diff;
+  if ($divisor == 0) {
+    $divisor = $divisor + $diff;
+  }
+  $result = (int)($number / $divisor);
+  if ($result < 8) {
+    $diff -= 1;
+    if ($diff) {
+      return _ad_report_select_x($number, $divisor, $diff);
+    }
+  }
+  else if ($result > 12) {
+    $diff += 1;
+    if ($diff) {
+      return _ad_report_select_x($number, $divisor, $diff);
+    }
+  }
+  return $result;
+}

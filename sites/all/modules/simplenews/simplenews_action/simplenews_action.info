@@ -1,0 +1,14 @@
+; $Id: simplenews_action.info,v 1.1.2.3 2008/07/15 10:05:08 sutharsan Exp $
+name = Simplenews action
+description = Provide actions for Simplenews.
+dependencies[] = simplenews
+dependencies[] = trigger
+package = Mail
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-03-09
+version = "6.x-1.0-rc6"
+core = "6.x"
+project = "simplenews"
+datestamp = "1236588951"
+

@@ -1,0 +1,146 @@
+<?php
+// $Id: ad_weight_probability.module,v 1.1.4.8 2009/07/11 16:39:22 jeremy Exp $
+
+/**
+ * @file
+ * A plug in for the ad.module, allowing an admin to set the probability that
+ * a given advertisement will be displayed.
+ *
+ * Copyright (c) 2008-2009.
+ *  Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+define('AD_PROBABILITY_DEFAULT', 100);
+
+/**
+ * Implementation of hook_form_alter().
+ * Generate a form for assigning a weight to an advertisement.
+ */
+function ad_weight_probability_form_alter(&$form, &$form_state, $form_id) {
+  if (isset($form['type']) && $form_id == 'ad_node_form') {
+    $node = $form['#node'];
+    $form['weighting'] = array(
+      '#type' => 'fieldset',
+      '#access' => user_access('configure ad probability'),
+      '#title' => t('Weight'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+    $form['weighting']['probability'] = array(
+      '#type' => 'select',
+      '#access' => user_access('configure ad probability'),
+      '#title' => t('Probability'),
+      '#options' => _ad_weight_probability_weights(),
+      '#default_value' => isset($node->probability) ? $node->probability : 100,
+      '#description' => t('The greater the probability, the more frequently this advertisement will be displayed.  An advertisement with a probablity of 2 will be displayed twice as frequently as an advertisement with a probability of 1.'),
+    );
+    $form['weighting']['#weight'] = -1;
+  }
+  // TODO: This hack requires that the ad_channel module is enabled to work.
+  // Ultimately ad.admin.inc should be enhanced to allow plug-in modules to
+  // modify the overview page.
+  else if ($form_id == 'ad_admin_ads' && function_exists('ad_channel_form_alter')) {
+    if (variable_get('ad_channel_admin_list', AD_CHANNEL_LIST_CHANNEL) != AD_CHANNEL_LIST_GROUP) {
+      $weights = _ad_weight_probability_weights();
+      // ensure a filter has not been set that yeilds no results
+      if (isset($form['title']) && is_array($form['title'])) {
+        foreach ($form['title'] as $aid => $value) {
+          $node->nid = $aid;
+          $result = _ad_weight_probability_node_load($node);
+          $form['probability'][$aid]['#value'] = $weights[$result['probability']];
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function ad_weight_probability_nodeapi($node, $op, $arg = 0) {
+  switch ($op) {
+    case 'load':
+      return _ad_weight_probability_node_load($node);
+    case 'insert':
+    case 'update':
+      if (user_access('configure ad probability')) {
+        if (is_object($node) && isset($node->adtype) &&
+            isset($node->probability) && isset($node->nid)) {
+          return _ad_weight_probability_node_save($node, $op);
+        }
+      }
+      break;
+    case 'delete':
+      return _ad_weight_probability_node_delete($node);
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function ad_weight_probability_perm() {
+  return array(t('configure ad probability'));
+}
+
+/**
+ * Implementation of hook_ad_build_cache().
+ */
+function ad_weight_probability_ad_build_cache() {
+  $cache = array();
+  $active = db_query("SELECT a.aid, p.probability FROM {ads} a LEFT JOIN {ad_weight_probability} p ON a.aid = p.aid WHERE adstatus = 'active'");
+  while ($ad = db_fetch_object($active)) {
+    $probability = $ad->probability ? $ad->probability : AD_PROBABILITY_DEFAULT;
+    $ads[$ad->aid] = $probability;
+  }
+  $cache['weight']['probability'] = $ads;
+  $cache['weight']['hook_weight'] = array(
+    'weight' => 10,
+    'file' => drupal_get_path('module', 'ad_weight_probability') .'/ad_weight_probability.inc',
+    'function' => 'ad_weight_probability_cache_filter',
+  );
+  return $cache;
+}
+
+/**
+ * Helper function, load the probability from the database.
+ */
+function _ad_weight_probability_node_load($node) {
+  $probability = (int)db_result(db_query('SELECT probability FROM {ad_weight_probability} WHERE aid = %d', $node->nid));
+  $output['probability'] = $probability ? $probability : AD_PROBABILITY_DEFAULT;
+  return $output;
+}
+
+/**
+ * Helper function, save the probability to the database.
+ */
+function _ad_weight_probability_node_save($node) {
+  if (isset($node->nid) && $node->nid) {
+    db_query('UPDATE {ad_weight_probability} SET probability = %d WHERE aid = %d', $node->probability, $node->nid);
+    if (!db_affected_rows()) {
+      db_query('INSERT INTO {ad_weight_probability} (aid, probability) VALUES(%d, %d)', $node->nid, $node->probability);
+    }
+  }
+}
+
+/**
+ * Helper function, delete the probability from the database.
+ */
+function _ad_weight_probability_node_delete($node) {
+  db_query('DELETE FROM {ad_weight_probability} WHERE aid = %d', $node->nid);
+}
+
+/**
+ * Available weight probabilities.
+ */
+function _ad_weight_probability_weights() {
+  return array(
+    25 => t('1/4'),
+    33 => t('1/3'),
+    50 => t('1/2'),
+    100 => t('1'),
+    200 => t('2'),
+    300 => t('3'),
+    400 => t('4'),
+  );
+}
+

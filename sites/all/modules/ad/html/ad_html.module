@@ -1,0 +1,156 @@
+<?php
+// $Id: ad_html.module,v 1.1.2.5.2.8.2.3 2009/02/28 23:35:26 jeremy Exp $
+
+/**
+ * @file
+ * Enhances the ad module to support html ads.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+
+/**
+ * Function used to display the selected ad.
+ */
+function ad_html_display_ad($ad) {
+  return theme('ad_html_ad', $ad);
+}
+
+/**
+ * Return a themed ad of type ad_html.
+ *
+ * @param @ad
+ *  The ad object.
+ * @return
+ *  A string containing the ad markup.
+ */
+function theme_ad_html_ad($ad) {
+  if (isset($ad->aid)) {
+    $output  = '<div class="html-advertisement" id="ad-'. $ad->aid .'">';
+    if (isset($ad->html) && isset($ad->format)) {
+      $output .= check_markup($ad->html, $ad->format, FALSE);
+    }
+    $output .= '</div>';
+    return $output;
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function ad_html_theme() {
+  return array(
+    'ad_html_ad' => array(
+      'file' => 'ad_html.module',
+      'arguments' => array(
+        'ad' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function ad_html_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'node/add/ad#html':
+      $output = t('A html advertisement.');
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function ad_html_access($op, $node, $account) {
+  return ad_access($op, $node, $account);
+}
+
+/**
+ * Implementation of the ad module's _adapi hook.
+ */
+function ad_html_adapi($op, &$node) {
+  switch ($op) {
+    case 'load':
+      $return = db_fetch_array(db_query('SELECT html FROM {ad_html} WHERE aid = %d', $node['aid']));
+      $return['ad'] = check_markup($return['html'], $node['format'], FALSE);
+      return $return;
+
+    case 'insert':
+      db_query("INSERT INTO {ad_html} (aid, html) VALUES(%d, '%s')", $node->nid, $node->html);
+      break;
+
+    case 'update':
+      db_query("UPDATE {ad_html} SET html = '%s' WHERE aid = %d", $node->html, $node->nid);
+      break;
+
+    case 'delete':
+      db_query('DELETE FROM {ad_html} WHERE aid = %d', $node->nid);
+      break;
+
+    case 'form':
+      return ad_html_node_form($node);
+
+    case 'view':
+      return ad_html_node_view($node);
+
+    case 'type':
+      return array(
+        'html' => array(
+          'name' => t('HTML ad'),
+          'module' => 'ad_html',
+          'description' => t('A html advertisement.'),
+          'help' => t('A html advertisement.'),
+        ),
+      );
+    case 'permissions':
+      if (!isset($node->adtype) || $node->adtype == 'html') {
+        return array('manage ad html' => TRUE);
+      }
+  }
+}
+
+/**
+ * Adapi helper function for displaying a node form.
+ */
+function ad_html_node_form(&$node) {
+  $form = array();
+
+  $form['ad_html'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('HTML'),
+    '#collapsible' => TRUE,
+  );
+
+  $form['ad_html']['display'] = array(
+    '#type' => 'markup',
+    '#value' => ad_html_display_ad($node),
+  );
+
+  if (isset($node->nid) && ad_permission($node->nid, 'manage ad html') || arg(1) == 'add' && user_access('create advertisements')) {
+    $form['ad_html']['html'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Ad HTML'),
+      '#required' => TRUE,
+      '#default_value' => isset($node->html) ? $node->html : '',
+      '#description' => t('Paste the complete HTML provided by your advertising affiliate.'),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Helper function, display the html ad as a node.
+ */
+function ad_html_node_view(&$node) {
+  $node->content['ad'] = array(
+    '#value' => theme('box', '', stripslashes(ad_html_display_ad($node))),
+    '#weight' => -1,
+  );
+}
+

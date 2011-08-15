@@ -1,0 +1,37 @@
+If you are having problems installing or configuring the ad module, please be
+sure to carefully follow the instructions in INSTALL.txt, and to read through
+README.txt.
+
+If after reviewing those files you are still having problems with the ad
+module, please review the project's issue queue to see if you are experiencing
+a known bug:
+   http://drupal.org/project/issues/ad
+
+If you're still unable to find the information you need, you can submit a new
+issue by following the above link.  When doing so, it is important that you
+offer details on how to duplicate the bug that you are experiencing.  If you
+are unable to get ads to appear, be sure to explain what method you are using
+to try and display ads: blocks, views, ad_embed, etc...
+
+In the event that ads are not displaying, it is helpful if you collect the
+following debug information and inculde it in your bug report.  Using your
+web browser, view the html source of the page on which you expect
+advertisements to show up.  Search for the string "serve.php", then copy and
+paste that entire URL directly into your web browser.  It will look something
+like:
+  http://sample.com/modules/ad/serve.php?q=1&t=23
+
+Load that URL and see if there are any indications as to why ads are not
+displaying.  If not, add "&debug=2" at the end of the URL:
+  http://sample.com/modules/ad/serve.php?q=1&t=23&debug=2
+
+(NOTE: you will need to convert "&amp;" to "&" in the url when you cut and
+paste it from your html source.  If you do not do this conversion, most of
+the URL will be ignored resulting in invalid output.)
+
+You can then submit the resulting debug output in your bug report.
+
+If you are seeing errors, please explain where you are seeing the errors, and
+include the _full_ error message (including any line numbers and file names).
+It is also very helpful to provide detailed instructions on how to duplicate
+these errors.

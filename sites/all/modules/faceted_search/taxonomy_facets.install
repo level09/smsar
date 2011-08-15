@@ -1,0 +1,115 @@
+<?php
+// $Id: taxonomy_facets.install,v 1.13 2009/01/04 19:34:43 davidlesieur Exp $
+
+/**
+ * Implementation of hook_schema().
+ */
+function taxonomy_facets_schema() {
+  $schema = array();
+  $schema['taxonomy_facets_term_node'] = array(
+    'description' => t('Stores relationships of terms to nodes, including ancestors of the related terms. This is redundant to {term_node} and {term_hierarchy} to help faceted search performance.'),
+    'fields' => array(
+      'nid' => array(
+        'description' => t('Primary Key: The {node}.nid of the node.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'tid' => array(
+        'description' => t('Primary Key: The {term_data}.tid of a term assigned to the node.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      )
+    ),
+    'primary key' => array('tid', 'nid'),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'tid' => array('tid')
+    ),
+  );
+  $schema['taxonomy_facets_node'] = array(
+    'description' => t('Manages the dirtiness of relationships of terms to nodes.'),
+    'fields' => array(
+      'nid' => array(
+        'description' => t('Primary Key: The {node}.nid of the node.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'changed' => array(
+        'description' => t('The Unix timestamp of the most recent change requiring an update of the {taxonomy_facets_term_node} table. Value is zero when the node is up-to-date.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      )
+    ),
+    'primary key' => array('nid'),
+  );
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function taxonomy_facets_install() {
+  drupal_install_schema('taxonomy_facets');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function taxonomy_facets_uninstall() {
+  drupal_uninstall_schema('taxonomy_facets');
+  if (db_table_exists('faceted_search_filters')) {
+    db_query("DELETE FROM {faceted_search_filters} WHERE filter_key = 'taxonomy'");
+  }
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function taxonomy_facets_enable() {
+  // Insert records into the taxonomy_facets_node table for nodes that are missing.
+  db_query_temporary('SELECT n.nid FROM {node} n LEFT JOIN {taxonomy_facets_node} s ON n.nid = s.nid WHERE s.changed IS NULL', 'taxonomy_facets_missing_nids');
+  db_query('INSERT INTO {taxonomy_facets_node} (nid, changed) SELECT n.nid, '. time() .' FROM taxonomy_facets_missing_nids n');
+  // Make sure all term node associations get built.
+  db_query('UPDATE {taxonomy_facets_node} SET changed = '. time() .' WHERE changed = 0');
+}
+
+/**
+ * Specify the 'changed' field as unsigned.
+ */
+function taxonomy_facets_update_6000() {
+  $ret = array();
+  db_change_field(
+    $ret,
+    'taxonomy_facets_node',
+    'changed',
+    'changed',
+    array(
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE,
+      'default' => 0,
+    )
+  );
+  return $ret;
+}
+
+/**
+ * Early Drupal 6 versions were still using the nid (as in Drupal 5) rather than
+ * the node revision to establish the terms-nodes relationships, so we want to
+ * rebuild them all now that's fixed.
+ */
+function taxonomy_facets_update_6001() {
+  $ret = array();
+  $ret[] = update_sql('UPDATE {taxonomy_facets_node} SET changed = '. time() .' WHERE changed = 0');
+  drupal_set_message(t('Re-indexing for taxonomy facets is needed and will start on the next <a href="@cron">cron</a> run.', array('@cron' => url('admin/reports/status/run-cron', array('query' => drupal_get_destination())))));
+  return $ret;
+}
+

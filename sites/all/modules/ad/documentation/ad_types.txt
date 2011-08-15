@@ -1,0 +1,73 @@
+---------
+Overview:
+---------
+This document is intended to help someone write a module for the ad api to
+introduce a new ad type. The core ad module includes two ad type modules, one
+for text ads and another for image ads. You can use the same api used by these
+two ad type modules to create your own custom ad type module, for example you
+may wish to write a module to ad support for flash ads. Some familiarity with
+Drupal and PHP is required.
+
+--------------------------
+Naming your new ad module:
+--------------------------
+There are two ad types included with the core ad module, text ads and image
+ads. Each ad type lives in its own module. Text ads are defined in the
+ad_text module, and image ads are defined in the ad_image module. All
+additional types of ads should be defined in modules following the same naming
+scheme which is 'ad_' followed by the type of ad. For example, if you are
+creating a module to add support for flash-based ads, you would call your
+module ad_flash.
+
+------------------------------
+Registering a new style of ad:
+------------------------------
+Within the Drupal framework, ads are nodes. To create a new ad, a user
+navigates to "create content >> ad", on which page they will be prompted
+to select the type of the ad they wish to create. Your new ad type can
+be added to this list by using the _adapi() hook and the 'type' operator. 
+For example, if creating a module for flash ads, you might add the following 
+function:
+
+ad_flash_adapi($op, $ad = NULL) {
+  switch ($op) {
+    case 'type':
+      return array(
+        'flash' => array(
+          'name' => t('Flash ad'),
+          'module' => 'ad_flash',
+          'description' => t('A flash advertisement.'),
+          'help' => t('A flash advertisement.'),
+        ),
+      );
+  }
+}
+
+------------------
+Displaying your ad
+------------------
+To display an ad, your ad type module needs to define the _display_ad() hook.
+Be aware that when this function is called, many standard Drupal functions
+are not available to you as the adtype.php script will only bootstrap to
+DRUPAL_BOOTSTRAP_DATABASE.
+
+You are passed in an object which contains the ad ID (aid) and the redirect
+URL (ie 'ad/redirect/13'). Utilize this information to return the complete
+advertisement. For example:
+
+function ad_static_display_ad($ad) {
+  $return "<a href=\"$ad->redirect\">Static ad #$ad->aid</a>";
+}
+
+--------------------------------
+Sharing your new ad_type module:
+--------------------------------
+The drupal.org CVS contributions repository requires that all included modules
+be licesensed under the GPL. The ad module is dual licensed under both the
+GPL and the BSD license, meeting this requirement. You can license your
+new ad_style module under just the GPL, or under a dual license as long as
+one of the licenses is the GPL.
+
+If your module meets the above licensing requirements and you feel other Drupal
+users could benefit from your work, contact the ad module maintainer to have
+your module reviewed for inclusion.

@@ -1,0 +1,14 @@
+; $Id: relevant_content_cck.info,v 1.1.4.2 2008/11/06 10:33:05 njt1982 Exp $
+name = Relevant Content CCK Field
+description = Provides a read-only field using CCK which can be added to any node type
+dependencies[] = relevant_content
+dependencies[] = content
+package = Relevant Content
+core = 6.x
+
+; Information added by drupal.org packaging script on 2008-11-06
+version = "6.x-1.4"
+core = "6.x"
+project = "relevant_content"
+datestamp = "1225979435"
+

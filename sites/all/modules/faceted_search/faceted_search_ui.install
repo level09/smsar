@@ -1,0 +1,23 @@
+<?php
+// $Id: faceted_search_ui.install,v 1.8 2009/01/10 21:02:23 davidlesieur Exp $
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function faceted_search_ui_uninstall() {
+  db_query("DELETE FROM {blocks} WHERE module = 'faceted_search_ui'");
+}
+
+/**
+ * Update block caching strategies.
+ */
+function faceted_search_ui_update_6000() {
+  $ret = array();
+  $ret[] = update_sql('UPDATE {blocks} SET cache = '. (BLOCK_CACHE_PER_PAGE | BLOCK_CACHE_PER_USER) ." WHERE module = 'faceted_search_ui' AND delta LIKE '%%_current'");
+  $ret[] = update_sql('UPDATE {blocks} SET cache = '. (BLOCK_CACHE_PER_PAGE | BLOCK_CACHE_PER_ROLE) ." WHERE module = 'faceted_search_ui' AND delta LIKE '%%_keyword'");
+  $ret[] = update_sql('UPDATE {blocks} SET cache = '. (BLOCK_CACHE_PER_PAGE | BLOCK_CACHE_PER_USER) ." WHERE module = 'faceted_search_ui' AND delta LIKE '%%_guided'");
+  $ret[] = update_sql('UPDATE {blocks} SET cache = '. (BLOCK_CACHE_PER_PAGE | BLOCK_CACHE_PER_USER) ." WHERE module = 'faceted_search_ui' AND delta LIKE '%%_related'");
+  $ret[] = update_sql('UPDATE {blocks} SET cache = '. BLOCK_CACHE_PER_PAGE ." WHERE module = 'faceted_search_ui' AND delta LIKE '%%_sort'");
+  cache_clear_all(NULL, 'cache_block');
+  return $ret;
+}

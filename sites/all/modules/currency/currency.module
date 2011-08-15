@@ -1,0 +1,146 @@
+<?php
+
+//$Id: currency.module,v 1.8.2.2.2.3 2008/09/12 16:01:32 kbahey Exp $
+
+// Copyright 2005 Khalid Baheyeldin http://2bits.com
+
+function currency_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#currency':
+      return t('This module provides currency exchange rates.');
+  }
+}
+
+function currency_menu() {
+  $items['admin/settings/currency'] = array(
+    'title'              => 'Currency',
+    'description'        => 'Settings for currency exchange rates.',
+    'page callback'      => 'drupal_get_form',
+    'page arguments'     => array('currency_admin_settings'),
+    'access arguments'   => array('administer site configuration'),
+    'type'               => MENU_NORMAL_ITEM,
+  );
+
+  $items['currency'] = array(
+    'title'              => 'Currency exchange',
+    'access arguments'   => array('use currency'),
+    'page callback'      => 'drupal_get_form',
+    'page arguments'     => array('currency_form'), 
+  );
+
+  return $items;
+}
+  
+function currency_admin_settings() {  
+  $form['currency_default_from'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Default Currency From'),
+    '#default_value' => variable_get('currency_default_from', 'CAD'),
+    '#size'          => 3,
+    '#maxlength'     => 3,
+    '#description'   => t('Three letter symbol for default currency to convert from.'),
+  );
+  
+  $form['currency_default_to'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Default Currency To'),
+    '#default_value' => variable_get('currency_default_to', 'USD'),
+    '#size'          => 3,
+    '#maxlength'     => 3,
+    '#description'   => t('Three letter symbol for default currency to convert to.'),
+  );
+  
+  $form['currency_description'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Currency form text'),
+    '#default_value' => variable_get('currency_description', t('You can use this form to do currency exchange.')),
+    '#description'   => t('Text to display on the top of the currency form.'),
+  );
+  
+  return system_settings_form($form);
+}  
+
+function currency_perm() {
+  return array('use currency');
+}
+
+function currency_form($data = array()) {
+  // Get the saved data from the session, if any
+  $amount = $_SESSION['currency_amount'] ? $_SESSION['currency_amount'] : 1;
+  $from   = $_SESSION['currency_from']   ? $_SESSION['currency_from'] : variable_get('currency_default_from', 'CAD'); 
+  $to     = $_SESSION['currency_to']     ? $_SESSION['currency_to']   : variable_get('currency_default_to', 'USD'); 
+
+  $form['currency_description'] = array(
+    '#value'         => variable_get('currency_description', t('You can use this form to do currency exchange.')),
+  );
+
+  $form['currency_amount'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Amount'),
+    '#default_value' => $amount,
+    '#size'          => 9,
+    '#maxlength'     => 9, 
+    '#description'   => t('Amount to convert'), 
+  );
+  
+  $form['currency_from'] = array(
+    '#type'          => 'select',
+    '#title'         => t('From'),
+    '#default_value' => $from,
+    '#options'       => currency_api_get_list(),    
+  );
+  
+  $form['currency_to'] = array(
+    '#type'          => 'select',
+    '#title'         => t('To'),
+    '#default_value' => $to,
+    '#options'       => currency_api_get_list(),    
+  );
+       
+  $form['submit'] = array(
+    '#type'          => 'submit',
+    '#value'         => t('Convert'),
+  );
+    
+  return $form;
+}
+
+function currency_form_validate($form, &$form_state) {
+  if (!$form_state['values']['currency_amount']) {
+    form_set_error('', t('Amount is required.'));
+  }
+
+  if (!is_numeric($form_state['values']['currency_amount'])) {
+    form_set_error('', t('Invalid Amount. Please enter a valid numeric amount.'));
+  }
+}
+
+function currency_form_submit($form, &$form_state) {
+  $from   = $form_state['values']['currency_from'];
+  $to     = $form_state['values']['currency_to'];
+  $amount = $form_state['values']['currency_amount'];
+  $url    = 'http://finance.yahoo.com/q?s='. $from . $to .'=X';
+
+  $ret = currency_api_convert($from, $to, $amount);
+  if ($ret['status'] == FALSE) { 
+    drupal_set_message(t('currency exchange error: ') . $ret['message']);
+  }
+  else {
+    $result .= '<p>';
+    $result .=  t('@amount @from = @value @to', array(
+      '@amount' => $amount,
+      '@from' => currency_api_get_desc($from),
+      '@value' => $ret['value'],
+      '@to' => currency_api_get_desc($to)));
+    $result .= '</p><p>';
+    $result .= l(t('Detailed history and chart'), $url);  
+    $result .= '</p>';
+  }
+
+  // Save the last used values in the session
+  $_SESSION['currency_amount'] = $amount;
+  $_SESSION['currency_from']   = $from;
+  $_SESSION['currency_to']     = $to;
+
+  drupal_set_message($result);
+}

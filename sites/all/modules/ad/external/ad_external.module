@@ -1,0 +1,207 @@
+<?php
+// $Id: ad_external.module,v 1.1.2.6.2.7 2009/02/17 18:56:26 jeremy Exp $
+
+/**
+ * @file
+ * Enhances the ad module to support externally hosted ads, served via IFrames.
+ * It is recommended that you configure "Administer >> Content management >>
+ *  Ads >> Settings >> Global settings >> Display type" to "Raw".
+ * If you configure the "Display type" to IFrame, you will be serving IFrames
+ * within IFrames.
+ *
+ * Copyright (c) 2005-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Function used to display the selected ad.
+ */
+function ad_external_display_ad($ad) {
+  return theme('ad_external_ad', $ad);
+}
+
+/**
+ * Return a themed ad of type ad_remote.
+ *
+ * @param @ad
+ *  The ad object.
+ * @return
+ *  A string containing the ad markup.
+ */
+function theme_ad_external_ad($ad) {
+  global $base_url;
+
+  if (isset($ad->aid)) {
+    $output = '<div class="external-advertisement" id="ad-'. $ad->aid .'">';
+    // For now, we hard code this to only support caching with the file cache.
+    // As more cache types are introduced, we'll expand this.  Ideally it should
+    // be cache type agnostic, but that seems to be unrealistic.
+    if (variable_get('ad_cache', 'none') == 'file') {
+      $adserve = variable_get('adserve', '');
+      $display_variables = '&amp;c=file'. module_invoke('ad_cache_file', 'adcacheapi', 'display_variables', array());
+      $external = url("$base_url/$adserve?o=external&amp;n=$ad->aid&amp;$display_variables");
+    }
+    else {
+      $external = db_result(db_query('SELECT url FROM {ad_external} WHERE aid = %d', $ad->aid));
+    }
+    $append = 'frameborder="'. variable_get('ad_iframe_frameborder', 0) .'" ';
+    $append .= 'scrolling="'. variable_get('ad_iframe_scroll', 'auto') .'" ';
+    if ($height = variable_get('ad_iframe_height', '')) {
+      $append .= "height=\"$height\" ";
+    }
+    if ($width = variable_get('ad_iframe_width', '')) {
+      $append .= "width=\"$width\" ";
+    }
+    $output .= "<iframe src=\"$external\" $append></iframe>";
+    $output .= '</div>';
+    return $output;
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function ad_external_theme() {
+  return array(
+    'ad_external_ad' => array(
+      'file' => 'ad_external.module',
+      'arguments' => array(
+        'ad' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function ad_external_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'node/add/ad#external':
+      $output = t('An external advertisement, displayed in an IFrame.');
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function ad_external_access($op, $node, $account) {
+  return ad_access($op, $node, $account);
+}
+
+/**
+ * Implementation of hook_adapi().
+ */
+function ad_external_adapi($op, &$node) {
+  switch ($op) {
+    case 'load':
+      return db_fetch_array(db_query('SELECT * FROM {ad_external} WHERE aid = %d', $node['aid']));
+
+    case 'insert':
+      db_query("INSERT INTO {ad_external} (aid, url) VALUES(%d, '%s')", $node->nid, $node->url);
+      break;
+
+    case 'update':
+      db_query("UPDATE {ad_external} SET url = '%s' WHERE aid = %d", $node->url, $node->nid);
+      break;
+
+    case 'delete':
+      db_query('DELETE FROM {ad_external} WHERE aid = %d', $node->nid);
+      break;
+
+    case 'form':
+      return ad_external_node_form($node);
+
+    case 'view':
+      return ad_external_node_view($node);
+
+    case 'redirect':
+      // TODO: Would it ever make sense to have redirects for this ad type?
+      watchdog('ad', 'Unexpected redirect attempt in external ad type.');
+      return;
+
+    case 'type':
+      return array(
+        'external' => array(
+          'name' => t('External ad'),
+          'module' => 'ad_external',
+          'description' => t('An external advertisement, displayed in an IFrame.'),
+          'help' => t('An external advertisement, displayed in an IFrame.'),
+        ),
+      );
+  }
+}
+
+/**
+ * Adapi helper function for displaying a node form.
+ */
+function ad_external_node_form(&$node) {
+  $form = array();
+
+  $form['ad_external'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('External'),
+    '#collapsible' => TRUE,
+  );
+
+  $form['ad_external']['preview'] = array(
+    '#type' => 'markup',
+    '#value' => ad_external_display_ad($node),
+  );
+
+  if ((arg(1) == 'add' || arg(2) == 'edit') &&
+       user_access('create advertisements')) {
+    $form['ad_external']['url'] = array(
+      '#type' => 'textfield',
+      '#title' => t('External Source URL'),
+      '#required' => TRUE,
+      '#default_value' => isset($node->url) ? $node->url : '',
+      '#description' => t('Enter the complete URL where your external ad his hosted.  The URL must begin with http:// or https://.  For example, %url.', array('%url' => t('http://www.sample.org/external/ad.php'))),
+    );
+
+  }
+
+  return $form;
+}
+
+/**
+ * Adapi helper function for displaying ad itself.
+ */
+function ad_external_node_view(&$node) {
+  $node->content['ad'] = array(
+    '#value' => theme('box', '', stripslashes(ad_external_display_ad($node))),
+    '#weight' => -1,
+  );
+  $link = t('Links to !url.', array('!url' => $node->url));
+  if (variable_get('ad_filter', 0)) {
+    $link = check_markup($link, $node->format, FALSE);
+  }
+  $node->content['ad-link'] = array(
+    '#value' => "<div class=\"links-to\">$link<div>",
+    '#weight' => 1,
+  );
+}
+
+/**
+ * Download external pages and store them in the filecache.
+ */
+function ad_external_ad_build_cache() {
+  $cache = array();
+  $result = db_query('SELECT * FROM {ad_external}');
+  while ($external = db_fetch_object($result)) {
+    $contents = file_get_contents($external->url);
+    if ($contents === FALSE) {
+      // Failed to download external url, don't cache the error page.
+      // TODO: Watchdog log this.
+      // TODO: Would it be possible to obtain the old version from the cache,
+      //       if we already downloaded this page once?
+      continue;
+    }
+    $cache['ad_external'][$external->aid]['url'] = $external->url;
+    $cache['ad_external'][$external->aid]['contents'] = $contents;
+  }
+  return $cache;
+}

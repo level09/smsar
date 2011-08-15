@@ -1,0 +1,36 @@
+<?php
+// $Id: ad_weight_percent.install,v 1.1.2.2.2.2 2009/02/16 17:06:50 jeremy Exp $
+
+/**
+ * Ad weight percent module database schema.
+ * Copyright (c) 2007-2009
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Installation of the ad_weight_percent schema.
+ */
+function ad_weight_percent_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    default:
+      db_query("CREATE TABLE {ad_weight_percent} (
+        tid INT NOT NULL DEFAULT '0',
+        aid INT NOT NULL DEFAULT '0',
+        weight INT(3) NOT NULL DEFAULT '0',
+
+        UNIQUE KEY (tid, aid))");
+  }
+}
+
+/**
+ * Complete uninstallation of the ad_weight_percent module.
+ */
+function ad_weight_percent_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('ad_weight_percent');
+
+  drupal_set_message('The ad_weight_percent module has been completely uninstalled.');
+}
+

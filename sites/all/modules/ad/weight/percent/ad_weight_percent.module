@@ -1,0 +1,236 @@
+<?php
+// $Id: ad_weight_percent.module,v 1.1.2.4.2.2 2009/02/16 17:06:50 jeremy Exp $
+
+/**
+ * @file
+ * A plug in for the ad.module, providing a percentage based weighting mechanism
+ * for the random selection of ads.
+ *
+ * Copyright (c) 2007-2009.
+ *  Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Drupal hook_menu().
+ */
+function ad_weight_percent_menu() {
+  $items = array();
+
+/* TODO
+   Non menu code that was placed in hook_menu under the '!$may_cache' block
+   so that it could be run during initialization, should now be moved to hook_init.
+   Previously we called hook_init twice, once early in the bootstrap process, second
+   just after the bootstrap has finished. The first instance is now called boot
+   instead of init.
+   
+   In Drupal 6, there are now two hooks that can be used by modules to execute code
+   at the beginning of a page request. hook_boot() replaces hook_boot() in Drupal 5
+   and runs on each page request, even for cached pages. hook_boot() now only runs
+   for non-cached pages and thus can be used for code that was previously placed in
+   hook_menu() with $may_cache = FALSE:
+   
+   Dynamic menu items under a '!$may_cache' block can often be simplified
+   to remove references to arg(n) and use of '%<function-name>' to check
+   conditions. See http://drupal.org/node/103114.
+   
+   The title and description arguments should not have strings wrapped in t(),
+   because translation of these happen in a later stage in the menu system.
+*/
+  if ($may_cache) {
+    $items['admin/content/ad/groups/percent'] = array(
+      'title' => 'Weight Percent',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('ad_weight_percent_settings'),
+      'type' => MENU_LOCAL_TASK,
+      'weight' => 5,
+    );
+  }
+
+  return $items;
+}
+
+/**
+ * Configure per-group percentage settings.
+ */
+function ad_weight_percent_settings() {
+  $form = array();
+
+  $groups = module_invoke('ad', 'groups_list', TRUE);
+  foreach ($groups as $tid => $group) {
+    $form["group-$tid"] = array(
+      '#type' => 'fieldset',
+      '#title' => $group->name,
+      '#collapsible' => TRUE,
+      '#collapsed' => variable_get("enable-$tid", 0) ? FALSE : TRUE,
+    );
+    $form["group-$tid"]["description-$tid"] = array(
+      '#type' => 'markup',
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+      '#value' => theme_placeholder("$group->description"),
+    );
+    $form["group-$tid"]["enable-$tid"] = array(
+      '#type' => 'checkbox',
+      '#default_value' => variable_get("enable-$tid", 0),
+      '#title' => t('Enabled'),
+      '#description' => t('If enabled, each ad in this group will be weighted per the percentages defined below.'),
+    );
+
+    $result = db_query('SELECT nid FROM {term_node} WHERE tid = %d', $group->tid);
+    while ($nid = db_fetch_object($result)) {
+      $ad = node_load($nid->nid);
+      $percent = db_fetch_object(db_query('SELECT * FROM {ad_weight_percent} WHERE tid = %d AND aid = %d', $tid, $nid->nid));
+      $form["group-$tid"]["ad-$tid"]["$tid-$nid->nid"] = array(
+        '#type' => 'fieldset',
+        '#title' => $ad->title,
+        '#collapsible' => TRUE,
+      );
+      $form["group-$tid"]["ad-$tid"]["$tid-$nid->nid"]["ad-$tid-$nid->nid"] = array(
+        '#type' => 'markup',
+        '#prefix' => '<div>',
+        '#suffix' => '</div>',
+        '#value' => "$ad->ad<br />$ad->url",
+      );
+      $form["group-$tid"]["ad-$tid"]["$tid-$nid->nid"]["percent-$tid-$nid->nid"] = array(
+        '#type' => 'textfield',
+        '#title' => t('Display percent'), 
+        '#default_value' => $percent->weight, 
+        '#size' => 2,
+        '#maxlength' => 3,
+        '#description' => t("Enter a percentage from 0 to 100.  The total percentages of all ads in this group must add up to 100.  For example, if you have two ads, and want one to be displayed 70% of the time and the other 30% of the time enter '70' in one and '30' in the other."),
+      );
+    }
+
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+  return $form;
+}
+
+/**
+ * Be sure that all enabled groups add up to a total of 100%.
+ */
+function ad_weight_percent_settings_validate($form, &$form_state) {
+  $groups = module_invoke('ad', 'groups_list', TRUE);
+  foreach ($groups as $tid => $group) {
+    if ($form_state['values']["enable-$tid"]) {
+      $result = db_query('SELECT nid FROM {term_node} WHERE tid = %d', $group->tid);
+      $total = 0;
+      // Add up total percentages for all nids in group, confirm equals 100%.
+      $first = 0;
+      while ($nid = db_fetch_object($result)) {
+        if (!$first) $first = $nid->nid;
+        $total = $total + (int)$form_state['values']["percent-$tid-$nid->nid"];
+      }
+      // Confirmed that total equals 100%.
+      if ($total != 100) {
+        form_set_error("percent-$tid-$first", t('The total percentage for all ads in the %group group combined must equal 100%.  It currently equals %percent.', array('%group' => $group->name, '%percent' => "$total%")));
+      }
+    }
+  }
+}
+
+/**
+ * Save the weight percent settings in the database.
+ */
+function ad_weight_percent_settings_submit($form, &$form_state) {
+  $groups = module_invoke('ad', 'groups_list', TRUE);
+  foreach ($groups as $tid => $group) {
+    variable_set("enable-$tid", (int)$form_state['values']["enable-$tid"]);
+    db_query('DELETE FROM {ad_weight_percent} WHERE tid = %d', $tid);
+    $result = db_query('SELECT nid FROM {term_node} WHERE tid = %d', $group->tid);
+    while ($nid = db_fetch_object($result)) {
+      db_query('INSERT INTO {ad_weight_percent} (tid, aid, weight) VALUES(%d, %d, %d)', $tid, $nid->nid, (int)$form_state['values']["percent-$tid-$nid->nid"]);
+    }
+  }
+}
+
+/**
+ * Returns the greatest common divisor of an array of integers.
+ */
+function ad_weight_percent_gcd($integers) {
+  $gcd = array_shift($integers);
+
+  while (!empty($integers)) {
+    $gcd = _ad_weight_percent_gcd($gcd, array_shift($integers));
+  }
+  return $gcd;
+}
+
+/**
+ * Helper function to calculate the greatest common divisor using the Euclidean
+ * algorithm (http://en.wikipedia.org/wiki/Euclidean_algorithm).
+ */
+function _ad_weight_percent_gcd($a, $b) {
+  if ($b == 0) {
+    return $a;
+  }
+  else {
+    return _ad_weight_percent_gcd($b, $a % $b);
+  }
+}
+
+/**
+ * Ad module's adcacheapi _hook().
+ */
+/*
+function ad_cache_file_adcacheapi($op, &$node) {
+  switch ($op) {
+    case 'display_variables':
+      $files = variable_get('ad_files', 3);
+      $path = file_create_path();
+      return "&amp;f=$files&amp;p=$path";
+    case 'method':
+      return array('file' => t('File'));
+    case 'description':
+      return t('File based caching will usually offer better performance, however, some find it difficult to enable and it may not offer valid statistics if you are using multiple load balanced web servers.');
+    case 'settings':
+      $form = array();
+      $form['cache']['file'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('File cache settings'),
+        '#collapsible' => TRUE,
+        '#collapsed' => (variable_get('ad_cache', 'none') == 'file') ? FALSE : TRUE,
+      );
+      $form['cache']['file']['ad_files'] = array(
+        '#type' => 'select', 
+        '#title' => t('Number of cache files'), 
+        '#default_value' => variable_get('ad_files', 3), 
+        '#options' => drupal_map_assoc(array(1, 3, 5, 10, 15)), 
+        '#description' => t('Please select the number of cache files the ad module should use.  Select a smaller value for better accuracy when performaing automatic actions on advertisements at specified thresholds.  Select a larger value for better performance.  This configuration option is only relevant if the file cache is enabled.')
+      );
+      $period = drupal_map_assoc(array(15,30,60,600,1800,3600,21600,43200,86400), 'format_interval');
+      $form['cache']['file']['ad_cache_file_lifetime'] = array(
+        '#type' => 'select', 
+        '#title' => t('Cache lifetime'), 
+        '#default_value' => variable_get('ad_cache_file_lifetime', 60), 
+        '#options' => $period,
+        '#description' => t('Specify how long information should be cached before ad statistics are updated in the database.  Increasing the cache lifetime can improve overall performance.  This configuration options is only relevant if the file cache is enabled.'),
+      );
+      return $form;
+    case 'settings_submit':
+      variable_set('ad_cache_file_lifetime', $node['ad_cache_file_lifetime']);
+      if ($node['ad_cache'] != 'file') {
+        ad_cache_file_build(0, variable_get('ad_files', 3));
+      }
+      else {
+        ad_cache_file_build($node['ad_files'], variable_get('ad_files', 3));
+      }
+      variable_set('ad_files', $node['ad_files']);
+      break;
+
+    case 'insert':
+    case 'update':
+    case 'delete':
+      if (variable_get('ad_cache', 'none') == 'file') {
+        ad_cache_file_build();
+      }
+      break;
+  }
+}
+*/
+

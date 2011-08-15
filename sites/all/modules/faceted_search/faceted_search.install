@@ -1,0 +1,186 @@
+<?php
+// $Id: faceted_search.install,v 1.12 2009/01/04 19:36:25 davidlesieur Exp $
+
+/**
+ * Implementation of hook_schema().
+ */
+function faceted_search_schema() {
+  $schema['faceted_search_env'] = array(
+    'fields' => array(
+      'env_id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The primary identifier for a faceted search environment.'),
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '32',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => t('The unique name of the faceted search environment. May only be alphanumeric characters plus underscores.'),
+      ),
+      'description' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'default' => '',
+        'description' => t('The description of the faceted search environment.'),
+      ),
+      'settings' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+        'serialize' => TRUE,
+        'description' => t('A serialized array of settings for the faceted search environment.'),
+      ),
+    ),
+    'primary key' => array('env_id'),
+  );
+
+  $schema['faceted_search_filters'] = array(
+    'description' => t(''),
+    'fields' => array(
+      'env_id' => array(
+        'description' => t(''),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-width' => '10'
+      ),
+      'filter_key' => array(
+        'description' => t(''),
+        'type' => 'varchar',
+        'length' => '32',
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'filter_id' => array(
+        'description' => t(''),
+        'type' => 'varchar',
+        'length' => '32',
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'status' => array(
+        'description' => t(''),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-width' => '11'
+      ),
+      'weight' => array(
+        'description' => t(''),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-width' => '11'
+      ),
+      'sort' => array(
+        'description' => t(''),
+        'type' => 'varchar',
+        'length' => '32',
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'max_categories' => array(
+        'description' => t(''),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-width' => '11'
+      )
+    ),
+    'primary key' => array('env_id', 'filter_key', 'filter_id'),
+    'indexes' => array(
+      'status' => array('status')
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function faceted_search_install() {
+  drupal_install_schema('faceted_search');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function faceted_search_uninstall() {
+  drupal_uninstall_schema('faceted_search');
+}
+
+/**
+ * Replace the faceted_search_variables table with a better data structure. 
+ */
+function faceted_search_update_6000() {
+  $ret = array();
+
+  $schema['faceted_search_env'] = array(
+    'fields' => array(
+      'env_id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The primary identifier for a faceted search environment.'),
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '32',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => t('The unique name of the faceted search environment. May only be alphanumeric characters plus underscores.'),
+      ),
+      'description' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'default' => '',
+        'description' => t('The description of the faceted search environment.'),
+      ),
+      'settings' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+        'serialize' => TRUE,
+        'description' => t('A serialized array of settings for the faceted search environment.'),
+      ),
+    ),
+    'primary key' => array('env_id'),
+  );
+  db_create_table($ret, 'faceted_search_env', $schema['faceted_search_env']);
+  
+  // Retrieve all the old variables.
+  $variables = array();
+  $results = db_query("SELECT * FROM {faceted_search_variables}");
+  while ($result = db_fetch_object($results)) {
+    $variables[$result->env_id][$result->name] = unserialize($result->value);
+  }
+  
+  // Rearrange and write them into the new structure.
+  foreach ($variables as $env_id => $settings) {
+    // Write base record.
+    $name = db_escape_string($settings['name']);
+    $description = db_escape_string($settings['description']);
+    $ret[] = update_sql("INSERT INTO {faceted_search_env} (env_id, name, description) VALUES ($env_id, '$name', '$description')");
+
+    // Remove unwanted variables.
+    unset($settings['name']);
+    unset($settings['description']);
+    unset($settings['form_build_id']); // An error had introduced this variable in older versions.
+    
+    // Write settings data. Because update_sql() does not support placeholders and
+    // would remove the curly braces contained in our serialized data if we
+    // embedded it directly in the query string, we use db_query() instead.
+    db_query("UPDATE {faceted_search_env} SET settings = '%s' WHERE env_id = %d", serialize($settings), $env_id);
+  }
+  
+  // Delete old table.
+  db_drop_table($ret, 'faceted_search_variables');
+  
+  return $ret;
+}
+

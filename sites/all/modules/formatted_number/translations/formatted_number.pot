@@ -1,0 +1,250 @@
+# $Id: formatted_number.pot,v 1.1.2.2 2008/11/15 13:52:52 markuspetrux Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  formatted_number.module,v 1.1.2.1 2008/11/13 14:07:31 markuspetrux
+#  formatted_number.install,v 1.1.2.1 2008/11/13 14:07:31 markuspetrux
+#  formatted_number.info,v 1.1.2.1 2008/11/13 14:07:31 markuspetrux
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-11-15 14:56+0100\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: formatted_number.module:52
+msgid "Formatted tiny integer"
+msgstr ""
+
+#: formatted_number.module:53
+msgid "Store a number in the database as a tiny integer (-128 to 127)."
+msgstr ""
+
+#: formatted_number.module:59
+msgid "Formatted tiny integer (unsigned)"
+msgstr ""
+
+#: formatted_number.module:60
+msgid "Store a number in the database as a tiny unsigned integer (0 to 255)."
+msgstr ""
+
+#: formatted_number.module:66
+msgid "Formatted small integer"
+msgstr ""
+
+#: formatted_number.module:67
+msgid "Store a number in the database as a small integer (-32768 to 32767)."
+msgstr ""
+
+#: formatted_number.module:73
+msgid "Formatted small integer (unsigned)"
+msgstr ""
+
+#: formatted_number.module:74
+msgid "Store a number in the database as a small unsigned integer (0 to 65535)."
+msgstr ""
+
+#: formatted_number.module:80
+msgid "Formatted medium integer"
+msgstr ""
+
+#: formatted_number.module:81
+msgid "Store a number in the database as a medium integer (-8388608 to 8388607)."
+msgstr ""
+
+#: formatted_number.module:87
+msgid "Formatted medium integer (unsigned)"
+msgstr ""
+
+#: formatted_number.module:88
+msgid "Store a number in the database as a medium unsigned integer (0 to 16777215)."
+msgstr ""
+
+#: formatted_number.module:94
+msgid "Formatted integer"
+msgstr ""
+
+#: formatted_number.module:95
+msgid "Store a number in the database as an integer (-2147483648 to 2147483647)."
+msgstr ""
+
+#: formatted_number.module:101
+msgid "Formatted integer (unsigned)"
+msgstr ""
+
+#: formatted_number.module:102
+msgid "Store a number in the database as an unsigned integer (0 to 4294967295)."
+msgstr ""
+
+#: formatted_number.module:108
+msgid "Formatted decimal"
+msgstr ""
+
+#: formatted_number.module:109
+msgid "Store a number in the database in a fixed decimal format."
+msgstr ""
+
+#: formatted_number.module:114
+msgid "Formatted float"
+msgstr ""
+
+#: formatted_number.module:115
+msgid "Store a number in the database in a floating point format."
+msgstr ""
+
+#: formatted_number.module:123
+msgid "Formatted big integer"
+msgstr ""
+
+#: formatted_number.module:124
+msgid "Store a number in the database as a big integer (-9223372036854775808 to 9223372036854775807)."
+msgstr ""
+
+#: formatted_number.module:130
+msgid "Formatted big integer (unsigned)"
+msgstr ""
+
+#: formatted_number.module:131
+msgid "Store a number in the database as a big unsigned integer (0 to 18446744073709551615)."
+msgstr ""
+
+#: formatted_number.module:164
+msgid "Prefix"
+msgstr ""
+
+#: formatted_number.module:167
+msgid "Define a string that should be prefixed to the value, like $ or €. Leave blank for none. Separate singular and plural values with a pipe (pound|pounds)."
+msgstr ""
+
+#: formatted_number.module:171
+msgid "Suffix"
+msgstr ""
+
+#: formatted_number.module:174
+msgid "Define a string that should suffixed to the value, like m², m/s², kb/s. Leave blank for none. Separate singular and plural values with a pipe (pound|pounds)."
+msgstr ""
+
+#: formatted_number.module:179
+msgid "Minimum"
+msgstr ""
+
+#: formatted_number.module:180
+msgid "Use this option to defined the minimum value that can be accepted for this field. Leave blank for no explicit limitation."
+msgstr ""
+
+#: formatted_number.module:183
+msgid "Maximum"
+msgstr ""
+
+#: formatted_number.module:184
+msgid "Use this option to defined the maximum value that can be accepted for this field. Leave blank for no explicit limitation."
+msgstr ""
+
+#: formatted_number.module:221
+msgid "Precision"
+msgstr ""
+
+#: formatted_number.module:224
+msgid "The total number of digits to store in the database, including digits to the right of the decimal point."
+msgstr ""
+
+#: formatted_number.module:229
+msgid "Decimals"
+msgstr ""
+
+#: formatted_number.module:232
+msgid "The number of digits to the right of the decimal point."
+msgstr ""
+
+#: formatted_number.module:241
+msgid "\"Minimum\" must be a valid number."
+msgstr ""
+
+#: formatted_number.module:246
+msgid "\"Minimum\" cannot be lower than !num."
+msgstr ""
+
+#: formatted_number.module:252
+msgid "\"Maximum\" must be a valid number."
+msgstr ""
+
+#: formatted_number.module:257
+msgid "\"Maximum\" cannot be greater than !num."
+msgstr ""
+
+#: formatted_number.module:262
+msgid "\"Minimum\" may not be a greater than \"Maximum\"."
+msgstr ""
+
+#: formatted_number.module:325
+msgid "Default"
+msgstr ""
+
+#: formatted_number.module:329
+msgid "Remove redundant zeros"
+msgstr ""
+
+#: formatted_number.module:333
+msgid "Unformatted"
+msgstr ""
+
+#: formatted_number.module:345
+msgid "Numeric text field"
+msgstr ""
+
+#: formatted_number.module:468
+msgid "The specified number !num is invalid."
+msgstr ""
+
+#: formatted_number.module:513
+msgid "%name: may be not be empty."
+msgstr ""
+
+#: formatted_number.module:518
+msgid "%name: the value may be no smaller than %min."
+msgstr ""
+
+#: formatted_number.module:521
+msgid "%name: the value may be no larger than %max."
+msgstr ""
+
+#: formatted_number.module:0
+msgid "formatted_number"
+msgstr ""
+
+#: (duplicate) formatted_number.install:21 
+msgid "Format Number API"
+msgstr ""
+
+#: (duplicate) formatted_number.install:22 
+msgid "%module-name requires, at least, version 6.x-1.1 of the <a href=\"@format-number\">Format Number API</a> module."
+msgstr ""
+
+#: (duplicate) formatted_number.install:23 
+msgid "Formatter Number CCK"
+msgstr ""
+
+#: (duplicate) formatted_number.install:26 
+msgid "version 6.x-1.0"
+msgstr ""
+
+#: formatted_number.info:0
+msgid "Formatted Number CCK"
+msgstr ""
+
+#: formatted_number.info:0
+msgid "Defines CCK numeric types where thousands separator and decimal point are inherited from the Format Number API module."
+msgstr ""
+
+#: formatted_number.info:0
+msgid "CCK"
+msgstr ""
+

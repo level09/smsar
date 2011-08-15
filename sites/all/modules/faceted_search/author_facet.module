@@ -1,0 +1,273 @@
+<?php
+// $Id: author_facet.module,v 1.16 2009/01/04 19:36:25 davidlesieur Exp $
+
+/**
+ * @file
+ * Provides a facet for content authors.
+ */
+
+require_once('./'. drupal_get_path('module', 'faceted_search') .'/faceted_search.inc');
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function author_facet_form_faceted_search_edit_form_alter(&$form, $form_state) {
+  $env = $form['env']['#value'];
+
+  $form['author_facet'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Author Facet options'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => 10,
+  );
+
+  $roles = array_filter(user_roles(TRUE), '_author_facet_filter_role');
+  if (count($roles)) {
+    $form['author_facet']['author_facet_excluded_roles'] = array( // TODO: Invert the logic, and ensure that all roles are included when none is checked.
+      '#type' => 'checkboxes',
+      '#title' => t('Roles to exclude from the Author facet'),
+      '#description' => t('Any user having one or more of the checked roles will not appear in the facet. Note that this setting is not a filter for search results; content from excluded users can still be searchable through other facets or from text searches.'),
+      '#options' => $roles,
+      '#default_value' => author_facet_excluded_roles($env),
+    );
+  }
+  else {
+    $form['author_facet']['author_facet_help'] = array(
+      '#type' => 'markup',
+      '#value' => '<p>'. t('No roles are currently available.') .'</p>',
+    );
+  }
+}
+
+/**
+ * Implementation of hook_faceted_search_collect().
+ */
+function author_facet_faceted_search_collect(&$facets, $domain, $env, $selection, $arg = NULL) {
+  switch ($domain) {
+    case 'facets':
+      // If the author facet is allowed.
+      if (!isset($selection) || isset($selection['author'][1])) {
+        $excluded_roles = author_facet_excluded_roles($env);
+        $facets[] = new author_facet($excluded_roles);
+      }
+      break;
+
+    case 'text':
+      // If the author facet is allowed.
+      if (!isset($selection) || isset($selection['author'][1])) {
+        // Scan the search text for a 'author:uid' token, and extract a
+        // facet from it.
+        $uid = search_query_extract($arg, 'author');
+        if (is_numeric($uid)) {
+          $excluded_roles = author_facet_excluded_roles($env);
+          
+          if ($name = author_facet_get_user_name($env, $uid, $excluded_roles)) {
+            // Create a facet with the user found in the search text as the
+            // active category.
+            $facets[] = new author_facet($excluded_roles, $uid, $name);
+            
+          }
+        }
+        // Remove the parsed token from the search text, based
+        // upon search_query_insert().
+        if (search_query_extract($arg, 'author') !== FALSE) {
+          $arg = trim(preg_replace('/(^| )author:[^ ]*/i', '', $arg));
+        }
+      }
+      return $arg;
+
+    case 'node':
+      // If the author facet is allowed.
+      if (is_numeric($arg->uid) && (!isset($selection) || isset($selection['author'][1]))) {
+        $excluded_roles = author_facet_excluded_roles($env);
+        if ($name = author_facet_get_user_name($env, $arg->uid, $excluded_roles)) {
+          // Create a facet with the node's author as the active category.
+          $facets[] = new author_facet($excluded_roles, $arg->uid, $name);
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_faceted_search_init().
+ */
+function author_facet_faceted_search_init(&$env) {
+  $env->settings['author_facet_excluded_roles'] = array();
+}
+
+/**
+ * Return the name of a user.
+ *
+ * @return The user's name, or FALSE if not found or if the user's role is not
+ * allowed in the facet.
+ */
+function author_facet_get_user_name($env, $uid, $excluded_roles = array()) {
+  if ($uid == 0) {
+  	return t('Anonymous');
+  }
+  elseif (count($excluded_roles)) {
+    return db_result(db_query('SELECT u.name FROM {users} u WHERE u.uid = %d AND NOT EXISTS (SELECT r.rid FROM {users_roles} r WHERE u.uid = r.uid AND r.rid IN ('. implode(', ', $excluded_roles) .'))', $uid));
+  }
+  else {
+    return db_result(db_query('SELECT u.name FROM {users} u WHERE u.uid = %d', $uid));
+  }
+}
+
+/**
+ * Returns an array with the roles that should not be used in faceted searches.
+ */
+function author_facet_excluded_roles($env) {
+  $roles = array_filter(user_roles(TRUE), '_author_facet_filter_role');
+  return array_intersect($env->settings['author_facet_excluded_roles'], array_keys($roles));
+}
+
+/**
+ * Callback for array_filter to remove unwanted roles.
+ */
+function _author_facet_filter_role($role) {
+  return $role != 'authenticated user';
+}
+
+/**
+ * A facet for node authors.
+ */
+class author_facet extends faceted_search_facet {
+
+  var $_excluded_roles;
+
+  /**
+   * Constructor. Optionally assigns the active user of the facet.
+   */
+  function author_facet($excluded_roles = array(), $uid = 0, $name = '') {
+    $active_path = array();
+    if (is_numeric($uid) && $name) {
+      $active_path[] = new author_facet_category($uid, $name);
+    }
+    parent::faceted_search_facet('author', $active_path);
+    $this->_excluded_roles = $excluded_roles;
+  }
+
+  function get_id() {
+    return 1; // This module provides only one facet.
+  }
+
+  function get_label() {
+    return t('Author');
+  }
+
+  /**
+   * Returns the available sort options for this facet.
+   */
+  function get_sort_options() {
+    $options = parent::get_sort_options();
+    $options['name'] = t('Name');
+    return $options;
+  }
+
+  /**
+   * Handler for the 'count' sort criteria.
+   */
+  function build_sort_query_count(&$query) {
+    $query->add_orderby('count', 'DESC');
+    $query->add_orderby('users_name', 'ASC');
+  }
+
+  /**
+   * Handler for the 'name' sort criteria.
+   */
+  function build_sort_query_name(&$query) {
+    $query->add_orderby('users_name', 'ASC');
+  }
+
+  /**
+   * Returns the search text for this facet, taking into account this facet's
+   * active path.
+   */
+  function get_text() {
+    if ($category = $this->get_active_category()) {
+      return $category->_uid;
+    }
+    return '';
+  }
+
+  /**
+   * Updates a query for retrieving the root categories of this facet and their
+   * associated nodes within the current search results.
+   *
+   * @param $query
+   *   The query object to update.
+   *
+   * @return
+   *   FALSE if this facet can't have root categories.
+   */
+  function build_root_categories_query(&$query) {
+    $query->add_table('users', 'uid', 'n', 'uid');
+    $query->add_field('users', 'uid');
+    $query->add_field('users', 'name');
+    $query->add_groupby('users_uid');
+    if (count($this->_excluded_roles)) {
+      $query->add_subquery('NOT EXISTS (SELECT users_roles.rid FROM {users_roles} users_roles WHERE users.uid = users_roles.uid AND users_roles.rid IN ('. implode(', ', $this->_excluded_roles) .'))');
+    }
+    return TRUE;
+  }
+
+  /**
+   * This factory method creates categories given query results that include the
+   * fields selected in get_root_categories_query() or get_subcategories_query().
+   *
+   * @param $results
+   *   $results A database query result resource.
+   *
+   * @return
+   *   Array of categories.
+   */
+  function build_categories($results) {
+    $categories = array();
+    while ($result = db_fetch_object($results)) {
+      if ($result->users_uid == 0) {
+      	$result->users_name = t('Anonymous');
+      }
+      $categories[] = new author_facet_category($result->users_uid, $result->users_name, $result->count);
+    }
+    return $categories;
+  }
+}
+
+/**
+ * A node-type based facet category.
+ */
+class author_facet_category extends faceted_search_category {
+  var $_uid = 0;
+  var $_name = '';
+
+  function author_facet_category($uid, $name, $count = NULL) {
+    parent::faceted_search_category($count);
+    $this->_uid = $uid;
+    $this->_name = $name;
+  }
+
+  /**
+   * Return the label of this category.
+   *
+   * @param $html
+   *   TRUE when HTML is allowed in the label, FALSE otherwise. Checking this
+   *   flag allows implementors to provide a rich-text label if desired, and an
+   *   alternate plain text version for cases where HTML cannot be used. The
+   *   implementor is responsible to ensure adequate security filtering.
+   */
+  function get_label($html = FALSE) {
+    return check_plain($this->_name);
+  }
+
+  /**
+   * Updates a query for selecting nodes matching this category.
+   *
+   * @param $query
+   *   The query object to update.
+   */
+  function build_results_query(&$query) {
+    $query->add_where('n.uid = %d', $this->_uid);
+  }
+}

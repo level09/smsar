@@ -1,0 +1,62 @@
+<?php
+// $Id: hs_taxonomy.install,v 1.2 2009/07/27 14:27:20 wimleers Exp $
+
+/**
+ * @file
+ * Install file for the Hierarchical Select Taxonomy module.
+ */
+
+
+/**
+ * Implementation of hook_install().
+ */
+function hs_taxonomy_install() {
+  $ret = array();
+
+  // Update the module weight to 2 so hs_taxonomy runs after the forum module.
+  // See http://drupal.org/node/475784.
+  $ret[] = update_sql("UPDATE {system} SET weight = 2 WHERE name = 'hs_taxonomy'");
+
+  return $ret;
+}
+
+
+/**
+ * Implementation of hook_enable().
+ */
+function hs_taxonomy_enable() {
+  variable_set('taxonomy_override_selector', TRUE);
+  drupal_set_message(t("Drupal core's taxonomy selects are now overridden on the
+                        Taxonomy Term form. They've been replaced by
+                        Hierarchical Selects for better scalability.<br />
+                        You can <a href=\"!configure-url\">configure</a> it to
+                        be used on node forms too!",
+                        array(
+                          '!configure-url' => url('admin/settings/hierarchical_select/configs'),
+                        )),
+                      'warning');
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function hs_taxonomy_disable() {
+  variable_set('taxonomy_override_selector', FALSE);
+  drupal_set_message(t("Drupal core's taxonomy selects are now restored.
+                        Please remember that they're not scalable!."),
+                    'warning');
+}
+
+
+//----------------------------------------------------------------------------
+// Schema updates.
+
+// Update the module weight to 2 so hs_taxonomy runs after the forum module.
+// See http://drupal.org/node/475784.
+function hs_taxonomy_update_1() {
+  $ret = array();
+
+  $ret[] = update_sql("UPDATE {system} SET weight = 2 WHERE name = 'hs_taxonomy'");
+
+  return $ret;
+}

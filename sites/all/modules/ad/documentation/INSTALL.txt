@@ -1,0 +1,66 @@
+-------------
+Requirements:
+-------------
+ - Drupal 6.x
+ - taxonomy.module
+ - upload.module (if using the ad_image module)
+
+-------------
+Installation:
+-------------
+1) Extract the ad tarball.  Move the resulting 'ad/' subdirectory within your
+   'modules/' directory.  Be sure the web server has read permissions to this
+   directory and the files within it.
+
+   NOTE:  For optimal performance you should set the DRUPAL_ROOT variable at
+   the top of the adserve.inc file.  Otherwise, the ad module will automatically
+   determine your top level Drupal directory each time it serves an
+   advertisement.
+
+2) Log in to your website and enable the ad.module.
+    (Goto :: administer >> modules :: then put a check next to 'ad')
+
+3) If you wish to display image (banner) ads, enable the ad_image.module.  If
+   it's not already enabled, you will also need to enable the upload.module.
+    (Goto :: administer >> modules :: then put a check next to 'ad_image' and
+     'upload'.)
+
+   You can set per-group limitations for image ads at administer >> modules >>
+   groups >> image ads.
+
+4) If you wish to display text ads, enable the ad_text.module.
+    (Goto :: administer >> modules :: then put a check next to 'ad_text')
+
+   You can set global limitations for text ads at administer >> modules >>
+   settings >> text ads.
+
+5) If you wish to embed ads into your site content, enable the ad_embed.module.
+    (Goto :: administer >> modules :: then put a check next to 'ad_embed')
+
+   You can configure embedded ads at administer >> modules >> settings >>
+   embedded ads.  There is also online help available if you enable the Drupal
+   help module and go to administer >> help >> ad_embed.
+
+6) If you wish to provide online graphical reports along with your ads, enable
+   the ad_report module.
+    (Goto :: administer >> modules :: then put a check next to 'ad_report')
+
+7) If you wish to filter out duplicate clicks and other invalid clicks (as
+   detailed in the README), enable the click_filter module.
+    (Goto :: administer >> modules :: then put a check next to 'click_filter')
+
+8) Assign the 'show advertisements' permission to all roles that you wish to
+   see advertisements.
+    (Goto :: administer >> user management >> access control :: then put a
+     check next to 'show advertisements' for all roles that should see ads)
+
+9) You can display ads in blocks by going to administer >> blocks and enabling
+   the per-ad-group blocks that are automatically generated.
+
+10) Optionally configure an input filter for your advertisements that allow
+    the html tags to display correctly.
+     (Goto :: administer >> site configuration >> input filters)
+    If you need to associate a specific input filter with the advertisement
+    content type, you may want to review the following projects:
+      http://drupal.org/project/better_formats
+      http://drupal.org/project/filterbynodetype

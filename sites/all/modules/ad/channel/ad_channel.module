@@ -1,0 +1,1298 @@
+<?php
+// $Id: ad_channel.module,v 1.1.4.27 2009/07/29 23:00:39 jeremy Exp $
+
+/**
+ * @file
+ * Ad Channel module.
+ *
+ * Copyright (c) 2008-2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+define('AD_CHANNEL_LIST_BOTH', 0);
+define('AD_CHANNEL_LIST_CHANNEL', 1);
+define('AD_CHANNEL_LIST_GROUP', 2);
+
+/**
+ * Implementation of hook_help().
+ */
+function ad_channel_help($path) {
+  $output = '';
+  switch ($path) {
+    case 'admin/help#ad_channel':
+      $output = '<p>'. t('This module provides the ability to create advertisement channels, for which rules can be defined.') .'</p>';
+      break;
+    case 'admin/content/ad/channel':
+    case 'admin/content/ad/channel/list':
+     return '<p>'. t('This is a list of existing containers and channels that you can edit.  Containers hold channels, and channels hold advertisements.') .'</p>';
+    case 'admin/content/ad/channel/container':
+     return '<p>'. t('Containers help you organize your advertisement channels.  A container can hold one or more related advertisement channels.') .'</p>';
+    case 'admin/content/ad/channel/channel':
+     return '<p>'. t('Advertisements can be assigned to one or more advertisement channels.  Rules can then be applied to these channels.') .'</p>';
+  }
+  return $output;
+}
+
+/**
+ * Drupal _perm hook.  Establishes permissions used by this module.
+ *
+ * @return  An array of permissions used by this module.
+ */
+function ad_channel_perm() {
+  return (array('administer channels', 'configure ad premier status'));
+}
+
+/**
+ * Implementation of hook_menu.
+ */
+function ad_channel_menu() {
+  $items = array();
+
+  $items['admin/content/ad/channel'] = array(
+    'title' => t('Channels'),
+    'page callback' => 'ad_channel_admin_overview',
+    'access arguments' => array('administer channels'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 6);
+  $items['admin/content/ad/channel/list'] = array(
+    'title' => t('List'),
+    'page callback' => 'ad_channel_admin_overview',
+    'access arguments' => array('administer channels'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0);
+  $items['admin/content/ad/channel/container'] = array(
+    'title' => t('Create container'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_channel_admin_container'),
+    'access arguments' => array('administer channels'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2);
+  $items['admin/content/ad/channel/channel'] = array(
+    'title' => t('Create channel'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_channel_admin_channel'),
+    'access arguments' => array('administer channels'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 4);
+  $items['admin/content/ad/channel/settings'] = array(
+    'title' => t('Settings'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_channel_admin_settings'),
+    'access arguments' => array('administer channels'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 9);
+  $items['admin/content/ad/channel/container/%ad_channel_container/delete'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_channel_admin_confirm_delete_container', 5),
+    'access arguments' => array('administer channels'),
+    'type' => MENU_CALLBACK);
+  $items['admin/content/ad/channel/channel/%ad_channel_channel/delete'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ad_channel_admin_confirm_delete_channel', 5),
+    'access arguments' => array('administer channels'),
+    'type' => MENU_CALLBACK);
+
+  return $items;
+}
+
+/**
+ * Load a specified container.
+ */
+function ad_channel_container_load($conid = 0) {
+  static $containers = array();
+  if (!isset($containers[$conid])) {
+    $containers[$conid] = db_fetch_object(db_query('SELECT * FROM {ad_channel_container} WHERE conid = %d', $conid));
+  }
+  return $containers[$conid];
+}
+
+/**
+ * Load a specified channel.
+ */
+function ad_channel_channel_load($chid = 0) {
+  static $channels = array();
+  if (!isset($channels[$chid])) {
+    $channels[$chid] = db_fetch_object(db_query('SELECT * FROM {ad_channel} WHERE chid = %d', $chid));
+  }
+  return $channels[$chid];
+}
+
+/**
+ * Implementation of hook_form_alter().
+ * Generate a form for selecting channels to associate with an advertisement.
+ */
+function ad_channel_form_alter(&$form, &$form_state, $form_id) {
+  if (isset($form['type']) && $form_id == 'ad_node_form') {
+    $fieldset = FALSE;
+    $containers = _ad_channel_get_containers();
+    foreach ($containers as $container) {
+      $channels = _ad_channel_get_container_channels($container->conid);
+      if (!empty($channels)) {
+        if ($container->conid) {
+          $fieldset = TRUE;
+        }
+        if ($fieldset) {
+          $form['channel'][$container->conid] = array(
+            '#type' => 'fieldset',
+            '#title' => $container->name,
+            '#collapsible' => FALSE,
+            '#collapsed' => FALSE,
+          );
+        }
+        foreach ($channels as $channel) {
+          if (is_object($form['#node'])) {
+            $node = $form['#node'];
+            $default_value = isset($node->channel[$channel->chid]);
+          }
+          else {
+            $default_value = 0;
+          }
+          if (!$default_value) {
+            $channel = _ad_channel_get_channels($channel->chid);
+            if (isset($channel->inventory) && $channel->inventory > 0) {
+              $num_ads = _ad_channel_get_channel_active_ad_count($channel->chid);
+              if($num_ads + 1 > $channel->inventory) {
+                 $disabled = TRUE;
+              }
+            }
+          }
+          $form['channel'][$container->conid]["channel-$channel->chid"] = array(
+            '#type' => 'checkbox',
+            '#title' => $channel->name,
+            '#description' => $channel->description,
+            '#default_value' => $default_value,
+            '#disabled' => isset($disabled) ? $disabled : FALSE,
+          );
+        }
+      }
+    }
+    $node = node_load($form['nid']['#value']);
+    if (isset($form['channel']) && is_array($form['channel']) && !empty($form['channel'])) {
+      $form['channel'] += array(
+        '#type' => 'fieldset',
+        '#title' => t('Channels'),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+      );
+      $form['channel']['#weight'] = -2;
+      $form['channel']['#tree'] = TRUE;
+    }
+    $form['priority'] = array(
+      '#type' => 'fieldset',
+      '#access' => user_access('configure ad premier status'),
+      '#title' => t('Priority'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+    $form['priority']['premiere'] = array(
+      '#type' => 'checkbox',
+      '#access' => user_access('configure ad premier status'),
+      '#title' => t('Premiere'),
+      '#description' => t('An active premiere advertisement will override all other non-premiere advertisements in the same channel.  As long as one or more premiere advertisements are active in a channel, non-premiere advertisements will not be displayed in that channel.'),
+      '#default_value' => isset($node->premiere) ? $node->premiere : FALSE,
+    );
+    $form['priority']['#weight'] = -1;
+
+    $form['inventory'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Inventory'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+
+    $form['inventory']['remnant'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Remnant'),
+      '#description' => t('An advertisement marked as a remnant is eligible for display in any channel where the number of assigned advertisements for the channel is less than the inventory level specified.'),
+      '#default_value' => isset($node->remnant) ? $node->remnant : FALSE,
+    );
+  }
+  else if ($form_id == 'ad_filter_form') {
+    $session = &$_SESSION['ad_overview_filter'];
+    $session = is_array($session) ? $session : array();
+
+    $display_channel = TRUE;
+    $display_premiere = TRUE;
+    foreach ($session as $filter) {
+      list($type, $value) = $filter;
+      if ($type == 'channel') {
+        $display_channel = FALSE;
+      }
+      else if ($type == 'premiere') {
+        $display_premiere = FALSE;
+      }
+    }
+
+    if ($display_channel) {
+      $channels = _ad_channel_get_channels();
+      $options = array();
+      foreach ($channels as $channel) {
+        $key = 'channel-'. $channel->chid;
+        $options[$key] = $channel->name;
+      }
+      $form['filters']['status']['channel'] = array(
+        '#type' => 'select',
+        '#options' => $options
+      );
+      $form['filters']['filter']['#options']['channel'] = 'channel';
+    }
+    else {
+      unset($form['filters']['status']['channel']);
+      unset($form['filters']['filter']['#options']['channel']);
+    }
+
+    if ($display_premiere) {
+      $options = array(
+        '0' => t('false'),
+        '1' => t('true'));
+      $form['filters']['status']['premiere'] = array(
+        '#type' => 'select',
+        '#options' => $options
+      );
+      $form['filters']['filter']['#options']['premiere'] = 'premiere';
+    }
+    else {
+      unset($form['filters']['status']['premiere']);
+      unset($form['filters']['filter']['#options']['premiere']);
+    }
+  }
+  else if ($form_id == 'ad_report_admin') {
+    $channels = _ad_channel_get_channels();
+    if (is_array($channels) && !empty($channels)) {
+      $channel = isset($_SESSION['ad_report_channel']) && is_array($_SESSION['ad_report_channel']) && !empty($_SESSION['ad_report_channel']) ? $_SESSION['ad_report_channel'] : array('any');
+      $form['channels'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Channels'),
+      );
+      $options = array();
+      $options['any'] = t('<any>');
+      $options['none'] = t('<none>');
+      foreach ($channels as $chan) {
+        $options[$chan->chid] = $chan->name;
+      }
+      $form['channels']['channel'] = array(
+        '#type' => 'select',
+        '#title' => t('Ad channels'),
+        '#options' => $options,
+        '#multiple' => TRUE,
+        '#required' => TRUE,
+        '#default_value' => $channel,
+      );
+      $form['#submit'] = array_merge(array('ad_channel_admin_report_submit'), $form['#submit']);
+    }
+  }
+  else if ($form_id == 'ad_admin_ads' && is_array($form['group'])) {
+    foreach ($form['group'] as $aid => $value) {
+      $result = db_query('SELECT chid FROM {ad_channel_node} WHERE nid = %d', $aid);
+      $names = array();
+      while ($channel = db_fetch_object($result)) {
+        $names[] = _ad_channel_get_name($channel->chid);
+      }
+      if (empty($names)) {
+        $names[] = t('none');
+      }
+      $list = variable_get('ad_channel_admin_list', AD_CHANNEL_LIST_CHANNEL);
+      switch ($list) {
+        case AD_CHANNEL_LIST_CHANNEL:
+          unset($form['group']);
+          $form['channel'][$aid]['#value'] = implode(', ', $names);
+          break;
+        case AD_CHANNEL_LIST_BOTH:
+          $form['channel'][$aid]['#value'] = implode(', ', $names);
+          break;
+        case AD_CHANNEL_LIST_GROUP:
+          // do nothing
+          break;
+      }
+    }
+  }
+}
+
+/**
+ * Register our own ad_admin_ads theme function.
+ */
+function ad_channel_theme_registry_alter(&$theme_registry) {
+  $list = variable_get('ad_channel_admin_list', AD_CHANNEL_LIST_CHANNEL);
+  if ($list == AD_CHANNEL_LIST_CHANNEL || $list == AD_CHANNEL_LIST_BOTH) {
+    if (!empty($theme_registry['ad_admin_ads'])) {
+      $theme_registry['ad_admin_ads']['function'] = 'ad_channel_ad_admin_ads';
+    }
+  }
+}
+
+/**
+ * Implement custom theme function for displaying ad overview, replacing groups
+ * with channels.
+ */
+function ad_channel_ad_admin_ads($form) {
+  $list = variable_get('ad_channel_admin_list', AD_CHANNEL_LIST_CHANNEL);
+
+  // Conditionally build the header based on list type and
+  // the availability of probability values from the 
+  // ad_weight_probability module
+  $header = array(theme('table_select_header_cell'), t('Title'));
+
+  // Overview table:
+  if ($list != AD_CHANNEL_LIST_CHANNEL) {
+    $header[] = t('Group');
+  }
+
+  $header = array_merge($header, array(t('Channel')));
+
+  if (isset($form['probability']) && is_array($form['probability'])) {
+    $header[] = t('Probability');
+  }
+
+  $header[] = t('Type');
+  $header[] = t('Status');
+  $header[] = t('Operations');
+
+  $output = drupal_render($form['options']);
+  if (isset($form['title']) && is_array($form['title'])) {
+    foreach (element_children($form['title']) as $key) {
+      $row = array();
+      $row[] = drupal_render($form['ads'][$key]);
+      $row[] = drupal_render($form['title'][$key]);
+      if ($list == AD_CHANNEL_LIST_BOTH) {
+        $row[] = drupal_render($form['group'][$key]);
+      }
+      $row[] = drupal_render($form['channel'][$key]);
+      if (isset($form['probability']) && is_array($form['probability'])) {
+        $row[] = drupal_render($form['probability'][$key]);
+      }
+      $row[] = drupal_render($form['adtype'][$key]);
+      $row[] = drupal_render($form['adstatus'][$key]);
+      $row[] = drupal_render($form['operations'][$key]);
+      $rows[] = $row;
+    }
+
+  }
+  else  {
+    $rows[] = array(array('data' => t('No ads available.'), 'colspan' => '6'));
+  }
+
+  $output .= theme('table', $header, $rows);
+  if ($form['pager']['#value']) {
+    $output .= drupal_render($form['pager']);
+  }
+
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+function _ad_channel_get_name($chid) {
+  static $names = array();
+  if (!isset($names[$chid])) {
+    $names[$chid] = db_result(db_query('SELECT name FROM {ad_channel} WHERE chid = %d', $chid));
+  }
+  return $names[$chid];
+}
+
+function ad_channel_admin_report_submit($form, $form_state) {
+  if ($form_state['clicked_button']['#value'] == t('Reset report')) {
+    unset($_SESSION['ad_report_channel']);
+  }
+  else if ($form_state['clicked_button']['#value'] == t('Generate report')) {
+    if (isset($form_state['values']['channel']) && is_array($form_state['values']['channel'])) {
+      $channels = array();
+      $any = FALSE;
+      foreach ($form_state['values']['channel'] as $chid) {
+        if (is_numeric($chid)) {
+          $channels[] = $chid;
+        }
+        else if ($chid == 'none') {
+          $channels[-1] = 'none';
+        }
+        else {
+          $any = TRUE;
+        }
+      }
+      if (!$any && !empty($channels)) {
+        $_SESSION['ad_report_channel'] = $channels;
+      }
+      else {
+        if (isset($_SESSION['ad_report_channel'])) {
+          unset($_SESSION['ad_report_channel']);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Filter reports by selected channel.
+ */
+function ad_channel_adreport($join, $where, $args, $select) {
+  if (isset($_SESSION['ad_report_channel']) && is_array($_SESSION['ad_report_channel']) && !empty($_SESSION['ad_report_channel'])) {
+    // Check if we're filtering by <none>
+    if (isset($_SESSION['ad_report_channel'][-1])) {
+      $join = array('LEFT JOIN {ad_channel_node} acn ON acn.nid = a.aid');
+      $channels = $_SESSION['ad_report_channel'];
+      unset($channels[-1]);
+      // Check if we're filtering on <none> and one or more channels
+      if (count($channels)) {
+        $where = array('(ISNULL(acn.chid) OR acn.chid IN (%s))');
+        $args = array(implode(',', $channels));
+      }
+      else {
+        $where = array('ISNULL(acn.chid)');
+      }
+      return array('join' => $join, 'where' => $where, 'args' => $args);
+    }
+    // Filtering by one or more channels
+    else {
+      $join = array('LEFT JOIN {ad_channel_node} acn ON acn.nid = a.aid');
+      $where = array('acn.chid IN (%s)');
+      $args = array(implode(',', $_SESSION['ad_report_channel']));
+      return array('join' => $join, 'where' => $where, 'args' => $args);
+    }
+  }
+}
+
+/**
+ * Implement hook _adapi.
+ */
+function ad_channel_adapi($op, &$node) {
+  switch ($op) {
+    case 'admin_filters':
+      $channels = _ad_channel_get_channels();
+      $options = array();
+      foreach ($channels as $channel) {
+        $key = 'channel-'. $channel->chid;
+        $options[$key] = $channel->name;
+      }
+      $filters['channel'] = array(
+        'title' => t('channel'),
+        'options' => $options,
+      );
+      $options = array(
+        '0' => t('false'),
+        '1' => t('true'));
+      $filters['premiere'] = array(
+        'title' => t('premiere'),
+        'options' => $options,
+      );
+      $filters['remnant'] = array(
+        'title' => t('remnant'),
+        'options' => $options,
+      );
+      return $filters;
+    case 'admin_filter_query':
+      if (is_array($node)) {
+        list($key, $value) = $node;
+        if ($key == 'channel') {
+          list($key, $value) = explode('-', $value, 2);
+          return array(
+            'channel' => array(
+              'where' => 'c.chid = %d',
+              'join' => 'INNER JOIN {ad_channel_node} c ON n.nid = c.nid ',
+              'value' => $value,
+            ));
+        }
+        else if ($key == 'premiere') {
+          return array(
+            'premiere' => array(
+              'where' => 'p.priority = %d',
+              'join' => 'INNER JOIN {ad_priority} p ON n.nid = p.aid ',
+              'value' => $value,
+            ));
+        }
+        else if ($key == 'remnant') {
+          return array(
+            'remnant' => array(
+              'where' => 'r.remnant = %d',
+              'join' => 'INNER JOIN {ad_channel_remnant} r ON n.nid = r.aid ',
+              'value' => $value,
+            ));
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function ad_channel_nodeapi($node, $op, $arg = 0) {
+  switch ($op) {
+    case 'view':
+      return _ad_channel_view_node($node);
+    case 'load':
+      return _ad_channel_load_node($node);
+    case 'insert':
+    case 'update':
+      if (is_object($node) && isset($node->adtype) && isset($node->nid)) {
+        return _ad_channel_save_node($node);
+      }
+      break;
+    case 'delete':
+      return _ad_channel_delete_node($node);
+    case 'validate':
+      return _ad_channel_validate_nodes($node);
+  }
+}
+
+/**
+ * Implementation of hook_ad_build_cache().
+ */
+function ad_channel_ad_build_cache() {
+  $cache = array();
+  $ads = array();
+  $active = db_query("SELECT aid FROM {ads} WHERE adstatus = 'active'");
+  while ($ad = db_fetch_object($active)) {
+    // cache channel<->node relation
+    $result = db_query('SELECT chid FROM {ad_channel_node} WHERE nid = %d', $ad->aid);
+    while ($channel = db_fetch_object($result)) {
+      $ads[$ad->aid][$channel->chid] = $channel->chid;
+      //$ads[$channel->chid][$ad->aid] = $ad->aid;
+    }
+  }
+  $channels = array();
+  $result = db_query('SELECT chid, display, urls, no_channel_percent, inventory FROM {ad_channel}');
+  while ($channel = db_fetch_object($result)) {
+    $channels[$channel->chid] = $channel;
+  }
+  $result = db_query("SELECT p.aid, p.priority FROM {ads} a LEFT JOIN {ad_priority} p ON a.aid = p.aid WHERE a.adstatus = 'active' AND p.priority = 1");
+  $premiere = array();
+  while ($priority = db_fetch_object($result)) {
+    $premiere[$priority->aid] = $priority->aid;
+  }
+  $result = db_query("SELECT r.aid, r.remnant FROM {ads} a LEFT JOIN {ad_channel_remnant} r ON a.aid = r.aid WHERE a.adstatus = 'active' AND r.remnant = 1");
+  $remnants = array();
+  while ($remnant = db_fetch_object($result)) {
+    $remnants[$remnant->aid] = $remnant->aid;
+  }
+  $cache['channel']['ads'] = $ads;
+  $cache['channel']['channels'] = $channels;
+  $cache['channel']['display'] = variable_get('ad_channel_display', 0);
+  $cache['premiere'] = $premiere;
+  $cache['remnant'] = $remnants;
+
+  $cache['channel']['hook_filter'] = array(
+    'weight' => 0,
+    'file' => drupal_get_path('module', 'ad_channel') .'/ad_channel.inc',
+    'function' => 'ad_channel_cache_filter',
+  );
+
+  return $cache;
+}
+
+/***/
+
+/**
+ * Settings form.
+ */
+function ad_channel_admin_settings() {
+  $form = array();
+
+  $form['ad_channel_display'] = array(
+    '#type' => 'radios',
+    '#title' => t('Display advertisements not assigned to any channel'),
+    '#options' => array(t('Only if no matching advertisements are found in the active channels'), t('Always'), t('Never')),
+    '#default_value' => variable_get('ad_channel_display', 0),
+    '#description' => t('By default, advertisements will first be selected out of the active channels, and if none are found they will be selected out of advertisements not assigned to any channel.  If you select "Always", advertisements will be selected out of the active channels and from advertisements not assigned to any channels.  If you select "Never", advertisements will only be selected out of the active channels, and advertisements not assigned to any channel will not ever be displayed.'),
+  );
+  $form['ad_channel_admin_list'] = array(
+    '#type' => 'radios',
+    '#title' => t('Display channels on administrative ads overview listing'),
+    '#options' => array(t('In addition to groups'), t('In place of groups'), t('Not at all')),
+    '#default_value' => variable_get('ad_channel_admin_list', AD_CHANNEL_LIST_CHANNEL),
+    '#description' => t('By default, channels will be listed along with groups on the administrative ads list.  You can optionally disable either the groups column (by selecting "in place of groups"), or the channel column (by selecting "not at all").'),
+  );
+  $options = array(0 => t('No limit')) + drupal_map_assoc(array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+  $form['ad_channel_ad_limit'] = array(
+    '#type' => 'select',
+    '#title' => t('Maximum number of channels that can be assigned to a single ad'),
+    '#options' => $options,
+    '#default_value' => variable_get('ad_channel_ad_limit', 0),
+    '#description' => t('Optionally limit the number of channels that a single advertisement can be assigned to.'),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Add channel information when viewing node.
+ */
+function _ad_channel_view_node($node) {
+  if (isset($node->adtype) && user_access('administer channels')) {
+    if (isset($node->channel) && is_array($node->channel) && !empty($node->channel)) {
+      $channels = array();
+      foreach ($node->channel as $chid) {
+        $channel = _ad_channel_get_channels($chid);
+        $channels[] = $channel->name;
+      }
+      $node->content['channel'] = array(
+        '#value' => theme('box', t('Channels'), theme('item_list', $channels)),
+        '#weight' => 1,
+      );
+    }
+    if (isset($node->premiere)) {
+      if (isset($node->premiere) && $node->premiere == 1) {
+        $output = t('This is a premiere advertisement.');
+      }
+      else {
+        $output = t('This is not a premiere advertisement.');
+      }
+      $node->content['premiere'] = array(
+        '#value' => theme('box', t('Premiere'), $output),
+        '#weight' => 1,
+      );
+    }
+    if (isset($node->remnant)) {
+      if (isset($node->remnant) && $node->remnant == 1) {
+        $output = t('This is a remnant advertisement.');
+        $node->content['remnant'] = array(
+          '#value' => theme('box', t('Remnant'), $output),
+          '#weight' => 1,
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Load channels associated with specified node.
+ */
+function _ad_channel_load_node($node) {
+  $result = db_query('SELECT chid FROM {ad_channel_node} WHERE nid = %d', $node->nid);
+  $output['channel'] = array();
+  while ($chid = db_fetch_object($result)) {
+    $output['channel'][$chid->chid] = $chid->chid;
+  }
+  // currently 0 or 1, with one being a 'premiere' advertisement.
+  $output['premiere'] = (int)db_result(db_query('SELECT priority FROM {ad_priority} WHERE aid = %d', $node->nid));
+  $output['remnant'] = (int)db_result(db_query('SELECT remnant FROM {ad_channel_remnant} WHERE aid = %d', $node->nid));
+  return $output;
+}
+
+/**
+ * Save channels associated with added or updated node.
+ */
+function _ad_channel_save_node($node) {
+  // delete old channel information, then add new
+  db_query('DELETE FROM {ad_channel_node} WHERE nid = %d', $node->nid);
+  $channels = _ad_channel_get_enabled($node);
+  foreach ($channels as $chid) {
+    db_query('INSERT INTO {ad_channel_node} (chid, nid) VALUES(%d, %d)', $chid, $node->nid);
+  }
+  if (user_access('configure ad premier status')) {
+    db_query('UPDATE {ad_priority} SET priority = %d WHERE aid = %d', isset($node->premiere) ? $node->premiere : 0, $node->nid);
+    if (!db_affected_rows()) {
+      db_query('INSERT INTO {ad_priority} (aid, priority) VALUES(%d, %d)', $node->nid, isset($node->premiere) ? $node->premiere : 0);
+    }
+  }
+    db_query('UPDATE {ad_channel_remnant} SET remnant = %d WHERE aid = %d', isset($node->remnant) ? $node->remnant : 0, $node->nid);
+    if (!db_affected_rows()) {
+      db_query('INSERT INTO {ad_channel_remnant} (aid, remnant) VALUES(%d, %d)', $node->nid, isset($node->remnant) ? $node->remnant : 0);
+    }
+}
+
+/**
+ * Delete channel information associated with node.
+ */
+function _ad_channel_delete_node($node) {
+  if ($node->nid) {
+    db_query('DELETE FROM {ad_channel_node} WHERE nid = %d', $node->nid);
+    db_query('DELETE FROM {ad_priority} WHERE aid = %d', $node->nid);
+  }
+}
+
+/**
+ * Be sure that the enabled channels actually can be enabled.
+ */
+function _ad_channel_validate_nodes($node) {
+  $channels = _ad_channel_get_enabled($node);
+
+  foreach ($channels as $chid) {
+    $channel = _ad_channel_get_channels($chid);
+    if(isset($channel->inventory) && $channel->inventory > 0) {
+      $num_ads = _ad_channel_get_channel_active_ad_count($chid);
+      if ($num_ads + 1 >= $channel->inventory) {
+        form_set_error("channel[$channel->conid][channel-$chid]", t('You may not assign more than !inventory to %name.', array('!inventory' => format_plural($channel->inventory, '1 advertisement', '@count advertisements'),  '%name' => $channel->name)));
+      }
+    }
+  }
+
+  $limit = variable_get('ad_channel_ad_limit', 0);
+  if ($limit && sizeof($channels) > $limit) {
+    $quantity_error = TRUE;
+  }
+  else {
+    $quantity_error = FALSE;
+  }
+  foreach ($channels as $chid) {
+    $channel = _ad_channel_get_channels($chid);
+    if ($quantity_error) {
+      $quantity_error = FALSE;
+      form_set_error("channel[$channel->conid][channel-$chid]", t('You can not assign this advertisement to more than !limit.', array('!limit' => format_plural(sizeof($limit), '1 channel', '@count channels'))));
+    }
+    $taxonomy = is_array($node->taxonomy) ? $node->taxonomy : array();
+    $groups = unserialize($channel->groups);
+    if (!empty($groups)) {
+      $enabled = FALSE;
+      foreach($groups as $group) {
+        if ($group) {
+          $enabled = TRUE;
+          break;
+        }
+      }
+      if ($enabled) {
+        $ad_groups = taxonomy_get_tree(_ad_get_vid());
+        foreach ($ad_groups as $ad_group) {
+          if (is_array($taxonomy[$ad_group->vid]) &&
+              isset($taxonomy[$ad_group->vid][$ad_group->tid]) &&
+              isset($groups[$ad_group->tid]) && !$groups[$ad_group->tid] &&
+              !isset($groups[''])) {
+            form_set_error("channel[$channel->conid][channel-$chid]", t('The %channel channel does not allow advertisements from the %group group.', array('%channel' => $channel->name, '%group' => $ad_group->name)));
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Retrive list of enabled channels from node object.
+ */
+function _ad_channel_get_enabled($node) {
+  static $enabled = array();
+  if (!isset($enabled[$node->nid])) {
+    $enabled[$node->nid] = array();
+    if (isset($node->channel) && is_array($node->channel) && !empty($node->channel)) {
+      foreach ($node->channel as $conid => $channels) {
+        foreach ($channels as $id => $enable) {
+          if ($enable) {
+            $chid = explode('-', $id);
+            $enabled[$node->nid][] = $chid[1];
+          }
+        }
+      }
+    }
+  }
+  return $enabled[$node->nid];
+}
+
+/**
+ * Display containers and channels.
+ */
+function ad_channel_admin_overview() {
+  drupal_add_css(drupal_get_path('module', 'ad_channel') .'/ad_channel.css');
+
+  $containers = _ad_channel_get_containers();
+  $rows = array();
+  if (count($containers)) {
+    $header = array(t('Name'), t('Inventory'), t('Options'));
+    $output  = '<div id="ad-channel">';
+    foreach ($containers as $conid => $container) {
+      $channels = _ad_channel_get_container_channels($conid);
+      if ($conid > 0 || count($channels)) {
+        if ($conid > 0) {
+          $description  = '<div class="name">'. l($container->name, "admin/content/ad/channel/container/$conid/edit") . "</div>\n";
+        }
+        else {
+          $description  = '<div class="name">'. $container->name . "</div>\n";
+        }
+        if ($container->description) {
+          $description .= '<div class="description">'. filter_xss_admin($container->description) ."</div>\n";
+        }
+        $rows[] = array(array('data' => $description, 'class' => 'container', 'colspan' => 3));
+      }
+      foreach ($channels as $chid => $channel) {
+        $description  = "<div style=\"margin-left: 30px;\">\n";
+        $description .= ' <div class="name">' . $channel->name . "</div>\n";
+        if ($channel->description) {
+          $description .= ' <div class="description">'. filter_xss_admin($channel->description) ."</div>\n";
+        }
+        $description .= "</div>\n";
+        $inventory = ' <div class="inventory">' . $channel->inventory . "</div>\n";
+        $rows[] = array(
+          array('data' => $description, 'class' => 'channel'),
+          array('data' => $inventory, 'class' => 'channel'),
+          l(t('edit'), "admin/content/ad/channel/channel/$channel->chid/edit") .'&nbsp;&nbsp;&nbsp;'. l(t('delete'), "admin/content/ad/channel/channel/$channel->chid/delete"),
+        );
+      }
+    }
+    $output .= theme('table', $header, $rows);
+    $output .= '</div>';
+  }
+
+  return $output;
+}
+
+/**
+ * Load one or more containers, caching the results.
+ */
+function _ad_channel_get_containers($conid = 0) {
+  static $cache;
+  if (!isset($cache[$conid])) {
+    if ($conid) {
+      $cache[$conid] = db_fetch_object(db_query('SELECT * FROM {ad_channel_container} WHERE conid = %d', $conid));
+    }
+    else {
+      // Get all manually defined channels.
+      $result = db_query('SELECT conid, name, description, weight FROM {ad_channel_container} ORDER BY weight ASC');
+      while ($container = db_fetch_object($result)) {
+        $containers[$container->conid] = $container;
+      }
+      // Define default 'No container'.
+      $none->conid = 0;
+      $none->name = t('No container');
+      $none->weight = 0;
+      $containers[0] = $none;
+      $cache[$conid] = $containers;
+    }
+  }
+  return $cache[$conid];
+}
+
+/**
+ * Load one or more channels, caching the results.
+ */
+function _ad_channel_get_container_channels($conid = 0) {
+  static $cache;
+  if (!isset($cache[$conid])) {
+    $channels = array();
+    $result = db_query('SELECT chid, name, description, weight, inventory FROM {ad_channel} WHERE conid = %d ORDER BY weight ASC', $conid);
+    while ($channel = db_fetch_object($result)) {
+      $channels[$channel->chid] = $channel;
+    }
+    $cache[$conid] = $channels;
+  }
+  return $cache[$conid];
+}
+
+/**
+ * Load one or more channels.
+ */
+function _ad_channel_get_channels($chid = 0) {
+  if ($chid) {
+    return db_fetch_object(db_query('SELECT * FROM {ad_channel} WHERE chid = %d', $chid));
+  }
+  else {
+    $channels = array();
+    $result = db_query('SELECT chid, name, description FROM {ad_channel}');
+    while ($channel = db_fetch_object($result)) {
+      $channels[$channel->chid] = $channel;
+    }
+    return $channels;
+  }
+}
+
+/**
+ * Administrative page for creating or editing containers.
+ */
+function ad_channel_admin_container($form_state, $conid = 0) {
+  $form = array();
+
+  if ($conid) {
+    $container = _ad_channel_get_containers($conid);
+    if (empty($container)) {
+      drupal_goto('admin/content/ad/channel');
+    }
+    $form['conid'] = array(
+      '#type' => 'hidden',
+      '#value' => $conid,
+    );
+  }
+
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Container name'),
+    '#required' => TRUE,
+    '#description' => t('Channel containers can be used to help organize channels, but they are not required.'),
+    '#default_value' => $conid ? $container->name : '',
+  );
+  $form['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),
+    '#description' => t('The channel container description can be used to help you define the purpose of your different channels.  The descriptions are only visible to advertisement administrators.'),
+    '#default_value' => $conid ? $container->description : '',
+  );
+  $form['weight'] = array(
+    '#type' => 'weight',
+    '#title' => t('Weight'),
+    '#description' => t('When listing containers, those with the lighter (smaller) weights get listed before containers with heavier (larger) weights.  Containers with equal weights are sorted alphabetically.'),
+    '#default_value' => $conid ? $container->weight : 0,
+  );
+
+  if ($conid) {
+    $form['update'] = array(
+      '#type' => 'submit',
+      '#value' => t('Update'),
+    );
+    $form['delete'] = array(
+      '#type' => 'submit',
+      '#value' => t('Delete'),
+    );
+  }
+  else {
+    $form['create'] = array(
+      '#type' => 'submit',
+      '#value' => t('Create'),
+    );
+  }
+  $form['cancel'] = array(
+    '#type' => 'markup',
+    '#value' => l(t('Cancel'), 'admin/content/ad/channel'),
+  );
+
+  return $form;
+}
+
+/**
+ * Validate the container.
+ */
+function ad_channel_admin_container_validate($form, &$form_state) {
+  $conid = 0;
+  if ($form_state['values']['op'] == t('Create')) {
+    $conid = db_result(db_query("SELECT conid FROM {ad_channel_container} WHERE name = '%s'", $form_state['values']['name']));
+  }
+  else if ($form_state['values']['op'] == t('Update')) {
+    $conid = db_result(db_query("SELECT conid FROM {ad_channel_container} WHERE name = '%s' AND conid != %d", $form_state['values']['name'], $form_state['values']['conid']));
+  }
+  if ($conid) {
+    form_set_error('name', t('A container named %name already exists.', array('%name' => $form_state['values']['name'])));
+  }
+}
+
+/**
+ * Save the container.
+ */
+function ad_channel_admin_container_submit($form, &$form_state) {
+  switch ($form_state['values']['op']) {
+    case t('Create'):
+      db_query("INSERT INTO {ad_channel_container} (name, description, weight) VALUES('%s', '%s', %d)", $form_state['values']['name'], $form_state['values']['description'], $form_state['values']['weight']);
+      drupal_set_message(t('The %name container has been created.', array('%name' => $form_state['values']['name'])));
+      break;
+    case t('Update'):
+      db_query("UPDATE {ad_channel_container} SET name = '%s', description = '%s', weight = '%s' WHERE conid = %d", $form_state['values']['name'], $form_state['values']['description'], $form_state['values']['weight'], $form_state['values']['conid']);
+      drupal_set_message(t('The %name container has been updated.', array('%name' => $form_state['values']['name'])));
+      break;
+    case t('Delete'):
+      drupal_goto('admin/content/ad/channel/container/'. $form_state['values']['conid'] .'/delete');
+  }
+  drupal_goto('admin/content/ad/channel');
+}
+
+/**
+ * Confirm whether or not to delete container, and the contained channels.
+ */
+function ad_channel_admin_confirm_delete_container($form_state, $container) {
+  $form = array();
+
+  $form['conid'] = array(
+    '#type' => 'value',
+    '#value' => $container->conid,
+  );
+
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete the %name container?', array('%name' => $container->name)),
+    'admin/content/ad/channel',
+    t('Any channels currently assigned to the %name container will not be deleted, they will be reassigned. <p>This action can not be undone.', array('%name' => $container->name)),
+    t('Delete'),
+    t('Cancel'));
+}
+
+/**
+ * Delete a container.
+ */
+function ad_channel_admin_confirm_delete_container_submit($form, &$form_state) {
+  $container = _ad_channel_get_containers($form_state['values']['conid']);
+  if ($container->conid) {
+    db_query('UPDATE {ad_channel} SET conid = 0 WHERE conid = %d', $container->conid);
+    db_query('DELETE FROM {ad_channel_container} WHERE conid = %d', $container->conid);
+    drupal_set_message(t('The %name container has been deleted.', array('%name' => $container->name)));
+  }
+  drupal_goto('admin/content/ad/channel');
+}
+
+/**
+ * Administrative page for creating or editing channels.
+ */
+function ad_channel_admin_channel($form_state, $chid = 0) {
+  $form = array();
+
+  if ($chid) {
+    $channel = _ad_channel_get_channels($chid);
+    if (empty($channel)) {
+      drupal_goto('admin/content/ad/channel');
+    }
+    $form['chid'] = array(
+      '#type' => 'hidden',
+      '#value' => $chid,
+    );
+  }
+
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#title' => t('Channel name'),
+    '#description' => t('Enter a short, descriptive name for your channel.'),
+    '#default_value' => $chid ? $channel->name : '',
+  );
+  $form['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),
+    '#description' => t('Enter a full description of your channel.'),
+    '#default_value' => $chid ? $channel->description : '',
+  );
+  $result = db_query('SELECT conid, name FROM {ad_channel_container} ORDER BY weight ASC');
+  $containers = array(t('<none>'));
+  while ($container = db_fetch_object($result)) {
+    $containers[$container->conid] = $container->name;
+  }
+  if (sizeof($containers) == 1) {
+    $containers = array(t('No containers have been created.'));
+  }
+  $form['conid'] = array(
+    '#type' => 'select',
+    '#title' => t('Container'),
+    '#options' => $containers,
+    '#description' => t('Optionally assign your channel to a container.  Containers can be used to help organize your channels, but they are not required.'),
+    '#default_value' => $chid ? $channel->conid : 0,
+  );
+  $form['weight'] = array(
+    '#type' => 'weight',
+    '#title' => t('Weight'),
+    '#description' => t('When listing channels, those with the lighter (smaller) weights get listed before channels with heavier (larger) weights.  Channels with equal weights are sorted alphabetically.'),
+    '#default_value' => $chid ? $channel->weight : 0,
+  );
+
+  // Inventory for remnant management
+  $form['channel_inventory'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Inventory'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE
+  );
+  $form['channel_inventory']['inventory'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Level'),
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#required' => FALSE,
+    '#description' => t('Entering an inventory value will limit the number of advertisements that may be assigned to this channel. As well, if fewer advertisements than the inventory value are assigned to this channel, advertisements marked as remnants will be used to reach the assigned inventory level.'),
+    '#default_value' => $chid ? $channel->inventory : 0,
+  );
+
+  // URL rules
+  $form['URL_rules'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('URL rules'),
+    '#collapsible' => TRUE,
+    '#collasped' => FALSE,
+  );
+  $form['URL_rules']['display'] = array(
+    '#type' => 'radios',
+    '#title' => t('Display advertisements from this channel on specific URLs'),
+    '#options' => array(t('Display advertisements on every URL except the listed URLs.'), t('Display advertisements only on the listed URLs.')),
+    '#default_value' => $chid ? $channel->display : 0,
+  );
+  $form['URL_rules']['urls'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Paths'),
+    '#description' => t("Enter one URL per line.  If serving ads locally use Drupal relative paths.  If serving ads remotely include the 'http://' or 'https:/'.  Use '&lt;front&gt;' to specify the front page.  The '*' character is a wildcard.  Example URLs are <em>blog</em> for the blog page and <em>blog/*</em> for every personal blog on your local website.  When specifying local paths you must enter the raw path (ie 'node/123') and not the url alias (ie 'my/custom/path'), if any."),
+    '#default_value' => $chid ? unserialize($channel->urls) : '',
+  );
+
+  // Group rules
+  $groups = taxonomy_get_tree(_ad_get_vid());
+  $collapsed = is_array($groups) && !empty($groups) ? FALSE : TRUE;
+  $form['group_rules'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Ad group rules'),
+    '#collapsible' => TRUE,
+    '#collapsed' => $collapsed,
+  );
+  if (!$collapsed) {
+    foreach ($groups as $group) {
+      $options[$group->tid] = $group->name;
+    }
+    $form['group_rules']['groups'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Allow advertisements from specific ad groups'),
+      '#options' => $options,
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+      '#description' => t('By selecting one or more groups, only advertisements from the selected group(s) will be allowed to be added to this channel.  If no groups are selected, any advertisement can be added to this channel regardless of its group.'),
+      '#default_value' => $chid ? unserialize($channel->groups) : array(),
+    );
+  }
+  else {
+    $form['group_rules']['none'] = array(
+      '#type' => 'markup',
+      '#value' => t('No ad groups have been created.'),
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+    );
+  }
+
+  $collapsed = (variable_get('ad_channel_display', 0) == 1) ? 0 : 1;
+  $form['nonchannel_rules'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Not-in-channel ad rules'),
+    '#collapsible' => TRUE,
+    '#collapsed' => $collapsed,
+  );
+  if ($collapsed) {
+    $form['nonchannel_rules']['info'] = array(
+      '#type' => 'markup',
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+      '#value' => t('You will need to set "!variable" to %value for these %type ad rules to be applicable.  Currently these settings are doing nothing.', array('!variable' => l(t('display advertisements not assigned to any channel'), 'admin/content/ad/channel/settings'), '%value' => t('always'), '%type' => 'not-in-channel')),
+    );
+  }
+  $form['nonchannel_rules']['no_channel_percent'] = array(
+    '#type' => 'select',
+    '#title' => t('Percentage'),
+    '#options' => _ad_channel_percentages(),
+    '#default_value' => $chid ? $channel->no_channel_percent : 10,
+    '#description' => t('Choose the maximum percentage of not-in-channel advertisements allowable for display. For instance, selecting 10% indicates that 1 out of 10 advertisements will be selected from those not assigned to this channel.'),
+  );
+  if ($chid) {
+    $form['update'] = array(
+      '#type' => 'submit',
+      '#value' => t('Update'),
+    );
+    $form['delete'] = array(
+      '#type' => 'submit',
+      '#value' => t('Delete'),
+    );
+  }
+  else {
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Create'),
+    );
+  }
+  $form['cancel'] = array(
+    '#type' => 'markup',
+    '#value' => l(t('Cancel'), 'admin/content/ad/channel'),
+  );
+
+  return $form;
+}
+
+/**
+ * Validate the channel.
+ */
+function ad_channel_admin_channel_validate($form, &$form_state) {
+  $chid = 0;
+  if ($form_state['values']['op'] == t('Create')) {
+    $chid = db_result(db_query("SELECT chid FROM {ad_channel} WHERE name = '%s'", $form_state['values']['name']));
+  }
+  else if ($form_state['values']['op'] == t('Update')) {
+    $chid = db_result(db_query("SELECT chid FROM {ad_channel} WHERE name = '%s' AND chid != %d", $form_state['values']['name'], $form_state['values']['chid']));
+  }
+  if ($chid) {
+    form_set_error('name', t('A channel named %name already exists.', array('%name' => $form_state['values']['name'])));
+  }
+}
+
+/**
+ * Save the channel.
+ */
+function ad_channel_admin_channel_submit($form, &$form_state) {
+  // remove extraneous white space from url list which can break matching
+  $url_array = explode("\n", $form_state['values']['urls']);
+  if (is_array($url_array)) {
+    foreach ($url_array as $url) {
+      $urls[] = trim($url);
+    }
+    $urls = implode("\n", $urls);
+  }
+  else {
+    $urls = '';
+  }
+  switch ($form_state['values']['op']) {
+    case t('Create'):
+      db_query("INSERT INTO {ad_channel} (name, description, conid, weight, display, no_channel_percent, urls, groups, inventory) VALUES('%s', '%s', %d, %d, %d, '%s', '%s', %d, %d)", $form_state['values']['name'], $form_state['values']['description'], $form_state['values']['conid'], $form_state['values']['weight'], $form_state['values']['display'], $form_state['values']['no_channel_percent'], serialize($urls), serialize($form_state['values']['groups']), $form_state['values']['inventory']);
+      drupal_set_message(t('The %name channel has been created.', array('%name' => $form_state['values']['name'])));
+      break;
+    case t('Update'):
+      $groups = array();
+      // Don't store information about groups that no longer exist.
+      if (is_array($form_state['values']['groups'])) {
+        $ad_groups = taxonomy_get_tree(_ad_get_vid());
+        foreach ($ad_groups as $ad_group) {
+          if (isset($form_state['values']['groups'][$ad_group->tid])) {
+            $groups[$ad_group->tid] = $form_state['values']['groups'][$ad_group->tid];
+          }
+        }
+      }
+      db_query("UPDATE {ad_channel} SET name = '%s', description = '%s', conid = %d, weight = %d, display = %d, urls = '%s', groups = '%s', no_channel_percent = %d, inventory = %d WHERE chid = %d", $form_state['values']['name'], $form_state['values']['description'], $form_state['values']['conid'], $form_state['values']['weight'], $form_state['values']['display'], serialize($urls), serialize($groups), $form_state['values']['no_channel_percent'], $form_state['values']['inventory'], $form_state['values']['chid']);
+      drupal_set_message(t('The %name channel has been updated.', array('%name' => $form_state['values']['name'])));
+      break;
+    case t('Delete'):
+      drupal_goto('admin/content/ad/channel/channel/'. $form_state['values']['chid'] .'/delete');
+  }
+  drupal_goto('admin/content/ad/channel');
+}
+
+/**
+ * Confirm whether or not to delete container, and the contained channels.
+ */
+function ad_channel_admin_confirm_delete_channel($form_state, $channel) {
+  $form = array();
+
+  $form['chid'] = array(
+    '#type' => 'value',
+    '#value' => $channel->chid,
+  );
+
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete the %name channel?', array('%name' => $channel->name)),
+    'admin/content/ad/channel',
+    t('Any advertisements currently assigned to the %name channel will not be deleted, they will be reassigned. <p>This action can not be undone.', array('%name' => $channel->name)),
+    t('Delete'),
+    t('Cancel'));
+}
+
+/**
+ * Delete a channel.
+ */
+function ad_channel_admin_confirm_delete_channel_submit($form, &$form_state) {
+  $channel = _ad_channel_get_channels($form_state['values']['chid']);
+  if ($channel->chid) {
+    db_query('DELETE FROM {ad_channel} WHERE chid = %d', $channel->chid);
+    drupal_set_message(t('The %name channel has been deleted.', array('%name' => $channel->name)));
+  }
+  drupal_goto('admin/content/ad/channel');
+}
+
+/**
+ * Available probabilities.
+ */
+function _ad_channel_probabilities() {
+  return array(
+    25 => t('1/4'),
+    33 => t('1/3'),
+    50 => t('1/2'),
+    100 => t('1'),
+    200 => t('2'),
+    300 => t('3'),
+    400 => t('4'),
+  );
+}
+
+/**
+ * Available percentages
+ */
+function _ad_channel_percentages() {
+  $options = array();
+  for($i = 5; $i <= 95; $i += 5) {
+    $options[$i] = t($i.'%');
+  }
+  return $options;
+}
+
+function _ad_channel_get_channel_active_ad_count($chid) {
+  if ($chid) {
+    $count = db_result(db_query("SELECT COUNT(nid) AS count FROM {ad_channel_node} acn LEFT JOIN {ads} a ON acn.nid = a.aid WHERE acn.chid = %d AND a.adstatus = 'active'", $chid));
+  }
+  return $count;
+}

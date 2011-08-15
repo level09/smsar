@@ -1,0 +1,113 @@
+<?php
+// $Id: faceted_search_views.module,v 1.18 2009/03/03 00:22:41 davidlesieur Exp $
+
+/**
+ * @file
+ * Allows to use Views to display Faceted Search results.
+ */
+
+require_once('./'. drupal_get_path('module', 'faceted_search') .'/faceted_search_ui.inc');
+
+/**
+ * Implementation of hook_faceted_search_ui_style_info().
+ *
+ * Return display styles based on views that use the Faceted Search argument.
+ */
+function faceted_search_views_faceted_search_ui_style_info() {
+  $styles = array();
+  foreach (views_get_all_views() as $view) {
+    if ($view->base_table == 'node' && empty($view->disabled) && $view->display['default']->display_options['use_pager']) {
+      $styles[$view->name] = new faceted_search_views_style($view->name);
+    }
+  }
+  return $styles;
+}
+	
+/**
+ * Implementation of hook_views_query_alter().
+ */
+function faceted_search_views_views_query_alter (&$view, &$query) {   
+  if (is_array($view->args[0]) && isset($view->args[0]['faceted_search'])) {    
+    $search = $view->args[0]['faceted_search'];
+	        
+    if ($search->ready()) {
+      if ($search->get_results_count() > 0) {
+        $join = new views_join();
+        $join->construct($search->get_results_table(), 'node', 'nid', 'nid', array(), 'INNER');
+        $query->add_table($search->get_results_table(), NULL, $join);        		
+      }
+      else {
+        $query->add_where(0, 'FALSE'); // Ensure the view shows no results.
+      }
+    }
+  }
+}
+
+/**
+ * Provides a view-based display style for search results.
+ */
+class faceted_search_views_style extends faceted_search_ui_style {
+  // Name of the view to use with this style.
+  var $_name;
+  
+  /**
+   * Constructor.
+   *
+   * @param $view_name
+   *   Name of the view to use with this style.
+   */
+  function faceted_search_views_style($view_name) {
+    $this->_name = $view_name;
+  }
+
+  /**
+   * Return the name of this style.
+   */
+  function get_label() {
+    return t('Views: @view', array('@view' => $this->_name));
+  }
+
+  /**
+   * Return the number of nodes per page.
+   */
+  function get_limit() {
+    $view = views_get_view($this->_name);
+       
+    if ($view->display['default']->display_options['items_per_page'] > 0) {
+      return $view->display['default']->display_options['items_per_page'];
+    }
+    // The pager is mandatory for search results, thus a valid limit required.
+    return variable_get('default_nodes_main', 10);
+  }
+
+  /**
+   * Apply the view's count query as a subquery to filter the search results.
+   *
+   * Note: We use the view's count query for this purpose because we don't need
+   * the sorting and field selection provided by view's full query. The view's
+   * only purpose here is to filter the search results.
+   */
+  function query_alter(&$query, $search) {
+    $view = views_get_view($this->_name);
+    $view->set_display('default');
+    $view->set_arguments(array('faceted_search' => $search));
+    $view->build('default');
+    $views_query = db_rewrite_sql($view->build_info['count_query'], $view->base_table, $view->base_field, array('view' => &$view));
+    $views_args = $view->build_info['query_args'];
+    $views_replacements = module_invoke_all('views_query_substitutions', $view);
+    if (is_array($views_args)) {
+      foreach ($views_args as $id => $arg) {
+        $views_args[$id] = str_replace(array_keys($views_replacements), $views_replacements, $arg);
+      }
+    }
+    $query->add_subquery('n.nid IN ('. $views_query .')', $views_args);
+  }
+
+  /**
+   * Format the search results according to this style's desire.
+   */
+  function format_results($search) {
+    return views_embed_view($this->_name, 'default' , array('faceted_search' => $search));
+  }
+}
+
