@@ -2,7 +2,7 @@
 
 Manage a property website with drupal, easy
 
-## Features ## 
+## Features 
 
 ** Custom Fields for property, built in fields for title, description, price, location, rooms, type, status, size, broker reference 
 
@@ -18,19 +18,19 @@ Manage a property website with drupal, easy
 ** Contact form 
 ** mailing list (simple news)
 
-## How to install ##
+## How to install 
 
 1. Copy the files into the root of your website directory 
 2. Create a mysql database using a GUI tool like phpmyadmin or using the command line : 
-<pre> create database db_name default charset utf8; </pre>
+	create database db_name default charset utf8; 
 3. restore the database file in the db directory
 this can be done with : 
 
-<pre>mysql -u username -p db_name < db/db </pre>
+	mysql -u username -p db_name < db/db 
 
 if you have drush installed, you can simply 
 
-<pre>drush sql-cli < db/db </pre>
+	drush sql-cli < db/db 
 
 4. Open sites/default directory and copy the default.settings.php or rename it to settings.php and update the database configuration line. 
 5. make sure the following directory is writable : 
@@ -44,7 +44,7 @@ pass: admin
 
 7. Check the status report for any issues. 
 
-## Demo site ##
+## Demo site 
 
 http://smsar.me 
 
