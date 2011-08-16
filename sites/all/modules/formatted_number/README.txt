@@ -1,9 +1,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Formatted Number CCK module for Drupal
-;; $Id: README.txt,v 1.1.2.3 2008/12/07 21:06:09 markuspetrux Exp $
+;; $Id: README.txt,v 1.1.2.4 2009/09/20 11:07:02 markuspetrux Exp $
 ;;
 ;; Original author: markus_petrux (http://drupal.org/user/39593)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+CONTENTS OF THIS FILE
+=====================
+* OVERVIEW
+* REQUIREMENTS
+* INSTALLATION
+* ADDITIONAL FORMATTERS
+
 
 OVERVIEW
 ========
@@ -36,3 +44,18 @@ INSTALLATION
 - Goto Administer > Site building > Modules to install this module.
 
 - Create or edit content types and start adding Money fields. :)
+
+
+ADDITIONAL FORMATTERS
+=====================
+
+You can easily add additional formatters adding the following lines to your
+settings.php file:
+
+<code>
+// Additional formatters for fixed number of decimal places.
+$conf['formatted_number_decimal_place_formatter_lengths'] = array(0, 1, 2);
+
+// Additional formatters for fixed number of significant figures.
+$conf['formatted_number_significant_figure_formatter_lengths'] = array(1, 2, 3, 4);
+</code>

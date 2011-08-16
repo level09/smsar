@@ -1,5 +1,5 @@
 <?php
-// $Id: ad_html.module,v 1.1.2.5.2.8.2.3 2009/02/28 23:35:26 jeremy Exp $
+// $Id: ad_html.module,v 1.1.2.5.2.8.2.4 2009/11/23 05:13:15 Jeremy Exp $
 
 /**
  * @file
@@ -73,7 +73,7 @@ function ad_html_access($op, $node, $account) {
 /**
  * Implementation of the ad module's _adapi hook.
  */
-function ad_html_adapi($op, &$node) {
+function ad_html_adapi($op, $node) {
   switch ($op) {
     case 'load':
       $return = db_fetch_array(db_query('SELECT html FROM {ad_html} WHERE aid = %d', $node['aid']));

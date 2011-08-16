@@ -1,5 +1,5 @@
 <?php
-// $Id: ad_cache_file.module,v 1.1.4.18.2.5.2.9 2009/07/03 18:57:55 jeremy Exp $
+// $Id: ad_cache_file.module,v 1.1.4.18.2.5.2.11 2009/11/23 16:38:42 Jeremy Exp $
 
 /**
  * @file
@@ -44,7 +44,7 @@ function ad_cache_file_cron() {
 /**
  * Implementation of hook_adcacheapi().
  */
-function ad_cache_file_adcacheapi($op, &$node = NULL) {
+function ad_cache_file_adcacheapi($op, $node = NULL) {
   if ($node == NULL) {
     $node = array();
   }
@@ -113,7 +113,9 @@ function ad_cache_file_flush_caches() {
  */
 function ad_cache_file_force_flush() {
   ad_cache_file_build();
-  drupal_set_message(t('Ad module file-cached data has been flushed to the database.'));
+  if (user_access('administer advertisements')) {
+    drupal_set_message(t('Ad module file-cached data has been flushed to the database.'));
+  }
 }
 
 /**

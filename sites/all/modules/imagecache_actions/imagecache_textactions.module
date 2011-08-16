@@ -1,5 +1,5 @@
 <?php
-// $Id: imagecache_textactions.module,v 1.2.2.7 2009/05/02 04:54:50 dman Exp $
+// $Id: imagecache_textactions.module,v 1.2.2.9 2009/09/04 23:28:04 dman Exp $
 /**
  * @file Provide text manipulation process for imagecache.
  * 
@@ -23,7 +23,7 @@ function imagecache_textactions_imagecache_actions() {
     ),
     'textactions_rendertext' => array(
       'name' => t('Render Text'),
-      'description' => t('EXPERIMENTAL Add static or dynamic (coded) text to an image using CSS-like effects.'),
+      'description' => t('EXPERIMENTAL Add static or dynamic (coded) text to an image using <a href="!imageapi_link">imageapi_text</a> CSS-like effects.', array(url('admin/settings/imageapi/config/text'))),
       'file' => 'textrender.inc',
     ),
   );
@@ -61,18 +61,20 @@ function imagecache_textactions_help($path, $arg) {
         Just give the filename with no path and it should be found..
         </p>
       ";
-      if( ini_get('safe_mode') ){
-        $output .= t("
+      $output .= t("<p>Files directory is !files</p>", array('!files' => file_directory_path()));
+      if (ini_get('safe_mode')) {
+        $output .= t("<p>
           It appears PHP 'safe mode' is on. 
           This prevents me for knowing which fonts are on your system. 
           You will have to know the exact path and filename of the fonts you intend to use 
           - or upload some *.ttf files to your 'files' directory and use them from there.
-        ");
+        </p>");
       }
       else {
         $list = `find /usr/share/fonts -name \*.ttf`;
-        $output .= "Fonts Found : <pre>" . $list . "</pre>";
+        $output .= "<p>Fonts Found : <pre>" . $list . "</pre></p>";
       }
+ 
       return $output;
       break;
   }
@@ -100,4 +102,48 @@ function imagecache_textactions_theme() {
       'arguments' => array('rgb' => NULL),
     ),
   );
+}
+
+
+/**
+ * Generate the dynamic text for this image.
+ * Was textactions caption - now merged as an option of text2canvas
+ * 
+ * TODO further code review for safety etc
+ * 
+ * @param $image object, as provided by imageapi
+ * @param $action definition
+ * 
+ * @return $text Plain or code string to be placed on the imagecache process.
+ */
+function textactions_evaluate_text($image, $action) {
+
+  // HOOK_metadata from file attempts to glean info from any direction possible - EXIF, XMP, DB, description.txt
+  // @see the meta_* project
+  if (!empty($image->source)) {
+    $meta = module_invoke_all('metadata_from_file', $image->source);
+    $file_data = (object) $meta;
+  }
+
+  // Try to load the attached node - if any
+  static $panic; #This can trigger recursion! build-load-build-etc
+  if ($panic) return;
+  $panic = TRUE;
+  $node = imagecache_actions_node_from_filepath($image->source, $file_data) ;
+  $panic = FALSE;
+
+  // Process the php using drupal_eval (rather than eval), 
+  // but with GLOBAL variables, so they can be passed successfully
+  $GLOBALS['image'] = $image;
+  $GLOBALS['node'] = $node;
+  $GLOBALS['file_data'] = $file_data;
+  
+  $text = @drupal_eval('<'.'?php global $node; global $image; global $file_data; '.$action['text'].' ?'.'>');
+
+  // Warn about errors in the php code if I can
+  if (empty($text) && function_exists('error_get_last') && $last_error = error_get_last()) {
+    drupal_set_message("Problem evaluating dynamic text. <br/><code>{$action['text']}</code><br/> ". $last_error['message'], 'error');
+  }
+
+  return $text;
 }

@@ -1,4 +1,3 @@
-// $Id: common_config_form.js,v 1.12 2008/12/03 00:04:20 wimleers Exp $
 
 Drupal.HierarchicalSelectConfigForm = {};
 

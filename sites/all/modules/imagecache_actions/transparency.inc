@@ -1,7 +1,7 @@
 <?php
-// $Id: transparency.inc,v 1.3.2.3 2009/03/28 05:10:28 dman Exp $
+// $Id: transparency.inc,v 1.3.2.5 2009/10/30 14:03:54 dman Exp $
 /**
- * Helper functions for the alpha action for imagecache
+ * @file Helper functions for the alpha action for imagecache
  * 
  * @author dan http://coders.co.nz
  */
@@ -144,39 +144,47 @@ function imagecache_alpha_image(&$image, $data = array()) {
  * To save a partially transparent image, the image resource must be switched to PNG.
  * ... or maybe not. Just flatten it yourself, or switch the format yourself.
  * This hack would produce side effects otherwise.
+ * 
+ * This algorithm runs maths per-pixel, and therefore is incredibly much more
+ * inefficient than any native routine. Will kill the server on large images.
  */
 function png_color2alpha(&$image, $color) {
   #$image->info['extension'] = 'png';
   #$image->info['mime_type'] = 'image/png';
   $info = $image->info;
-  if (!$info) { return FALSE; }
-  
+  if (!$info) return FALSE;
   $im1 = $image->resource;
   
-  imagesavealpha( $im1, TRUE);
+  imagesavealpha($im1, TRUE);
   imagealphablending($im1, FALSE);
 
   if ($color) $background = hex_to_rgb($color);
   $width = imagesx($im1);
   $height = imagesy($im1);
+
+  if (($width*$height) > (600*600)) {
+    watchdog('imagecache_actions', __FUNCTION__ . " on {$image->source}. Image is TOO BIG to run the per-pixel algorithm. Aborting.");  
+    return TRUE;
+  }
+
   for ($i = 0; $i < $height; $i++) { //this loop traverses each row in the image
     for ($j = 0; $j < $width; $j++) { //this loop traverses each pixel of each row
 
-      // Get the color & alpha info of the current pixel
+      // Get the color & alpha info of the current pixel.
       $retrieved_color = imagecolorat($im1, $j, $i); // an index
       $rgba_array = imagecolorsforindex($im1, $retrieved_color);
 
-      // Calculate the total shade value of this pixel
+      // Calculate the total shade value of this pixel.
       $lightness = ( $rgba_array['red'] + $rgba_array['green'] + $rgba_array['blue'] ) /3;
       // Need to flip the numbers around before doing maths.
       #$opacity = 1-($rgba_array['alpha']/127);
       #$darkness = 1-($lightness/256); // 0 is white, 1 is black
       #$visibility = $darkness * $opacity;
       #$alpha = (1-$visibility) * 127;
-      # =>      
+
       $alpha = (1- ((1-($lightness/256)) * (1-($rgba_array['alpha']/127)))) * 127;
       if (!$color) $background=$rgba_array;
-      //paint the pixel
+      // Paint the pixel.
       $color_to_paint = imagecolorallocatealpha($image->resource, $background['red'], $background['green'], $background['blue'], $alpha);
       imagesetpixel($image->resource, $j, $i, $color_to_paint);  
     }

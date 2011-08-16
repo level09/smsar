@@ -1,0 +1,9 @@
+-------------
+Requirements:
+-------------
+ - Drupal 6.x
+ - ad.module
+ - chart.module
+   http://drupal.org/project/chart
+
+This module utilizes the Google Charts API to generate charts.

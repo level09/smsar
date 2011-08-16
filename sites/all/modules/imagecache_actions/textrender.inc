@@ -1,7 +1,7 @@
 <?php
-// $ID: $
+// $Id: textrender.inc,v 1.1.2.5 2009/10/30 13:55:59 dman Exp $
 /**
- * Helper functions for imagecache_textactions
+ * @file Helper functions for imagecache_textactions
  * 
  * Static rendertext and dynamic caption functions
  * 
@@ -16,8 +16,6 @@
  * Contains a stub for imageapi functions : imageapi_image_create_text that may
  * be ported over to there if that makes sense.
  */
-
-require_once(dirname(__FILE__) . '/textactions.inc');
 
 /**
  * Place text on top of the current canvas
@@ -59,48 +57,14 @@ function textactions_rendertext_form($action) {
       '#type' => 'checkbox',
       '#title' => t('Evaluate text as PHP code'),
       '#default_value' => $action['evaluate_text'],
-      '#description' => t('If selected, the text will be treated as PHP code.
-      <p>
-        Enter PHP code that will <b>return</b> your dynamic text. Do not use %php tags. 
-        <br />EG <code>return format_date(time());</code>  
-        <br /><code>return $file_data->description ? $file_data->description : $node->title;</code>
-      </p>
-      <p>Note that executing incorrect PHP-code can break your Drupal site.</p>
-      <p>
-        <b>If it\'s an image.module image</b> then a <b>$node</b> object with its values 
-        <em>may</em> be available.
-        <br/><code>return $node->title;</code>
-        <br/><code>return format_date($node->created);</code>
-      </p>
-
-      <p>
-        If it\'s an image that has been attached to a node using <b>CCK-filefield-imagefield</b>
-        (or just filefield)
-        then as well as the parent <b>$node</b> object,
-        a <b>$file_data</b> object that may contain a file description from that file field.
-        <br/><code>return $file_data->description;</code>
-        <small>So far that seems to be the only available \'data\' provided by filefield, 
-        but you can investigate the node structure using devel.module or print_r() 
-        to see what else this array actually contains</small>.
-      </p>
-      <p>
-        If it\'s a file that\'s just been <b>attached using upload.module</b>,
-        a <b>$file_data</b> object may also have a description.
-        <br/><code>return $file_data->description;</code>
-      </p>
-      <p>
-        If the image path is detected as belonging to more than one node, just the
-        data for the first one found is returned. 
-      </p>
-
-      <p>
-        An "<b>$image</b>" object is also available, but that usually contains only technical data, including 
-        <br/><code>return $image->source;</code>
-        <br/><code>return basename($image->source);</code>
-        <br/><code>return $image->info["filesize"];</code>
-      </p>
-      ', 
-      array('%php' => '<?php ?>'))
+      '#description' => t('If selected, the text will be treated as PHP code.'),
+    ),
+    'php_help' => array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE, 
+      '#collapsed' => TRUE, 
+      '#title' => t('PHP code help'),
+      '#value' => file_get_contents(drupal_get_path('module', 'imagecache_text') .'/help/textrender_syntax.html'),
     ),
   );
   if (! user_access('administer site configuration')) {
@@ -122,12 +86,15 @@ function textactions_rendertext_form($action) {
 function theme_textactions_rendertext($element) {
   $data = $element['#value'];
   $style_atts = imageapi_text_parse_style($data['textstyle']['style']);
-  return "<em><strong>{$data['text']}</strong></em><br/>{$data['textstyle']['style']}" ;
+  return t("<em>\"<strong>@data</strong>\"</em><br/>%style<br/>%font", array(
+    '@data'  => $data['text'], 
+    '%style' => $data['textstyle']['style'], 
+    '%font'  => basename($data['textstyle']['fontfile'])
+  )) ;
 }
 
-
 /**
- * Place the source image on the current background
+ * Place the text defined in the action onto the current background
  *
  * Implementation of hook_image()
  *
@@ -142,51 +109,34 @@ function textactions_rendertext_image(&$image, $action = array()) {
   else {
     $text = $action['text'];
   }
+  
+  if (empty($text)) {
+    // Do nothing, carry on
+    return TRUE;
+  }
 
   $style = imageapi_text_parse_style($action['textstyle']['style']);
   $fontfile = $action['textstyle']['fontfile'];
 
   // Calculate position by first creating a temp image 
-  // containing the text and accessing its dimensions
+  // containing the text and then accessing its dimensions.
+  // Inefficient, but reliable.
 
-  // $textimage is a placeholder that will get the image created in it - to work like the rest of the imageapi functions.
+  // $textimage is a placeholder that will get the image created in it - an object to work like the rest of the imageapi functions.
   // We really need to force the toolkit to GD, but even then it can't be merged back into imagemagick
   $textimage = (object) array(
     'toolkit' => $image->toolkit,
   );
   
-  if(! imageapi_image_create_text($textimage, $text, $fontfile, $style) ) {
+  if (! imageapi_image_create_text($textimage, $text, $fontfile, $style) || empty($textimage->info) ) {
     drupal_set_message(t('Failed to generate text image using %toolkit. Not overlaying text.', array('%toolkit' => $textimage->toolkit )), 'error');
     return FALSE;
   }
 
   // $textimage should now have its size info available.
-  // Calc the position
-  if (!empty($style['top'])) {
-    $ypos = $style['top'];
-  }
-  if (!empty($style['bottom'])) {
-    $ypos = $image->info['height'] - ( $textimage->info['height'] + $style['bottom']);
-  }
-  if (! isset($ypos)) {
-    // assume center
-    $ypos = ($image->info['height']/2) - ($textimage->info['height']/2);
-  }
-
-  if (!empty($style['left'])) {
-    $xpos = $style['left'];
-  }
-  if (!empty($style['right'])) {
-    $xpos = $image->info['width'] - ( $textimage->info['width'] + $style['right']);
-  }
-  if (! isset($xpos)) {
-    // assume center
-    $xpos = ($image->info['width']/2) - ($textimage->info['width']/2);
-  }
-  
-  return imageapi_image_overlay($image, $textimage, $xpos, $ypos);
-  
-  ////////////////////////////////
-
+  // Calc the position on the canvas
+  $xy = imagecache_actions_calculate_relative_position($image, $textimage, $style);
+#dpm(get_defined_vars());
+  return imageapi_image_overlay($image, $textimage, $xy['x'], $xy['y']);
 }
 

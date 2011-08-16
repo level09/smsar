@@ -1,0 +1,7 @@
+/* $Id: format_number.css,v 1.1.2.1 2009/11/30 23:14:56 markuspetrux Exp $ */
+
+.form-numeric {
+  display: inline;
+  width: auto;
+  text-align: right;
+}

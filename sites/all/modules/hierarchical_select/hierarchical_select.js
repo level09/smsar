@@ -1,4 +1,3 @@
-// $Id: hierarchical_select.js,v 1.96 2009/08/15 13:15:47 wimleers Exp $
 
 (function($) {
 
@@ -44,7 +43,9 @@ Drupal.HierarchicalSelect.initialize = function(hsid) {
   }
 
   Drupal.settings.HierarchicalSelect.settings[hsid]['updatesEnabled'] = true;
-  Drupal.HierarchicalSelect.state[hsid] = {};
+  if (undefined == Drupal.HierarchicalSelect.state[hsid]) {
+    Drupal.HierarchicalSelect.state[hsid] = {};
+  }
 
   this.transform(hsid);
   if (Drupal.settings.HierarchicalSelect.settings[hsid].resizable) {
@@ -59,23 +60,30 @@ Drupal.HierarchicalSelect.initialize = function(hsid) {
   Drupal.HierarchicalSelect.log(hsid);
 };
 
-Drupal.HierarchicalSelect.log = function(hsid) {
-  Drupal.HierarchicalSelect.state[hsid].log = [];
+Drupal.HierarchicalSelect.log = function(hsid, messages) {
+  // Only perform logging if logging is enabled.
   if (Drupal.settings.HierarchicalSelect.initialLog == undefined || Drupal.settings.HierarchicalSelect.initialLog[hsid] == undefined) {
     return;
   }
-
-  // Make sure we print the log of the last build for this Hierarchical Select.
-  if (Drupal.HierarchicalSelect.state[hsid].lastBuildNumber == undefined) {
-    Drupal.HierarchicalSelect.state[hsid].log[0] = Drupal.settings.HierarchicalSelect.initialLog[hsid];
-    Drupal.HierarchicalSelect.state[hsid].lastBuildNumber = -1;
+  else {
+    Drupal.HierarchicalSelect.state[hsid].log = [];
   }
-  var lastBuildNumber = ++Drupal.HierarchicalSelect.state[hsid].lastBuildNumber;
 
-  // Print all log messages for the last build.
+  // Store the log messages. The first call to this function may not contain a
+  // message: the initial log included in the initial HTML rendering should be
+  // used instead.. 
+  if (Drupal.HierarchicalSelect.state[hsid].log.length == 0) {
+    Drupal.HierarchicalSelect.state[hsid].log.push(Drupal.settings.HierarchicalSelect.initialLog[hsid]);
+  }
+  else {
+      Drupal.HierarchicalSelect.state[hsid].log.push(messages);
+  }
+
+  // Print the log messages.
   console.log("HIERARCHICAL SELECT " + hsid);
-  for (var i = 0; i < Drupal.HierarchicalSelect.state[hsid].log[lastBuildNumber].length; i++) {
-    console.log(Drupal.HierarchicalSelect.state[hsid].log[lastBuildNumber][i]);
+  var logIndex = Drupal.HierarchicalSelect.state[hsid].log.length - 1;
+  for (var i = 0; i < Drupal.HierarchicalSelect.state[hsid].log[logIndex].length; i++) {
+    console.log(Drupal.HierarchicalSelect.state[hsid].log[logIndex][i]);
   }
   console.log(' ');
 };
@@ -178,16 +186,23 @@ Drupal.HierarchicalSelect.disableForm = function(hsid) {
 Drupal.HierarchicalSelect.enableForm = function(hsid) {
   // This method undoes everything the disableForm() method did.
 
-  $e = $('form:has(#hierarchical-select-' + hsid +'-wrapper) input[type=submit]');  
+  $e = $('form:has(#hierarchical-select-' + hsid +'-wrapper) input[type=submit]');
   $e = $e.add('#hierarchical-select-' + hsid +'-wrapper .hierarchical-select input[type!=submit]');
 
   // Don't enable the selects again if they've been disabled because the
   // dropbox limit was exceeded.
-  if ($('#hierarchical-select-' + hsid +'-wrapper hierarchical-select-dropbox-limit-warning').length == 0) {
+  dropboxLimitExceeded = $('#hierarchical-select-' + hsid +'-wrapper .hierarchical-select-dropbox-limit-warning').length > 0;
+  if (!dropboxLimitExceeded) {
     $e = $e.add($('#hierarchical-select-' + hsid +'-wrapper .hierarchical-select .selects select'));
   }
-
   $e.attr('disabled', false);
+
+  // Don't enable the 'Add' button again if it's been disabled because the
+  // dropbox limit was exceeded.
+  if (dropboxLimitExceeded) {
+    $('#hierarchical-select-' + hsid +'-wrapper .hierarchical-select input[type=submit]')
+    .attr('disabled', true);
+  }
 
   $('#hierarchical-select-' + hsid +'-wrapper').removeClass('waiting');
 
@@ -199,8 +214,7 @@ Drupal.HierarchicalSelect.throwError = function(hsid, message) {
   alert(message);
 
   // Log the error.
-  Drupal.HierarchicalSelect.state[hsid].log.push([ message ]);
-  Drupal.HierarchicalSelect.log(hsid);
+  Drupal.HierarchicalSelect.log(hsid, [ message ]);
 
   // Re-enable the form to allow the user to retry, but reset the selection to
   // the level label if possible, otherwise the "<none>" option if possible.
@@ -504,12 +518,9 @@ Drupal.HierarchicalSelect.update = function(hsid, updateType, settings) {
   // Construct the URL the request should be made to. GET arguments may not be
   // forgotten.
   var url = Drupal.settings.HierarchicalSelect.basePath + Drupal.settings.HierarchicalSelect.settings[hsid]['path'];
-  var i = 0;
-  for (var key in Drupal.settings.HierarchicalSelect.getArguments) {
-    url += (i == 0) ? '?' : '&';
-    url += key;
-    url += '=';
-    url += Drupal.settings.HierarchicalSelect.getArguments[key];
+  if (Drupal.settings.HierarchicalSelect.getArguments.length > 0) {
+    url += (url.indexOf('?') == -1) ? '?' : '&';
+    url += Drupal.settings.HierarchicalSelect.getArguments;
   }
 
   // Construct the object that contains the options for a callback to the
@@ -558,8 +569,7 @@ Drupal.HierarchicalSelect.update = function(hsid, updateType, settings) {
         }
 
         if (response.log != undefined) {
-          Drupal.HierarchicalSelect.state[hsid].log.push(response.log);
-          Drupal.HierarchicalSelect.log(hsid);
+          Drupal.HierarchicalSelect.log(hsid, response.log);
         }
 
         Drupal.HierarchicalSelect.triggerEvents(hsid, updateType, settings);
@@ -592,6 +602,11 @@ Drupal.HierarchicalSelect.update = function(hsid, updateType, settings) {
       $.ajax(ajaxOptions);
     });
   }
+};
+
+Drupal.HierarchicalSelect.ajaxViewPagerSettingsUpdate = function(target, response) {
+  $.extend(Drupal.settings.HierarchicalSelect.settings, response.hs_drupal_js_settings);
+  Drupal.attachBehaviors($(target));
 };
 
 })(jQuery);

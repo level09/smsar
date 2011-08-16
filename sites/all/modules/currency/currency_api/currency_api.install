@@ -1,8 +1,12 @@
 <?php
-// $Id: currency_api.install,v 1.1.2.2.2.1 2008/07/14 14:30:06 kbahey Exp $
 
 /**
- * Implementation of hook_install()
+ * @file
+ *   This module provides an API for currency conversion.
+ */
+
+/**
+ * Implementation of hook_install().
  *
  * This will automatically install the database tables for CurrencyAPI.
  */
@@ -11,37 +15,37 @@ function currency_api_install() {
 }
 
 /**
- * Implementation of hook_schema()
+ * Implementation of hook_schema().
  *
  * Define schema for currencyapi database
  */
 function currency_api_schema() {
   $schema['currencyapi'] = array(
-    'description' => t('Table to cache currency rates that have been looked up by the Currency API module.'),
+    'description' => 'Table to cache currency rates that have been looked up by the Currency API module.',
     'fields'      => array(
       'currency_from' => array(
-        'description' => t('ISO 4217 3-character currency code for destination currency, as a character string.'),
+        'description' => 'ISO 4217 3-character currency code for destination currency, as a character string.',
         'type'        => 'varchar',
         'length'      => 10,
         'not null'    => TRUE,
         'default'     => '',
       ),
       'currency_to'   => array(
-        'description' => t('ISO 4217 3-character currency code for destination currency, as a character string.'),
+        'description' => 'ISO 4217 3-character currency code for destination currency, as a character string.',
         'type'        => 'varchar',
         'length'      => 10,
         'not null'    => TRUE,
         'default'     => '',
       ),
       'rate'      => array(
-        'description' => t('Conversion rate, currency_to per currency_from, as a floating point number.'),
+        'description' => 'Conversion rate, currency_to per currency_from, as a floating point number.',
         'type'        => 'float',
         'size'        => 'normal',
         'not null'    => TRUE,
         'default'     => 0,
       ),
       'timestamp' => array(
-        'description' => t('The time that the conversion rate was created, or last edited by its author, as a Unix timestamp.'),
+        'description' => 'The time that the conversion rate was created, or last edited by its author, as a Unix timestamp.',
         'type'        => 'int',
         'not null'    => TRUE,
         'default'     => 0,
@@ -54,7 +58,7 @@ function currency_api_schema() {
 }
 
 /**
- * Implementation of hook_uninstall()
+ * Implementation of hook_uninstall().
  *
  * This will automatically remove the database tables and varibles
  * defined by CurrencyAPI.

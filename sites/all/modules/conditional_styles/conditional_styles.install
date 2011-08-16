@@ -1,6 +1,4 @@
 <?php
-// $Id: conditional_styles.install,v 1.1 2008/09/14 10:05:14 johnalbin Exp $
-
 /**
  * @file
  * Provides install, upgrade and un-install functions for conditional_styles.
@@ -14,6 +12,7 @@ function conditional_styles_uninstall() {
   $themes = list_themes();
   foreach (array_keys($themes) AS $theme) {
     variable_del('conditional_styles_' . $theme);
+    variable_del('conditional_styles_' . $theme . '_rtl');
   }
   // Clear the page cache.
   cache_clear_all();

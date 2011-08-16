@@ -1,0 +1,10 @@
+name = AuthorContact
+description = Creates a block to send an email to node author
+version = "$name$"
+core = 6.x
+; Information added by drupal.org packaging script on 2011-07-05
+version = "6.x-1.4"
+core = "6.x"
+project = "authorcontact"
+datestamp = "1309846916"
+

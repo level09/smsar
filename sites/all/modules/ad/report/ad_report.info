@@ -1,13 +1,14 @@
-; $Id: ad_report.info,v 1.1.2.1.2.2.2.2 2009/04/17 19:20:56 jeremy Exp $
+; $Id: ad_report.info,v 1.1.2.1.2.2.2.3 2009/10/07 04:07:28 jeremy Exp $
 name = Ad report
 package = Ad
 dependencies[] = ad
-description = Provides comprehensive charts and reports about advertising statistics.
+dependencies[] = chart
+description = Generates reports and charts from advertisement statistics.
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-08-05
-version = "6.x-2.1"
+; Information added by drupal.org packaging script on 2009-11-30
+version = "6.x-2.2"
 core = "6.x"
 project = "ad"
-datestamp = "1249431906"
+datestamp = "1259599504"
 

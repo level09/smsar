@@ -1,5 +1,5 @@
 <?php
-// $Id: taxonomy_manager.admin.inc,v 1.1.2.17.2.23 2009/08/11 07:41:11 mh86 Exp $
+// $Id: taxonomy_manager.admin.inc,v 1.1.2.17.2.33 2010/01/31 17:47:27 mh86 Exp $
 
 /**
  * 
@@ -562,6 +562,7 @@ function taxonomy_manager_merge_form($voc) {
   $form['merge']['main_term'] = array(
     '#type' => 'textfield',
     '#title' => t('Resulting merged term'),
+    '#description' => t("Enter a unique term name or a term id with 'term-id:[tid]'"),
     '#required' => FALSE,
     '#autocomplete_path' => 'taxonomy_manager/autocomplete/'. $voc->vid,
   );
@@ -620,14 +621,10 @@ function taxonomy_manager_move_form($voc) {
     '#description' => $description,
   );
   
-  if ($voc->hierarchy == 2) {
-    $auto_description .= t("Separate parent terms with a comma. ");
-  }
-  
   $form['move']['parents'] = array(
     '#type' => 'textfield',
     '#title' => t('Parent term(s)'),
-    '#description' => $auto_description,
+    '#description' => t("Enter a unique term name or a term id with 'term-id:[tid]'. Separate multiple parent terms with commas."),
     '#required' => FALSE,
     '#autocomplete_path' => 'taxonomy_manager/autocomplete/'. $voc->vid,
   );
@@ -983,7 +980,7 @@ function _taxonomy_manager_form_term_data_lists($term, $values, $header_type, $a
       $id = $value;
     }
     $form['data'][$id][] = array(
-      '#value' => (isset($vid) && $vid > 0) ? l($name, 'admin/content/taxonomy_manager/termdata/'. $vid ."/". $id, array('attributes' => array('title' => $extra_info))) : check_plain($name),
+      '#value' => (isset($vid) && $vid > 0) ? l($name, 'admin/content/taxonomy_manager/termdata/'. $vid ."/". $id, array('attributes' => array('title' => $extra_info, 'class' => 'taxonomy-term-data-name-link'))) : check_plain($name),
       '#row-class' => 'taxonomy-term-data-name',
       '#row-id' => 'term-'. $id, 
     );
@@ -1139,7 +1136,8 @@ function taxonomy_manager_form_submit($form, &$form_state) {
         $parents[] = check_plain($parent->name);
       }
       $parent_text = count($parents) ? implode(' | ', $parents) ." › " : "";
-      $matched_text_list[] = $parent_text ."". l($matched_term->name, $url_prefix .'/'. $matched_term->tid, array('attributes' => array('title' => taxonomy_manager_tree_term_extra_info($matched_term)))) ." (". $matched_term->tid .")";
+      $term = taxonomy_get_term($t['tid']);
+      $matched_text_list[] = $parent_text ."". l($matched_term->name, $url_prefix .'/'. $matched_term->tid, array('attributes' => array('title' => taxonomy_manager_tree_term_extra_info($matched_term)))) ." (". $matched_term->tid . (!empty($matched_term->language) ? '-'. check_plain($matched_term->language) : '') . ")";
     }
     drupal_set_message(t("Your search string matches !count terms:", array('!count' => count($terms))) ."". theme('item_list', $matched_text_list));
     $form_state['rebuild'] = TRUE;
@@ -1202,7 +1200,7 @@ function taxonomy_manager_form_add_submit($form, &$form_state) {
   if (isset($updated_lang) && $updated_lang == TRUE) {
     drupal_set_message(t("Saving terms to language @lang", array('@lang' => locale_language_name($form_state['values']['taxonomy']['manager']['top']['language']))));
   }
-  drupal_set_message("Terms added: ". check_plain(implode(', ', $terms)));
+  drupal_set_message(t("Terms added: %terms", array('%terms' => implode(', ', $terms))));
 }
 
 
@@ -1279,7 +1277,7 @@ function taxonomy_manager_term_confirm_delete_submit($form, &$form_state) {
   else {
     $form_state['redirect'] = 'admin/content/taxonomy_manager/voc/'. $form_state['values']['vid'];
   }
-  drupal_set_message("Selected terms deleted"); 
+  drupal_set_message(t("Selected terms deleted")); 
   return;
 }
 
@@ -1297,7 +1295,7 @@ function taxonomy_manager_form_move_validate($form, &$form_state) {
     $form_state['rebuild'] = TRUE;
   }
   else if (_taxonomy_manager_check_duplicates($form_state['values']['vid'], $form_state['values']['move']['parents'], $error_msg)) {
-    form_set_error('move', t("Warning: Your input matches with multiple terms, because of duplicated term names. Please enter a unique term name") ." (". $error_msg .").");
+    form_set_error('move', t("Warning: Your input matches with multiple terms, because of duplicated term names. Please enter a unique term name or the term id with 'term-id:[tid]'") ." (". $error_msg .").");
     $form_state['rebuild'] = TRUE;
   }
   
@@ -1450,7 +1448,7 @@ function taxonomy_manager_form_merge_validate($form, &$form_state) {
     $form_state['rebuild'] = TRUE;
   }
   else if (_taxonomy_manager_check_duplicates($form_state['values']['vid'], $form_state['values']['merge']['main_term'], $error_msg)) {
-    form_set_error('merge', t("Warning: Your input matches with multiple terms, because of duplicated term names. Please enter a unique term name") ." (". $error_msg .").");
+    form_set_error('merge', t("Warning: Your input matches with multiple terms, because of duplicated term names. Please enter a unique term name or the term id with 'term-id:[tid]'") ." (". $error_msg .").");
         $form_state['rebuild'] = TRUE;
   }
   else if ($form_state['values']['merge']['options']['collect_parents']) {
@@ -1508,8 +1506,9 @@ function _taxonomy_manager_check_duplicates($vid, $autocomplete_value, &$msg) {
    $terms = taxonomy_manager_autocomplete_tags_get_tids($match, $vid, FALSE);
    if (count($terms) > 1) {
      $tids = array();
-     foreach ($terms as $term) {
-       $tids[] = $term['tid'];
+     foreach ($terms as $t) {
+       $term = taxonomy_get_term($t['tid']);
+       $tids[] = $term->tid . (!empty($term->language) ? '-'. check_plain($term->language) : '');
      }
      $msg .= check_plain($match) .": ". implode(", ", $tids);
      return TRUE;
@@ -1541,7 +1540,7 @@ function taxonomy_manager_settings() {
   $form['taxonomy_manager_disable_merge_redirect'] = array(
     '#type' => 'checkbox',
     '#title' => t('Disable redirect of the taxonomy term page to merged terms '),
-    '#default_value' => variable_get('taxonomy_manager_disable_merge_redirect', 0),
+    '#default_value' => variable_get('taxonomy_manager_disable_merge_redirect', TRUE),
     '#description' => t('When using the merging feature, the selected terms get merged into one term. All selected terms will be deleted afterwards. Normally the Taxonomy Manager redirects calls to taxonomy/term/$tid of the deleted terms (through merging) to the resulting merged term. This feature might conflict with other modules (e.g. Taxonomy Breadcrumb, Panels), which implement hook_menu_alter to change the taxonomy_manager_term_page callback. Disable this feature if it conflicts with other modules or if you do not need it. Changing this setting requires a (menu) cache flush to become active.'),
   );
   $form['taxonomy_manager_pager_tree_page_size'] = array(
@@ -1562,7 +1561,7 @@ function taxonomy_manager_settings() {
 function taxonomy_manager_term_data_edit() {
   $param = $_POST;
 
-  $msg = "Changes successfully saved";
+  $msg = t("Changes successfully saved");
   $is_error_msg = FALSE;
   
   $tid = $param['tid'];
@@ -1577,7 +1576,7 @@ function taxonomy_manager_term_data_edit() {
   $attr_type = $param['attr_type'];
   $op = $param['op'];
   
-  if ($op == "Save changes") {
+  if ($op == t("Save changes")) {
     db_query("UPDATE {term_data} SET name = '%s' WHERE tid = %d", $param['term_data']['name'], $tid);
     db_query("UPDATE {term_data} SET description = '%s' WHERE tid = %d", $param['term_data']['description'], $tid);
   }
@@ -1589,7 +1588,7 @@ function taxonomy_manager_term_data_edit() {
     //check for unique names
     $error_msg = "";
     if (_taxonomy_manager_check_duplicates($vid, $values, $error_msg)) {
-      $msg = t("Your input matches with multiple terms, because of duplicated term names. Please enter a unique term name") ." (". $error_msg .").";
+      $msg = t("Warning: Your input matches with multiple terms, because of duplicated term names. Please enter a unique term name or the term id with 'term-id:[tid]'") ." (". $error_msg .").";
       $is_error_msg = TRUE; 
     }
     if(!taxonomy_manager_check_language($vid, array($tid), $typed_terms)) {
@@ -1622,7 +1621,7 @@ function taxonomy_manager_term_data_edit() {
       $msg = t('Invalid language selection');
       $is_error_msg = TRUE; 
     }
-    else if (!count($typed_terms) && count($translation_terms) && empty($param['edit-term-data-translations-op-lang'])) {
+    else if (empty($param['edit-term-data-translations-op-lang'])) {
       $msg = t('Missing language for new term');
       $is_error_msg = TRUE; 
     }
@@ -1661,7 +1660,12 @@ function taxonomy_manager_term_data_edit() {
       }
       else {
         $typed_term_tids = array();
-        $typed_term_tids = taxonomy_manager_autocomplete_tags_get_tids($values, $vid, TRUE, $param['edit-term-data-language']);
+        if ($attr_type == "translation") {
+          $typed_term_tids = taxonomy_manager_autocomplete_tags_get_tids($values, $vid, TRUE, $param['edit-term-data-translations-op-lang']);
+        }
+        else {
+          $typed_term_tids = taxonomy_manager_autocomplete_tags_get_tids($values, $vid, TRUE, $param['edit-term-data-language']);
+        }
         $values = array();
         foreach ($typed_term_tids as $term_info) {
           $values[] = $term_info['tid'];
@@ -1739,11 +1743,7 @@ function taxonomy_manager_term_data_edit() {
       case 'translation':
         if (module_exists('i18ntaxonomy')) {
           if ($op == "add") {
-            $translation_term = $values[0];
-            if ($param['edit-term-data-translations-op-lang'] != "") {
-              _i18ntaxonomy_term_set_lang($translation_term, $param['edit-term-data-translations-op-lang']);
-            }
-            taxonomy_manager_add_translation($tid, $translation_term);
+            taxonomy_manager_add_translation($tid, $values[0]);
             $msg = t("Successfully added translation");
           }
           else if ($op == "delete") {
@@ -1783,13 +1783,13 @@ function taxonomy_manager_double_tree_edit() {
   $is_error_msg = FALSE;
   
   if ($op == "move") {
-    taxonomy_manager_double_tree_edit_move($params, &$msg, &$is_error_msg);
+    taxonomy_manager_double_tree_edit_move($params, $msg, $is_error_msg);
   }
   else if ($op == "translation") {
-    taxonomy_manager_doube_tree_edit_translate($params, &$msg, &$is_error_msg); 
+    taxonomy_manager_doube_tree_edit_translate($params, $msg, $is_error_msg); 
   }
   else if ($op == "switch") {
-    taxonomy_manager_double_tree_edit_switch($params, &$msg, &$is_error_msg); 
+    taxonomy_manager_double_tree_edit_switch($params, $msg, $is_error_msg); 
   }
     
   if ($msg == "") {
@@ -1973,35 +1973,38 @@ function taxonomy_manager_add_translation($tid1, $tid2) {
  * Changes vocabulary of given terms and its children
  * conflicts might be possible with multi-parent terms!
  */
-function taxonomy_manager_switch($tids, $from_voc, $to_voc, $parents = array()) {
+function taxonomy_manager_switch($tids, $from_voc, $to_voc, $parents = array()) {  
   foreach ($tids as $tid) {
-   $children = taxonomy_get_tree($from_voc, $tid);
-   $place_holder = array();
-   $terms_to_switch = array();
-   foreach ($children as $child) {
-     $placeholder[] = '%d';
-     $terms_to_switch[] = $child->tid;
-   }
-   $placeholder[] = '%d';
-   $terms_to_switch[] = $tid;
-   db_query("UPDATE {term_data} SET vid = %d WHERE tid IN (". implode(', ', $placeholder) .")", array_merge(array($to_voc), $terms_to_switch));
+    //hook to inform modules about the changes
+    module_invoke_all('taxonomy_manager_term', 'switch', $tid, $from_voc, $to_voc);
+    
+    $children = taxonomy_get_tree($from_voc, $tid);
+    $place_holder = array();
+    $terms_to_switch = array();
+    foreach ($children as $child) {
+      $placeholder[] = '%d';
+      $terms_to_switch[] = $child->tid;
+    }
+    $placeholder[] = '%d';
+    $terms_to_switch[] = $tid;
+    db_query("UPDATE {term_data} SET vid = %d WHERE tid IN (". implode(', ', $placeholder) .")", array_merge(array($to_voc), $terms_to_switch));
    
-   //delete references to parents from the old voc
-   foreach ($children as $child) {
-     $term_parents = taxonomy_get_parents($child->tid);
-     foreach ($term_parents as $term_parent) {
-       if ($term_parent->vid != $to_voc) {
-         db_query("DELETE FROM {term_hierarchy} WHERE tid = %d AND parent = %d", $child->tid, $term_parent->tid);
-       } 
-     }
-   }
+    //delete references to parents from the old voc
+    foreach ($children as $child) {
+      $term_parents = taxonomy_get_parents($child->tid);
+      foreach ($term_parents as $term_parent) {
+        if ($term_parent->vid != $to_voc) {
+          db_query("DELETE FROM {term_hierarchy} WHERE tid = %d AND parent = %d", $child->tid, $term_parent->tid);
+        } 
+      }
+    }
    
-   //set parent of the selected term
-   if (!count($parents)) {
-     $parents[0] = 0;
-   }
-   taxonomy_manager_move($parents, array($tid));
-   taxonomy_manager_update_voc($to_voc, $parents);
+    //set parent of the selected term
+    if (!count($parents)) {
+      $parents[0] = 0;
+    }
+    taxonomy_manager_move($parents, array($tid));
+    taxonomy_manager_update_voc($to_voc, $parents);
   }
 }
 /**
@@ -2115,14 +2118,17 @@ function taxonomy_manager_merge($main_term, $merging_terms, $options = array(), 
   $voc = taxonomy_vocabulary_load($vid);
   $merging_terms_parents = array();
   
-  //TODO: add hook, so that other modules can consider changes
   foreach ($merging_terms as $merge_term) {
     if ($merge_term != $main_term) {
+      
+      //hook, to inform other modules about the changes
+      module_invoke_all('taxonomy_manager_term', 'merge', $main_term, $merge_term);
+      
       //update node-relations
       $sql = db_query("SELECT * FROM {term_node} WHERE tid = %d", $merge_term);
       while ($obj = db_fetch_object($sql)) {
-        db_query("DELETE FROM {term_node} WHERE tid = %d AND nid = %d", $obj->tid, $obj->nid);
-        if (!db_result(db_query("SELECT COUNT(*) FROM {term_node} WHERE tid = %d AND nid = %d", $main_term, $obj->nid))) {
+        db_query("DELETE FROM {term_node} WHERE tid = %d AND vid = %d", $obj->tid, $obj->vid);
+        if (!db_result(db_query("SELECT COUNT(*) FROM {term_node} WHERE tid = %d AND vid = %d", $main_term, $obj->vid))) {
           $obj->tid = $main_term;
           drupal_write_record('term_node', $obj);
         }
@@ -2212,10 +2218,12 @@ function taxonomy_manager_merge_history_update($main_tid, $merged_tids) {
 /**
  * helper function for getting out of term ids from autocomplete fields
  * non-exsiting terms get inserted autmatically
- * (part of taxonomy_node_save)
+ * the input gets parsed for term names, optional a term id can be directly passed with prefixing the input with 'term-id:'
  *
  * @param $typed_input input string of form field
  * @param $vid vocabulary id
+ * @param $insert_new TRUE if non-existing terms should be inserted
+ * @param $lang define the language (optional)
  * @return array of term ids
  */
 function taxonomy_manager_autocomplete_tags_get_tids($typed_input, $vid, $insert_new = TRUE, $lang = NULL) {
@@ -2228,28 +2236,35 @@ function taxonomy_manager_autocomplete_tags_get_tids($typed_input, $vid, $insert
   foreach ($typed_terms as $typed_term) {
     $typed_term = str_replace('""', '"', preg_replace('/^"(.*)"$/', '\1', $typed_term));
     $typed_term = trim($typed_term);
-    if ($typed_term == "") { 
-      continue; 
-    }
-
-    $possibilities = taxonomy_get_term_by_name($typed_term);
-    $typed_term_tid = NULL; // tid match if any.
-    foreach ($possibilities as $possibility) {
-      if ($possibility->vid == $vid) {
-        $typed_term_tid = $possibility->tid;
-        $tids[$typed_term_tid]['tid'] = $typed_term_tid;
+    if ($typed_term != "") { 
+      if (substr($typed_term, 0, 8) == "term-id:") {
+        $id = substr($typed_term, 8);
+        $term = taxonomy_get_term($id);
+        if ($term->vid == $vid) {
+          $tids[$term->tid]['tid'] = $term->tid;
+        }
       }
-    }
+      else {
+        $possibilities = taxonomy_get_term_by_name($typed_term);
+        $typed_term_tid = NULL; // tid match if any.
+        foreach ($possibilities as $possibility) {
+          if ($possibility->vid == $vid && !($lang && $lang != $possibility->language)) {
+            $typed_term_tid = $possibility->tid;
+            $tids[$typed_term_tid]['tid'] = $typed_term_tid;
+          }
+        }
 
-    if (!$typed_term_tid && $insert_new) {
-      $edit = array('vid' => $vid, 'name' => $typed_term);
-      $status = taxonomy_save_term($edit);
-      if (module_exists('i18ntaxonomy') && $lang != "") {
-        _i18ntaxonomy_term_set_lang($edit['tid'], $lang);
+        if (!$typed_term_tid && $insert_new) {
+          $edit = array('vid' => $vid, 'name' => $typed_term);
+          $status = taxonomy_save_term($edit);
+          if (module_exists('i18ntaxonomy') && $lang != "") {
+            _i18ntaxonomy_term_set_lang($edit['tid'], $lang);
+          }
+          $typed_term_tid = $edit['tid'];
+          $tids[$typed_term_tid]['tid'] = $typed_term_tid;
+          $tids[$typed_term_tid]['new'] = TRUE;
+        }
       }
-      $typed_term_tid = $edit['tid'];
-      $tids[$typed_term_tid]['tid'] = $typed_term_tid;
-      $tids[$typed_term_tid]['new'] = TRUE;
     }
   }
   return $tids;

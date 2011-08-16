@@ -1,5 +1,4 @@
 <?php
-// $Id: hs_taxonomy_views.module,v 1.17 2009/08/15 10:45:00 wimleers Exp $
 
 /**
  * @file
@@ -8,7 +7,7 @@
  */
 
 
-define('HS_TAXONOMY_VIEWS_ALL_OPTION', 'All');
+define('HS_TAXONOMY_VIEWS_ANY_OPTION', 'Any');
 
 
 //----------------------------------------------------------------------------
@@ -180,6 +179,9 @@ function hs_taxonomy_views_handlers() {
       'hs_taxonomy_views_handler_filter_term_node_tid' => array(
         'parent' => 'views_handler_filter_term_node_tid',
       ),
+      'hs_taxonomy_views_handler_filter_term_node_tid_depth' => array(
+        'parent' => 'hs_taxonomy_views_handler_filter_term_node_tid',
+      ),
     )
   );
 }
@@ -187,7 +189,7 @@ function hs_taxonomy_views_handlers() {
 /**
  * Implementation of hook_views_data_alter().
  */
-function hs_taxonomy_views_data_alter(&$data) {
+function hs_taxonomy_views_views_data_alter(&$data) {
   // Term view type, tid field.
   $data['term_data']['tid'] = array(
    'title' => t('Term ID'),
@@ -195,6 +197,9 @@ function hs_taxonomy_views_data_alter(&$data) {
    'field' => array(
      'handler'   => 'views_handler_field_numeric',
      'skip base' => array('node', 'node_revision'),
+   ),
+   'sort' => array(
+     'handler' => 'views_handler_sort',
    ),
    'argument' => array(
      'handler'   => 'views_handler_argument_numeric',
@@ -238,6 +243,21 @@ function hs_taxonomy_views_data_alter(&$data) {
       'skip base'       => 'term_data',
     ),
   );
+
+  // Node view type, tid with depth field.
+  $data['node']['term_node_tid_depth'] = array(
+    'group' => t('Taxonomy'),
+    'title' => t('Term ID (with depth)'),
+    'help' => t('The depth filter is more complex, so provides fewer options.'),
+    'real field' => 'vid',
+    'argument' => array(
+      'handler' => 'views_handler_argument_term_node_tid_depth',
+      'accept depth modifier' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'hs_taxonomy_views_handler_filter_term_node_tid_depth',
+    ),
+  );
 }
 
 
@@ -272,6 +292,7 @@ function hs_taxonomy_views_config_form($form_state, $view, $display_id, $filter_
     'exclude_tid' => NULL,
     'root_term'   => NULL,
   );
+  $vocabulary = taxonomy_vocabulary_load($params['vid']);
   $defaults = array(
     // Enable the save_lineage setting by default if the multiple parents
     // vocabulary option is enabled.
@@ -281,10 +302,10 @@ function hs_taxonomy_views_config_form($form_state, $view, $display_id, $filter_
     ),
     // Use our custom callback.
     'path' => "hs_taxonomy_views_json/$view->name/$display_id",
-    // When the 'All' option is selected, nothing else should be and it
+    // When the 'Any' option is selected, nothing else should be and it
     // should replace the '<none>' option.
     'special_items' => array(
-      HS_TAXONOMY_VIEWS_ALL_OPTION => array('none', 'exclusive'),
+      HS_TAXONOMY_VIEWS_ANY_OPTION => array('none', 'exclusive'),
     ),
   );
   $strings = array(
@@ -297,7 +318,7 @@ function hs_taxonomy_views_config_form($form_state, $view, $display_id, $filter_
     'entities'    => t('nodes'),
   );
   $max_hierarchy_depth = _hs_taxonomy_hierarchical_select_get_depth($vocabulary->vid);
-  $preview_is_required = !(bool)$exposed_filter['expose']['optional'];
+  $preview_is_required = !(bool)$filter['expose']['optional'];
   $form['hierarchical_select_config'] = hierarchical_select_common_config_form($module, $params, $config_id, $defaults, $strings, $max_hierarchy_depth, $preview_is_required);
 
   $form['link'] = array(
@@ -377,7 +398,8 @@ function hs_taxonomy_views_hierarchical_select_params() {
  * Implementation of hook_hierarchical_select_root_level().
  */
 function hs_taxonomy_views_hierarchical_select_root_level($params) {
-  $root_level =  ($params['optional']) ? array(HS_TAXONOMY_VIEWS_ALL_OPTION => '<'. t('Any') .'>') : array();
+  $any_label = variable_get('views_exposed_filter_any_label', 'old_any') === 'old_any' ? '<'. t('Any') .'>' : '- '. t('Any') .' -';
+  $root_level =  ($params['optional']) ? array(HS_TAXONOMY_VIEWS_ANY_OPTION => $any_label) : array();
   $root_level += hs_taxonomy_hierarchical_select_root_level($params);
   return $root_level;
 }
@@ -386,28 +408,28 @@ function hs_taxonomy_views_hierarchical_select_root_level($params) {
  * Implementation of hook_hierarchical_select_children().
  */
 function hs_taxonomy_views_hierarchical_select_children($parent, $params) {
-  return ($parent == HS_TAXONOMY_VIEWS_ALL_OPTION) ? array() : hs_taxonomy_hierarchical_select_children($parent, $params);
+  return ($parent == HS_TAXONOMY_VIEWS_ANY_OPTION) ? array() : hs_taxonomy_hierarchical_select_children($parent, $params);
 }
 
 /**
  * Implementation of hook_hierarchical_select_lineage().
  */
 function hs_taxonomy_views_hierarchical_select_lineage($item, $params) {
-  return ($item == HS_TAXONOMY_VIEWS_ALL_OPTION) ? array($item) : hs_taxonomy_hierarchical_select_lineage($item, $params);
+  return ($item == HS_TAXONOMY_VIEWS_ANY_OPTION) ? array($item) : hs_taxonomy_hierarchical_select_lineage($item, $params);
 }
 
 /**
  * Implementation of hook_hierarchical_select_valid_item().
  */
 function hs_taxonomy_views_hierarchical_select_valid_item($item, $params) {
-  return ($item == HS_TAXONOMY_VIEWS_ALL_OPTION || hs_taxonomy_hierarchical_select_valid_item($item, $params));
+  return ($item == HS_TAXONOMY_VIEWS_ANY_OPTION || hs_taxonomy_hierarchical_select_valid_item($item, $params));
 }
 
 /**
  * Implementation of hook_hierarchical_select_item_get_label().
  */
 function hs_taxonomy_views_hierarchical_select_item_get_label($item, $params) {
-  return ($item == HS_TAXONOMY_VIEWS_ALL_OPTION) ? '<'. t('Any') .'>' : hs_taxonomy_hierarchical_select_item_get_label($item, $params);
+  return ($item == HS_TAXONOMY_VIEWS_ANY_OPTION) ? '<'. t('Any') .'>' : hs_taxonomy_hierarchical_select_item_get_label($item, $params);
 }
 
 /**
@@ -431,14 +453,19 @@ function hs_taxonomy_views_hierarchical_select_entity_count($item, $params) {
     $temp_view->set_display($display_id);
 
     // Disable the pager to get *all* results.
-    $temp_view->set_use_pager(FALSE);
+    if (method_exists($temp_view, 'set_use_pager')) {
+      $temp_view->set_use_pager(FALSE);
+    }
+    else {
+      $temp_view->set_use_pager = FALSE;
+    }
 
     // Pretend nothing is exposed, otherwise an exposed filters form will also
     // be rendered and thereby cause endless recursion.
     $temp_view->display_handler->has_exposed = 0;
 
     // Dynamically add an additional filter when
-    if ($item != HS_TAXONOMY_VIEWS_ALL_OPTION) {
+    if ($item != HS_TAXONOMY_VIEWS_ANY_OPTION) {
       // Get an array with all tids: the tid of the currently selected term and
       // all child terms.
       $term = taxonomy_get_term($item);
@@ -501,6 +528,25 @@ function hs_taxonomy_views_hierarchical_select_entity_count($item, $params) {
     // Due to the above: sneak DISTINCT() in through a string replace ...
     $count_query = str_replace("SELECT node.nid AS nid", "SELECT DISTINCT(node.nid) AS nid", $count_query);
 
+    // Filter by node type if such a filter is configured in the view.
+    if (isset($current_view->filter['type'])) {
+      $node_types = $current_view->filter['type']->value;
+      if (isset($node_types)) {
+        $values = '';
+        foreach ($node_types as $key => $value) {
+          if (empty($values)) {
+            $values = '\''. $value .'\'';
+          }
+          else {
+            $values .= ', \''. $value .'\'';
+          }
+        }
+
+        // Use the same sneaky string replace trick once more.
+        $count_query = str_replace("WHERE", 'WHERE node.type IN (' . $values . ') AND', $count_query);
+      }
+    }
+
     // Apply the same query transformations as view::execute() does.
     $count_query = db_rewrite_sql($count_query, $temp_view->base_table, $temp_view->base_field, array('view' => &$temp_view));
     $count_query = 'SELECT COUNT(*) FROM (' . $count_query . ') count_alias';
@@ -526,17 +572,23 @@ function hs_taxonomy_views_hierarchical_select_implementation_info() {
  * Implementation of hook_hierarchical_select_config_info().
  */
 function hs_taxonomy_views_hierarchical_select_config_info() {
+  $config_info = array();
   $views = views_get_all_views();
 
   foreach ($views as $view) {
     foreach (array_keys($view->display) as $display_id) {
-      if (count($view->display[$display_id]->display_options['filters'])) {
+      if (isset($view->display[$display_id]->display_options['filters']) && count($view->display[$display_id]->display_options['filters'])) {
         foreach ($view->display[$display_id]->display_options['filters'] as $filter) {
-          if ($filter['type'] == 'hierarchical_select' && $filter['table'] == 'term_node' && $filter['field'] == 'tid') {
+          if (isset($filter['type']) && $filter['type'] == 'hierarchical_select'
+            && ((isset($filter['table']) && $filter['table'] == 'term_node'
+              && isset($filter['field']) && $filter['field'] == 'tid')
+             || (isset($filter['table']) && $filter['table'] == 'node'
+              && isset($filter['field']) && $filter['field'] == 'term_node_tid_depth')))
+          {
             $vocabulary = taxonomy_vocabulary_load($filter['vid']);
             $filter_label = (!empty($filter['expose']['label'])) ? $filter['expose']['label'] : t('Taxonomy: Term');
 
-            $config_id = "taxonomy-views-$view->name-$vocabulary->vid";
+            $config_id = "taxonomy-views-$view->name-$display_id-{$filter['id']}";
             $config_info[$config_id] = array(
               'config_id'      => $config_id,
               'hierarchy type' => t('Taxonomy'),
@@ -635,6 +687,6 @@ function _hs_taxonomy_views_config_path($view_name, $display_id, $filter_id) {
  */
 function _hs_taxonomy_views_get_display_id_for_filter($view, $filter_id) {
   $current_display = $view->current_display;
-  $current_display_filters = $view->display[$current_display]->display_options['filters'];
+  $current_display_filters = (isset($view->display[$current_display]->display_options['filters'])) ? $view->display[$current_display]->display_options['filters'] : array();
   return (isset($current_display_filters[$filter_id])) ? $current_display : 'default';
 }

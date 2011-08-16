@@ -1,12 +1,15 @@
 <?php
-// $Id: canvasactions.inc,v 1.1.4.15 2009/05/19 18:03:30 dman Exp $
+// $Id: canvasactions.inc,v 1.1.4.21 2009/12/28 03:26:53 dman Exp $
 /**
- * Helper functions for the text2canvas action for imagecache
+ * @file Helper functions for the text2canvas action for imagecache
  * 
  * @author Dan Morrison http://coders.co.nz
  * 
  * Individually configurable rounded corners logic contributed by canaryMason
  * 2009 03 http://drupal.org/node/402112
+ *
+ * Better algorithm for trimming rounded corners from donquixote 
+ * 2009 09 http://drupal.org/node/564036
  *
  */
 
@@ -46,7 +49,8 @@ function canvasactions_definecanvas_form($action) {
     'RGB' => imagecache_rgb_form($action['RGB']),
     'help' => array(
       '#type' => 'markup',
-      '#value' => '<p>'. t('Enter no color value for transparent. This will have the effect of adding clear margins around the image.') .'</p>',
+      '#value' => t('Enter no color value for transparent. This will have the effect of adding clear margins around the image.'),
+      '#prefix' => '<p>', '#suffix' => '</p>',
     ),
     'under' => array(
       '#type' => 'checkbox',
@@ -58,11 +62,12 @@ function canvasactions_definecanvas_form($action) {
   $form['info'] = array('#value' => t('Enter values in ONLY ONE of the below options. Either exact or relative. Most values are optional - you can adjust only one dimension as needed. If no useful values are set, the current base image size will be used.'));
   $form['exact'] = array(
       '#type' => 'fieldset',
-      '#collapsible' => true,
+      '#collapsible' => TRUE,
       '#title' => 'Exact size',
       'help' => array(
         '#type' => 'markup',
-        '#value' => '<p>'. t('Set the canvas to a precise size, possibly cropping the image. Use to start with a known size.'). '</p>',
+        '#value' => t('Set the canvas to a precise size, possibly cropping the image. Use to start with a known size.'),
+        '#prefix' => '<p>', '#suffix' => '</p>',
       ),
       
       'width' => array(
@@ -81,13 +86,13 @@ function canvasactions_definecanvas_form($action) {
       ),
     );
   $form['exact'] = array_merge($form['exact'], imagecacheactions_pos_form($action['exact']));
-  if(! $action['exact']['width'] && !$action['exact']['height']) {
-    $form['exact']['#collapsed'] = true;
+  if (! $action['exact']['width'] && !$action['exact']['height']) {
+    $form['exact']['#collapsed'] = TRUE;
   }
 
   $form['relative'] = array(
       '#type' => 'fieldset',
-      '#collapsible' => true,
+      '#collapsible' => TRUE,
       '#title' => t('Relative size'),
       'help' => array(
         '#type' => 'markup',
@@ -122,8 +127,8 @@ function canvasactions_definecanvas_form($action) {
         '#description' => t('Enter an offset in pixels.'),
       ),
     );
-  if(! $action['relative']['leftdiff'] && !$action['relative']['rightdiff'] && !$action['relative']['topdiff'] && !$action['relative']['bottomdiff']) {
-    $form['relative']['#collapsed'] = true;
+  if (! $action['relative']['leftdiff'] && !$action['relative']['rightdiff'] && !$action['relative']['topdiff'] && !$action['relative']['bottomdiff']) {
+    $form['relative']['#collapsed'] = TRUE;
   }
 
   $form['#submit'][] = 'canvasactions_definecanvas_form_submit';
@@ -167,10 +172,6 @@ function theme_canvasactions_definecanvas($element) {
  *   $image->resource handle on the image object
  */
 function canvasactions_definecanvas_image(&$image, $action = array()) {
-  if ($image->toolkit != 'imageapi_gd') {
-    drupal_set_message("Unable to define canvas with {$image->toolkit}");
-    return FALSE;
-  }
  
   // May be given either exact or relative dimensions.
   if ($action['exact']['width'] || $action['exact']['width']) {
@@ -192,13 +193,27 @@ function canvasactions_definecanvas_image(&$image, $action = array()) {
     $targetsize['left'] = $action['relative']['leftdiff'];
     $targetsize['top'] = $action['relative']['topdiff'];
   }
-  
-  $newcanvas = imagecreatetruecolor($targetsize['width'], $targetsize['height']);
-  $RGB = $action['RGB'];
 
   // convert from hex (as it is stored in the UI)
-  if($RGB['HEX'] && $deduced = hex_to_rgb($RGB['HEX'])) {
-    $RGB = array_merge($RGB, $deduced);
+  if ($action['RGB']['HEX'] && $deduced = hex_to_rgb($action['RGB']['HEX'])) {
+    $action['RGB'] = array_merge($action['RGB'], $deduced);
+  }
+  
+  // All the maths is done, now defer to the api toolkits;
+  $action['targetsize'] = $targetsize;
+
+  $success = imageapi_toolkit_invoke('definecanvas', $image, array($action));
+  if ($success) {
+    $image->info['width'] = $targetsize['width'];
+    $image->info['height'] = $targetsize['height'];
+  }
+  return $success;
+
+/*
+
+  $newcanvas = imagecreatetruecolor($targetsize['width'], $targetsize['height']);
+
+  if ($RGB['HEX'] && $deduced = hex_to_rgb($RGB['HEX'])) {
     $background = imagecolorallocate($newcanvas, $RGB['red'], $RGB['green'], $RGB['blue']);
   }
   else {
@@ -209,23 +224,100 @@ function canvasactions_definecanvas_image(&$image, $action = array()) {
     imagesavealpha($image->resource, TRUE);
   }
   imagefilledrectangle($newcanvas, 0, 0, $targetsize['width'], $targetsize['height'], $background);
-
 #  imagealphablending($newcanvas, TRUE);
 
   if ($action['under']) {
-    require_once('watermark.inc');
-    $watermark = new watermark();
-    $image->resource = $watermark->create_watermark($newcanvas, $image->resource, $targetsize['left'], $targetsize['top'], 100);
-    imagesavealpha($image->resource, TRUE);
+    $canvas_object = (object) array(
+      'resource' => $newcanvas,
+      'info' => array(
+        'width' => $targetsize['width'], 
+        'height' => $targetsize['height'],
+        'mime_type' => 'image/png',
+      ),
+      'toolkit' => $image->toolkit,
+    );
+    imageapi_image_overlay($canvas_object, $image, $targetsize['left'], $targetsize['top'], 100, TRUE);
   } 
   else {
     $image->resource = $newcanvas ;
   }
-  
+*/  
   $image->info['width'] = $targetsize['width'];
   $image->info['height'] = $targetsize['height'];
   return TRUE;
 }
+
+/**
+ * Draw a color (or transparency) behind an image
+ * 
+ * $targetsize is an array expected to contain a width,height and a left,top
+ * offset.
+ */
+function imageapi_gd_image_definecanvas(&$image, $action = array()) {
+  $targetsize = $action['targetsize'];
+  $RGB = $action['RGB'];
+
+  $newcanvas = imagecreatetruecolor($targetsize['width'], $targetsize['height']);
+
+  if ($RGB['HEX']) {
+    $background = imagecolorallocate($newcanvas, $RGB['red'], $RGB['green'], $RGB['blue']);
+  }
+  else {
+    // No color, attempt transparency, assume white
+    $background = imagecolorallocatealpha($newcanvas, 255, 255, 255, 127);
+    imagesavealpha($newcanvas, TRUE);
+    imagealphablending($newcanvas, FALSE);
+    imagesavealpha($image->resource, TRUE);
+  }
+  imagefilledrectangle($newcanvas, 0, 0, $targetsize['width'], $targetsize['height'], $background);
+#  imagealphablending($newcanvas, TRUE);
+
+  if ($action['under']) {
+    $canvas_object = (object) array(
+      'resource' => $newcanvas,
+      'info' => array(
+        'width' => $targetsize['width'], 
+        'height' => $targetsize['height'],
+        'mime_type' => 'image/png',
+        'extension' => 'png',
+      ),
+      'toolkit' => $image->toolkit,
+    );
+    imageapi_image_overlay($canvas_object, $image, $targetsize['left'], $targetsize['top'], 100, TRUE);
+  } 
+  else {
+    $image->resource = $newcanvas ;
+  }
+  return TRUE;
+}
+
+/**
+ * Draw a color (or transparency) behind an image
+ * 
+ * $targetsize is an array expected to contain a width,height and a left,top
+ * offset.
+ */
+function imageapi_imagemagick_image_definecanvas(&$image, $action = array()) {
+  $targetsize = $action['targetsize'];
+  $RGB = $action['RGB'];
+  
+  # TODO needs work.
+  #
+  $crop = " -background '#{$RGB['HEX']}' -crop   '{$targetsize['width']}x{$targetsize['height']}-{$targetsize['left']}-{$targetsize['top']}!' ";
+  $draw = '';
+
+  $draw = " -draw '";
+  $draw .= " fill '#{$RGB['HEX']}' polygon 0,0 {$targetsize['width']},0 {$targetsize['width']},{$targetsize['height']} 0,{$targetsize['height']} ";
+  $draw .= " ' ";
+  #$draw .= " -composite ";
+  $draw .= " +repage ";
+
+  $compose = " $crop $draw ";
+  $image->ops[] = $compose; 
+  return TRUE; 
+  
+}
+
 
 ////////////////////////////////////////////////
 
@@ -281,7 +373,13 @@ function canvasactions_canvas2file_form($action) {
  */
 function theme_canvasactions_canvas2file($element) {
   $data = $element['#value'];
-  return 'xpos:'. $data['xpos'] .', ypos:'. $data['ypos'] .' alpha:'. $data['alpha'] .'%' ;
+
+  $filepath = $data['path'];
+  if (!file_exists($filepath) ) {
+    $filepath = file_create_path($data['path']);
+  }
+  $file_url = url($filepath);
+  return "xpos:{$data['xpos']} , ypos:{$data['ypos']} alpha:{$data['alpha']}%. file path:<a href='$file_url'>{$data['path']}</a>, dimensions:{$data['dimensions']}" ;
 }
 
 /**
@@ -296,7 +394,7 @@ function theme_canvasactions_canvas2file($element) {
  * @param $action
  */
 function canvasactions_canvas2file_image(&$image, $action = array()) {
-  // search for full (siteroot) paths, then file dir paths, then relative to the current theme
+  // Search for full (siteroot) paths, then file dir paths, then relative to the current theme
   $filepath = $action['path'];
   if (!file_exists($filepath) ) {
     $filepath = file_create_path($action['path']);
@@ -313,8 +411,17 @@ function canvasactions_canvas2file_image(&$image, $action = array()) {
   // allow overlays to be bigger than the target.
   // Adjust size
   $crop_rules = array('xoffset' => 0, 'yoffset' => 0, );
+  if (empty($action['dimensions'])) $action['dimensions'] = 'original';
   switch ($action['dimensions']) {
     case 'original' :
+      // If the underlay is smaller than the target size, 
+      // then when preparing the underlay by cropping it, 
+      // the offsets may need to be negative
+      // which will produce a 'cropped' image larger than the original
+      // In this case, we need to calculate the position of the bg image
+      // in relation to the space it will occupy under the top layer
+      #$crop_rules['xoffset'] = $underlay->info['width'] - $image->info['width'] ;
+
       $crop_rules['width'] = $image->info['width'];
       $crop_rules['height']  = $image->info['height'];
       break;
@@ -334,11 +441,12 @@ function canvasactions_canvas2file_image(&$image, $action = array()) {
   // imageapi crop assumes upsize is legal.
   imagecache_include_standard_actions(); // ensure the library is loaded.
 
-  // crop both before processing to avoid unwanted processing.
+  // Crop both before processing to avoid unwanted processing.
   imagecache_crop_image($underlay, $crop_rules);
-  // Actually this failes because imagecache_crop fills it with solid color when 'cropping' to a larger size.
+  # BUG - this doesn't position either
+  // Actually this fails because imagecache_crop fills it with solid color when 'cropping' to a larger size.
   #imagecache_crop_image($image, $crop_rules);
-
+  #dpm(get_defined_vars());
   // This func modifies the underlay image by ref, placing the current canvas on it
   if (imageapi_image_overlay($underlay, $image, $action['xpos'], $action['ypos'], $action['alpha'], TRUE)) {
     $image->resource = $underlay->resource;
@@ -511,7 +619,7 @@ function canvasactions_roundedcorners_form($action) {
   drupal_add_js(drupal_get_path('module', 'imagecache_canvasactions') .'/imagecache_actions.jquery.js');
   $defaults = array(
     'radius' => '16',
-    'antialias' => TRUE,
+    #'antialias' => TRUE,
     'independent_corners_set' => array(
       'independent_corners' => FALSE,
       'radii' => array(
@@ -558,7 +666,7 @@ function canvasactions_roundedcorners_form($action) {
         '#size' => 2,
     );
   }
-
+/*
   $form['antialias'] = array(
       '#type' => 'checkbox',
       '#title' => t('antialias'),
@@ -566,7 +674,7 @@ function canvasactions_roundedcorners_form($action) {
       '#default_value' => $action['antialias'],
       '#description' => t('Attempt antialias smoothing when drawing the corners'),
   );
-
+*/
   $form['notes'] = array(
       '#type' => 'markup',
       '#value' => t('
@@ -574,6 +682,7 @@ function canvasactions_roundedcorners_form($action) {
         This means that this effect <b>will fail to be saved</b> on jpegs 
         <em>unless</em> you either <ul>
         <li>convert the image to PNG (using the coloractions filter for that),</li>
+        <li>define a canvas underneath it (using canvasactions-define-canvas) or</li> 
         <li>underlay a solid color (using coloractions-alpha-flatten) or</li> 
         <li>underlay a background image (canvasactions-underlay)</li> 
         </ul>
@@ -585,8 +694,22 @@ function canvasactions_roundedcorners_form($action) {
   return $form;
 }
 
+function canvasactions_roundedcorners_image(&$image, $action = array()) {
+  $independent_corners = !empty($action['independent_corners_set']['independent_corners']);
+  if (!$independent_corners) {
+    // set the independant corners to all be the same.
+    $corners = array('tl', 'tr', 'bl', 'br');
+    foreach ($corners as $key) {
+      // Use the all-the-same radius setting.
+      $action['independent_corners_set']['radii'][$key] = $action['radius'];
+    }
+  }
+  
+  return imageapi_toolkit_invoke('roundedcorners', $image, array($action));
+}
+
 /**
- * Create a rounded corner mask and alpha-merge it with the image.
+ * Trim rounded corners off an image, using an anti-aliasing algorithm.
  * 
  * Implementation of hook_image()
  * 
@@ -594,156 +717,197 @@ function canvasactions_roundedcorners_form($action) {
  * We can abstract it out once we have something else to abstract to.
  * In the meantime just don't.
  * 
- * 'independant' rounded corners logic contributed by canaryMason 2009-03
+ * 'handcoded' rounded corners logic contributed by donquixote 2009-08-31
  *
  * @param $image
  * @param $action
  */
-function canvasactions_roundedcorners_image(&$image, $action = array()) {
-  if ($image->toolkit != 'imageapi_gd') {
-    drupal_set_message("Unable to create rounded corners with {$image->toolkit}");
-    // Pretend we did anyway, just return the untrimmed version.
-    return TRUE;
-  }
-  
+function imageapi_gd_image_roundedcorners(&$image, $action = array()) {
+  // Read settings.
   $width = $image->info['width'];
   $height = $image->info['height'];
   $radius = $action['radius'];
-  $independent_corners = $action['independent_corners_set']['independent_corners'];
-  $radii = $action['independent_corners_set']['radii'];
-  $diameter = array();
+  $independent_corners = !empty($action['independent_corners_set']['independent_corners']);
+  $corners = array('tl', 'tr', 'bl', 'br');
 
-  if ($action['antialias']) {
-    $width = $width * 3;
-    $height = $height * 3;
-    $radius = $radius * 3;
-    foreach ($radii as $corner => $corner_radius) {
-      $radii[$corner] = $radii[$corner] * 3;
+  $im = &$image->resource;
+  // Prepare drawing on the alpha channel.
+  imagesavealpha($im, TRUE);
+  imagealphablending($im, FALSE);
+
+  foreach ($corners as $key) {
+    if ($independent_corners) {
+      $r = $action['independent_corners_set']['radii'][$key];
+    } 
+    else {
+      // Use the all-the-same radius setting.
+      $r = $radius;
+    }
+
+    // key can be 'tl', 'tr', 'bl', 'br'.
+    $is_bottom = ($key{0}=='b');
+    $is_right = ($key{1}=='r');
+    
+    // dx and dy are in "continuous coordinates",
+    // and mark the distance of the pixel middle to the image border.
+    for ($dx = .5; $dx < $r; ++$dx) {
+      for ($dy = .5; $dy < $r; ++$dy) {
+        
+        // ix and iy are in discrete pixel indices,
+        // counting from the top left
+        $ix = floor($is_right ? $width-$dx : $dx);
+        $iy = floor($is_bottom ? $height-$dy : $dy);
+        
+        $opacity = _canvasactions_roundedcorners_pixel_opacity($dx, $dy, $r);
+        if ($opacity >= 1) {
+          // we can finish this row,
+          // all following pixels will be fully opaque.
+          break;
+        }
+        
+        // Color lookup at ($ix, $iy).
+        $color_ix = imagecolorat($im, $ix, $iy);
+        $color = imagecolorsforindex($im, $color_ix);
+        
+        if (isset($rgba['alpha'])) {
+          $color['alpha'] = 127 - round($opacity * (127 - $color['alpha']));
+        } 
+        else {
+          $color['alpha'] = 127 - round($opacity * 127);
+        }
+        // Value should not be more than 127, and not less than 0.
+        $color['alpha'] = ($color['alpha'] > 127) ? 127 : (($color['alpha'] < 0) ? 0 : $color['alpha']);
+        $color_ix = imagecolorallocatealpha($im, $color['red'], $color['green'], $color['blue'], $color['alpha']);
+        imagesetpixel($im, $ix, $iy, $color_ix);
+      }
     }
   }
-
-  foreach ($radii as $corner => $corner_radius) {
-    if(!$independent_corners){
-      // Use the unique maths for independant corners, 
-      // even if they are all the same.
-      $radii[$corner] = $radius;
-    }
-    $diameter[$corner] = $radii[$corner] * 2;
-  }
-  
-  // Create a mask with rounded corners
-  $mask = imagecreatetruecolor($width, $height);
-
-  // Is using the toolkit really worth the bother?
-  // Just doing it in an attempt to be consistent
-  $mask_image = (object)array(
-    'resource' => &$mask, 
-    'info' => array('width' => $width, 'height' => $height, 'extension' => 'png'), 
-    'toolkit' => $image->toolkit,
-    'resource' => &$mask,
-  );
-
-  // Start with a blank slate
-  $background = imagecolorallocatealpha($mask, 255, 255, 255, 127);
-  imagesavealpha($mask, TRUE);
-  imagealphablending($mask, false);
-  imagefilledrectangle($mask, 0, 0, $width, $height, $background);
-  // Place solid lumps on it
-  $foreground = imagecolorallocatealpha($mask, 0, 0, 0, 0);
-
-  // Place blobs in the corners
-  ImageFilledEllipse($mask, $radii['tl'], $radii['tl'], $diameter['tl'], $diameter['tl'], $foreground);
-  ImageFilledEllipse($mask, $width-$radii['tr'], $radii['tr'], $diameter['tr'], $diameter['tr'], $foreground);
-  ImageFilledEllipse($mask, $radii['bl'], $height-$radii['bl'], $diameter['bl'], $diameter['bl'], $foreground);
-  ImageFilledEllipse($mask, $width-$radii['br'], $height-$radii['br'], $diameter['br'], $diameter['br'], $foreground);
-  
-  // Block out the middle
-  ImageFilledRectangle($mask, $radii['tl'], 0, $width*0.5, $height*0.5, $foreground);
-  ImageFilledRectangle($mask, 0, $radii['tl'], $width*0.5, $height*0.5, $foreground);
-  ImageFilledRectangle($mask, $width*0.5, 0, $width-$radii['tr'], $height*0.5, $foreground);
-  ImageFilledRectangle($mask, $width*0.5, $radii['tr'], $width, $height*0.5, $foreground);
-  ImageFilledRectangle($mask, 0, $height*0.5, $width*0.5, $height-$radii['bl'], $foreground);
-  ImageFilledRectangle($mask, $radii['bl'], $height*0.5, $width*0.5, $height, $foreground);
-  ImageFilledRectangle($mask, $width*0.5, $height*0.5, $width, $height-$radii['br'], $foreground);
-  ImageFilledRectangle($mask, $width*0.5, $height*0.5, $width-$radii['br'], $height, $foreground);
-
-  if ($action['antialias']) {
-    // Use toolkit so scale down again. 
-    imageapi_image_scale($mask_image, $width/3, $height/3);
-    $mask = $mask_image->resource;
-  }
-  // Now we have a mask. Merge to get a result
-  canvasactions_mask($image, $mask_image);
-  
   return TRUE;
 }
 
 /**
- * Given a mask image resource object in the $action, use the alpha values from
- * it to set transparency on the source image.
+ * Calculate the transparency value for a rounded corner pixel
  * 
- * Note that the returned image has transparency set BUT if it's a jpeg it may
- * not remember that channel.
- * Need to switch formats or flatten before saving, or the transparency will be
- * lost.
+ * @param $x
+ *   distance from pixel center to image border (left or right)
+ *   should be an integer + 0.5
+ *   
+ * @param $y
+ *   distance from pixel center to image border (top or bottom)
+ *   should be an integer + 0.5
+ *   
+ * @param $r
+ *   radius of the rounded corner
+ *   should be an integer
+ *   
+ * @return float
+ *   opacity value between 0 (fully transparent) and 1 (fully opaque).
  */
-function canvasactions_mask(&$image, $mask) {
-  // I do not believe there is a func for this, so I'll do it pixel-by-pixel
-  // Slow, I know.
-  $info = $image->info;
-  if (!$info) { return FALSE; }
-  $img = &$image->resource;
-  $msk = &$mask->resource;
-  imagesavealpha($image->resource, TRUE);
-  imagealphablending($image->resource, FALSE);
-
-  // Support indexed color (gif) if I have to
-  $transparent_ix = imagecolortransparent($image->resource);
-    
-  $width = imagesx($img);  // Use the actual, not claimed image size.
-  $height = imagesy($img);
-  for ($i = 0; $i < $height; $i++) { //this loop traverses each row in the image
-    for ($j = 0; $j < $width; $j++) { //this loop traverses each pixel of each row
-
-      // Get the color & alpha info of the current pixel
-      $color_ix = imagecolorat($img, $j, $i); // an index
-      $rgba_array = imagecolorsforindex($img, $color_ix);
-      
-      // support indexed trans
-      if ($color_ix == $transparent_ix) { $rgba_array['alpha'] = 127; }
-      
-      // Get the alpha of the corresponding mask pixel
-      $mask_color_ix = imagecolorat($msk, $j, $i); // an index
-      $msk_rgba_array = imagecolorsforindex($msk, $mask_color_ix);
-
-      // Calculate the total alpha value of this pixel
-      $rgba_array['alpha'] = max($msk_rgba_array['alpha'], $rgba_array['alpha']);
-
-      //paint the pixel
-      if($image->info['mime_type'] == 'image/gif') {
-        // indexed color - re-use existing pallette
-        $color_to_paint = imagecolorclosestalpha($image->resource, $rgba_array['red'], $rgba_array['green'], $rgba_array['blue'], $rgba_array['alpha']);
-      }
-      else {
-        $color_to_paint = imagecolorallocatealpha($image->resource, $rgba_array['red'], $rgba_array['green'], $rgba_array['blue'], $rgba_array['alpha']);
-      }
-      imagesetpixel($image->resource, $j, $i, $color_to_paint);  
-    }
+function _canvasactions_roundedcorners_pixel_opacity($x, $y, $r) {
+  if ($x < 0 || $y < 0) {
+    return 0;
+  } 
+  else if ($x > $r || $y > $r) {
+    return 1;
   }
-  return TRUE;
+  $dist_2 = ($r-$x)*($r-$x) + ($r-$y)*($r-$y);
+  $r_2 = $r*$r;
+  if ($dist_2 > ($r+0.8)*($r+0.8)) {
+    return 0;
+  } 
+  else if ($dist_2 < ($r-0.8)*($r-0.8)) {
+    return 1; 
+  } 
+  else {
+    // this pixel needs special analysis.
+    // thanks to a quite efficient algorithm, we can afford 10x antialiasing :)
+    $opacity = 0.5;
+    if ($x > $y) {
+      // cut the pixel into 10 vertical "stripes"
+      for ($dx=-0.45; $dx<0.5; $dx+=0.1) {
+        // find out where the rounded corner edge intersects with the stripe
+        // this is plain triangle geometry.
+        $dy = $r - $y - sqrt($r_2 - ($r-$x-$dx)*($r-$x-$dx));
+        $dy = ($dy > 0.5) ? 0.5 : (($dy < -0.5) ? -0.5 : $dy);
+        // count the opaque part of the stripe.
+        $opacity -= 0.1 * $dy;
+      }
+    } 
+    else {
+      // cut the pixel into 10 horizontal "stripes"
+      for ($dy=-0.45; $dy<0.5; $dy+=0.1) {
+        // this is the math:
+        //   ($r-$x-$dx)^2 + ($r-$y-$dy)^2 = $r^2
+        //   $dx = $r - $x - sqrt($r^2 - ($r-$y-$dy)^2) 
+        $dx = $r - $x - sqrt($r_2 - ($r-$y-$dy)*($r-$y-$dy));
+        $dx = ($dx > 0.5) ? 0.5 : (($dx < -0.5) ? -0.5 : $dx);
+        $opacity -= 0.1 * $dx;
+      }
+    }
+    return ($opacity < 0) ? 0 : (($opacity > 1) ? 1 : $opacity);
+  }
 }
+
+
+
+/**
+ * imageapi_roundedcorners
+ */
+function imageapi_imagemagick_image_roundedcorners(&$image, $action = array()) {
+  // Based on the imagemagick documentation.
+  // http://www.imagemagick.org/Usage/thumbnails/#rounded
+  // Create arc cut-outs, then mask them.
+  // Draw black triangles and white circles.
+  // draw circle is center: x,y, and a point on the perimeter
+  $corners = array('tl', 'tr', 'bl', 'br');
+  $radii = $action['independent_corners_set']['radii'];
+  $width = $image->info['width'];
+  $height = $image->info['height'];
+  $tl = $radii['tl'];
+  $tr = $radii['tr'];
+  $bl = $radii['bl'];
+  $br = $radii['br'];
+
+  $drawmask = " -draw '";
+  if ($tl) {
+    $drawmask .= " fill black polygon 0,0 0,{$tl} {$tl},0 ";
+    $drawmask .= " fill white circle {$tl},{$tl} {$tl},0 ";
+  }
+  if ($tr) {
+    $right = $width-$tr;
+    $drawmask .= " fill black polygon {$right},0 {$width},0 {$width},{$tr} ";
+    $drawmask .= " fill white circle {$right},{$tr} {$right},0 ";
+  }
+  if ($bl) {
+    $bottom = $height-$bl;
+    $drawmask .= " fill black polygon 0,{$bottom} 0,{$height} {$bl},{$height} ";
+    $drawmask .= " fill white circle {$bl},{$bottom} 0,{$bottom} ";
+  }
+  if ($br) {
+    $bottom = $height-$br;
+    $right = $width-$br;
+    $drawmask .= " fill black polygon {$right},{$height} {$width},{$bottom} {$width},{$height} ";
+    $drawmask .= " fill white circle {$right},{$bottom} {$width},{$bottom} ";
+  }
+  $drawmask .= " ' ";
+
+  $compose = " \\( +clone  -threshold -1 {$drawmask} \\) +matte -compose CopyOpacity -composite ";
+  $image->ops[] = $compose; 
+  return TRUE; 
+} 
 
 /**
  * Implementation of theme_hook() for imagecache_ui.module
  */
 function theme_canvasactions_roundedcorners($element) {
   $data = $element['#value'];
-  if($data['independent_corners_set']['independent_corners']){
-    $dimens = join('px | ', $data['independent_corners_set']['radii']).'px';
-  } else { 
-    $dimens = "Radius: {$data['radius']}px "; 
+  if (!empty($data['independent_corners_set']['independent_corners'])) {
+    $dimens = join('px | ', $data['independent_corners_set']['radii']) .'px';
+  } 
+  else { 
+    $dimens = "Radius: {$data['radius']}px"; 
   }
-  return $dimens ." | ". ($data['antialias'] ? "antialiased" : "") ;
+  return $dimens;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -757,7 +921,7 @@ function theme_canvasactions_roundedcorners($element) {
  * @return a form definition
  */
 function canvasactions_aspect_form($action) {
-  $defaults = array(  );
+  $defaults = array( 'ratio_adjustment' => 1 );
   $action = array_merge($defaults, (array)$action);
   
   $form = array(
@@ -784,6 +948,22 @@ function canvasactions_aspect_form($action) {
     '#default_value' => $action['landscape'],
     '#options' => $presets,
   );
+
+  $form['ratio_adjustment'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Ratio Adjustment (advanced)'),
+    '#size' => 3,
+    '#default_value' => $action['ratio_adjustment'],
+    '#description' => t("
+This allows you to bend the rules for how different the proportions need to be to trigger the switch.  
+<br/>If the (width/height)*n is greater than 1, use 'landscape', otherwise use 'portrait'.
+<br/>When n = 1 (the default) it will switch between portrait and landscape modes.
+<br/>If n > 1, images that are slightly wide will still be treated as portraits.
+If n < 1 then blunt portraits will be treated as landscape.
+    "),
+  );
+  
+  
   return $form;
 }
 
@@ -794,7 +974,11 @@ function canvasactions_aspect_form($action) {
 function theme_canvasactions_aspect($element) {
   $action = $element['#value'];
   $presets = imagecache_presets(TRUE); 
-  return 'Portrait size: <strong>'. $presets[$action['portrait']]['presetname'] . '</strong>. Landscape size: <strong>'. $presets[$action['landscape']]['presetname'] .'</strong>' ;
+  $ratio_adjustment = '';
+  if ($action['ratio_adjustment'] != 1) {
+    $ratio_adjustment = " (switch at 1:{$action['ratio_adjustment']})";
+  }
+  return 'Portrait size: <strong>'. $presets[$action['portrait']]['presetname'] . '</strong>. Landscape size: <strong>'. $presets[$action['landscape']]['presetname'] .'</strong>'. $ratio_adjustment ;
 }
 
 /**
@@ -807,7 +991,13 @@ function theme_canvasactions_aspect($element) {
  * @param $action
  */
 function canvasactions_aspect_image(&$image, $action = array()) {
-  $preset_id = ($image->info['width'] > $image->info['height'] ) ? $action['landscape'] : $action['portrait'];
+  $ratio_adjustment = 0 + $action['ratio_adjustment'];
+  if (!$ratio_adjustment) {
+    $ratio_adjustment = 1;
+  }
+  $aspect = $image->info['width'] / $image->info['height'];
+  // width / height * adjustment. If > 1, it's wide. 
+  $preset_id = (($aspect * $ratio_adjustment) > 1) ? $action['landscape'] : $action['portrait'];
   $preset = imagecache_preset($preset_id);
 
   // Run the preset actions ourself. Cannot invoke a preset from the top as it handles filenames, not image objects.

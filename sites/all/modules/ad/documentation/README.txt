@@ -67,7 +67,7 @@ advertisement' or 'text advertisement'.
   Image ads or only slightly more complicated than text ads.  They depend on
   the drupal core Upload module for managing the actual images.  As with text
   ads, you first need to specify the Destination URL where you want people to
-  be redirected when they click on your image ad.  Second, you can optoinally
+  be redirected when they click on your image ad.  Second, you can optionally
   enter some Mouseover text.  If you enter text in the mouseover field this
   text will be displayed when people hover their mouse pointer over the
   advertisement.  Finally, you need to scroll down to the File attachements
@@ -157,7 +157,7 @@ module.
 
   If you wish to automatically embed ads in your content, configure this on a
   per-content-type basis in the lower configuration section.
-  embeded ads".
+  embedded ads".
 
   ------------------------
   Displaying ads from PHP:
@@ -266,7 +266,7 @@ The ad module and related modules provide a number of configuration options.
   This page is divided into sections.  The "Status" section validates that the 
   module can find the necessary scripts for serving advertisements.  If 
   everything is properly installed, it will show you the automatically detected
-  paths to serve.ph and adserve.inc.  If you instead see errors in this section,
+  paths to serve.php and adserve.inc.  If you instead see errors in this section,
   review the directions in INSTALL.txt to get the ad module properly installed.
 
   In the "General" section you can configure what happens when an advertisement
@@ -349,5 +349,5 @@ clicks:
 
 This means that when the click_filter module is enabled, all clicks by UID 1
 will be filtered because Drupal will automatically assign all permissions to
-this user, including the 'filter clicks' permisison.  The click_filter module
+this user, including the 'filter clicks' permission.  The click_filter module
 currently has no configuration options beyond the 'filter clicks' permission.

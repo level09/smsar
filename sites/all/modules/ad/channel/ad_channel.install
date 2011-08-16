@@ -1,5 +1,5 @@
 <?php
-// $Id: ad_channel.install,v 1.1.4.9 2009/07/28 17:39:35 jeremy Exp $
+// $Id: ad_channel.install,v 1.1.4.10 2009/11/23 20:05:56 Jeremy Exp $
 
 /**
  *
@@ -44,7 +44,7 @@ function ad_channel_schema() {
         'type' => 'int',
         'size' => 'medium',
         'not null' => TRUE,
-        'unsigned' => TRUE,
+        'unsigned' => FALSE,
         'default' => 0,
         'description' => 'Used when displaying channels to admins, heavier weights sink to the bottom.',
       ),
@@ -124,7 +124,7 @@ function ad_channel_schema() {
         'type' => 'int',
         'size' => 'medium',
         'not null' => TRUE,
-        'unsigned' => TRUE,
+        'unsigned' => FALSE,
         'default' => 0,
         'description' => 'Used when displaying channels to admins, heavier weights sink to the bottom.',
       ),
@@ -245,5 +245,28 @@ function ad_channel_update_6005() {
   $ret = array();
   $ret[] = update_sql("ALTER TABLE {ad_channel} ADD inventory INT(11)");
   $ret[] = update_sql("CREATE TABLE {ad_channel_remnant} (aid INT(11) UNSIGNED NOT NULL DEFAULT '0', remnant TINYINT UNSIGNED NOT NULL DEFAULT '0', PRIMARY KEY (aid, remnant))");
+  return $ret;
+}
+
+/*
+ * Make weight a signed int to allow negative weights.
+ * Issue http://drupal.org/node/612302
+ */
+function ad_channel_update_6006() {
+  $ret = array();
+  db_change_field($ret, 'ad_channel', 'weight', 'weight', array(
+    'type' => 'int',
+    'size' => 'medium',
+    'not null' => TRUE,
+    'unsigned' => FALSE,
+    'default' => 0,
+    'description' => 'Used when displaying channels to admins, heavier weights sink to the bottom.'));
+  db_change_field($ret, 'ad_channel_container', 'weight', 'weight', array(
+    'type' => 'int',
+    'size' => 'medium',
+    'not null' => TRUE,
+    'unsigned' => FALSE,
+    'default' => 0,
+    'description' => 'Used when displaying channels to admins, heavier weights sink to the bottom.'));
   return $ret;
 }

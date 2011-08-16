@@ -1,5 +1,5 @@
 <?php
-// $Id: relevant_content_cck.module,v 1.1.4.3 2008/11/06 12:49:29 njt1982 Exp $
+// $Id: relevant_content_cck.module,v 1.1.4.8 2010/01/22 23:58:35 njt1982 Exp $
 
 /**
  * @file
@@ -11,13 +11,28 @@
  * Implementation of hook_theme().
  */
 function relevant_content_cck_theme() {
-  return array(
-    'relevant_content_cck_field'                => array('arguments' => array('element' => NULL)),
-    'relevant_content_cck_field_format_default' => array('arguments' => array('element' => NULL)),
-    'relevant_content_cck_field_format_plain'   => array('arguments' => array('element' => NULL)),
-    'relevant_content_cck_field_format_teaser'  => array('arguments' => array('element' => NULL)),
-    'relevant_content_cck_field_format_full'    => array('arguments' => array('element' => NULL)),
+  $hooks['relevant_content_cck_formatter_general'] = array(
+    'path' => drupal_get_path('module', 'relevant_content_cck') .'/theme',
+    'file' => 'relevant_content_cck.theme.inc',
+    'arguments' => array('element' => NULL, 'type' => 'default'),
   );
+
+  $base = array(
+    'path' => drupal_get_path('module', 'relevant_content_cck') .'/theme',
+    'file' => 'relevant_content_cck.theme.inc',
+    'arguments' => array('element' => NULL),
+  );
+
+  $hooks['relevant_content_cck_formatter_default'] = $base;
+  $hooks['relevant_content_cck_formatter_plain']   = $base;
+  $hooks['relevant_content_cck_formatter_teaser']  = $base;
+  $hooks['relevant_content_cck_formatter_full']    = $base;
+
+  if (module_exists('token')) {
+    $hooks['relevant_content_cck_formatter_token_teaser']  = $base;
+    $hooks['relevant_content_cck_formatter_token_full']    = $base;
+  }
+  return $hooks;
 }
 
 
@@ -47,7 +62,7 @@ function relevant_content_cck_field_settings($op, $field) {
       $form['relevant_nodetypes'] = array(
         '#type' => 'checkboxes',
         '#title' => t('Relevant Node Types'),
-        '#default_value' => isset($field['relevant_nodetypes']) ? $field['relevant_nodetypes'] : array(),
+        '#default_value' => is_array($field['relevant_nodetypes']) ? $field['relevant_nodetypes'] : array(),
         '#options' => node_get_types('names'),
         '#required' => TRUE,
         '#description' => t('Select the node types you would like to include in this <em>Relevant Content Field</em>'),
@@ -57,10 +72,32 @@ function relevant_content_cck_field_settings($op, $field) {
       foreach (taxonomy_get_vocabularies() as $vid => $voc) {
         $vocabs[$vid] = $voc->name;
       }
+
+      // If the vocabularies array is empty, then we should prompt the user to create a vocabulary before they configure the field.
+      if (empty($vocabs)) {
+        // If they have permission to admin taxonomy then configure a link with appropriate destinations/redirections
+        if (user_access('administer taxonomy')) {
+          $link_options = array('query' => array('destination' => $_GET['q']));
+          $link = l('Create a vocabulary now', 'admin/content/taxonomy/add/vocabulary', $link_options);
+        }
+        // Otherwise, display an error message asking them to get an admin to do it.
+        else {
+          $link = t('You do not have permission to create vocabularies. An administrator must create one for you.');
+        }
+
+        // Display the error message on a page on its own - we dont want the user to complete the form as the form itself is incomplete
+        // TODO: Is this OK for usability?
+        drupal_set_message(
+          t('You must define at least one vocabulary before you can continue. !link.', array('!link' => $link)),
+          'error'
+        );
+        print theme('page', '');
+        exit;
+      }
       $form['relevant_vocabs'] = array(
         '#type' => 'checkboxes',
         '#title' => t('Relevant Vocabularies'),
-        '#default_value' => isset($field['relevant_vocabs']) ? $field['relevant_vocabs'] : array(),
+        '#default_value' => is_array($field['relevant_vocabs']) ? $field['relevant_vocabs'] : array(),
         '#options' => $vocabs,
         '#required' => TRUE,
         '#description' => t('Select the vocabularies you would like to include in this <em>Relevant Content Field</em>. Only terms in the selected vocabularies will be used to find relevant content.'),
@@ -90,6 +127,12 @@ function relevant_content_cck_field_settings($op, $field) {
       $form['relevant_header']['format'] = filter_form($field['relevant_header']['format'], NULL, array('relevant_header', 'format'));
 
       return $form;
+
+    case 'validate' :
+      if (preg_match('|[^0-9]|', $field['relevant_result_limit']) || $field['relevant_result_limit'] < 1) {
+        form_set_error('relevant_result_limit', t('The result limit should be a whole and positive number'));
+      }
+      break;
 
     case 'save' :
       return array('relevant_nodetypes', 'relevant_vocabs', 'relevant_result_limit', 'relevant_header');
@@ -128,16 +171,14 @@ function relevant_content_cck_field($op, &$node, $field, &$items, $teaser, $page
 
       // Search for items and return the item set.
       $items = relevant_content_get_nodes($types, $terms, array($node->nid), $field['relevant_result_limit']);
-      return array(
-        $field['field_name'] => array(
-          'items' => $items,
-          'header' => $field['relevant_header'],
-          '#theme' => 'relevant_content_cck_field',
-        )
-      );
+      if (empty($items)) return array($field['field_name'] => array());
+
+      // We need the test as the function "relevant_content_get_nodes" returns false on an empty set. Here we need just an array.
+      return array($field['field_name'] => array('items' => $items, 'header' => $field['relevant_header']));
 
     case 'sanitize' :
-      if (!empty($items['header'])) {
+      // Apply the filter to the body and store in 'safe'
+      if (!empty($items['header']['body'])) {
         $items['header']['safe'] = check_markup($items['header']['body'], $items['header']['format'], FALSE);
       }
       break;
@@ -149,32 +190,22 @@ function relevant_content_cck_field($op, &$node, $field, &$items, $teaser, $page
  * Implementation of hook_field_formatter_info().
  */
 function relevant_content_cck_field_formatter_info() {
+  if (module_exists('token')) {
+    $optional = array(
+      'token_teaser' => array('multiple values' => CONTENT_HANDLE_MODULE, 'field types' => array('relevant_content'), 'label' => t('Custom Tokens Teaser View')),
+      'token_full'   => array('multiple values' => CONTENT_HANDLE_MODULE, 'field types' => array('relevant_content'), 'label' => t('Custom Tokens Full View')),
+    );
+  }
+  else {
+    $optional = array();
+  }
+
   return array(
     'default' => array('multiple values' => CONTENT_HANDLE_MODULE, 'field types' => array('relevant_content'), 'label' => t('Node Title - Link')),
     'plain'   => array('multiple values' => CONTENT_HANDLE_MODULE, 'field types' => array('relevant_content'), 'label' => t('Node Title - Plain Text')),
     'teaser'  => array('multiple values' => CONTENT_HANDLE_MODULE, 'field types' => array('relevant_content'), 'label' => t('Node Teaser')),
     'full'    => array('multiple values' => CONTENT_HANDLE_MODULE, 'field types' => array('relevant_content'), 'label' => t('Node Full View')),
-  );
-}
-
-
-/**
- * Field theming functions
- */
-function theme_relevant_content_cck_field_format_default($element) {
-  return l($element['title'], 'node/'. $element['nid']);
-}
-
-function theme_relevant_content_cck_field_format_plain($element) {
-  return check_plain($element['title']);
-}
-
-function theme_relevant_content_cck_field_format_teaser($element) {
-  return node_view(node_load($element['nid'], TRUE));
-}
-
-function theme_relevant_content_cck_field_format_full($element) {
-  return node_view(node_load($element['nid'], FALSE));
+  ) + $optional;
 }
 
 
@@ -216,26 +247,94 @@ function relevant_content_cck_widget(&$form, &$form_state, $field, $items, $delt
 
 
 /**
- * Theme function for outputing a "Relevant Content" field. This is basically the same as theme_field() in the content.module of CCK,
- * but it also allows the optional header text.
+ * Implementation of hook_widget_settings().
  */
-function theme_relevant_content_cck_field($element) {
-  $items_output = '';
-  $format = $element['#formatter'];
-  $count = 1;
-  foreach ($element['items']['#item'] as $delta => $item) {
-    $items_output .= '<div class="field-item '. ($count % 2 ? 'odd' : 'even') .'">'. theme('relevant_content_cck_field_format_'. $format, $item) .'</div>';
-    $count++;
-  }
+function relevant_content_cck_widget_settings($op, $widget) {
+  // If token isn't installed then dont bother with the form below
+  if (!module_exists('token')) return;
 
-  $output = '';
-  if (!empty($items_output)) {
-    $output .= '<div class="field field-type-relevant-content field-'. check_plain(strtr($element['#field_name'], '_', '-')) .'">';
-    if (!empty($element['header']['#item']['safe'])) {
-      $output .= '<div class="field-header description">'. $element['header']['#item']['safe'] .'</div>';
-    }
-    $output .= '<div class="field-items">'. $items_output .'</div>';
-    $output .= '</div>';
+  switch ($op) {
+    case 'form' :
+      $form = array();
+
+
+      $form['token_settings'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Token Output Settings'),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+      );
+      $form['token_settings']['token_teaser'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Tokens for teaser view formatter'),
+        '#tree' => TRUE,
+      );
+      $form['token_settings']['token_teaser']['body'] = array(
+        '#type' => 'textarea',
+        '#description' => t('Tokens entered in here will be used for the optional token teaser formatter. This allows customized output.'),
+        '#default_value' => $widget['token_teaser']['body'],
+        '#rows' => 4,
+      );
+      $form['token_settings']['token_teaser']['format'] = filter_form($widget['token_teaser']['format'], NULL, array('token_teaser', 'format'));
+
+
+      $form['token_settings']['token_full'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Tokens for full view formatter'),
+        '#tree' => TRUE,
+      );
+      $form['token_settings']['token_full']['body'] = array(
+        '#type' => 'textarea',
+        '#description' => t('Tokens entered in here will be used for the optional token full formatter. This allows customized output.'),
+        '#default_value' => $widget['token_full']['body'],
+        '#rows' => 4,
+      );
+      $form['token_settings']['token_full']['format'] = filter_form($widget['token_full']['format'], NULL, array('token_full', 'format'));
+
+
+      $form['token_settings']['token_help'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Token Help'),
+        '#collapsed' => TRUE,
+        '#collapsible' => TRUE,
+      );
+      $form['token_settings']['token_help']['view'] = array(
+        '#type' => 'markup',
+        '#value' => theme('token_help'),
+      );
+      return $form;
+
+    case 'save' :
+      return array('token_teaser', 'token_full');
   }
-  return $output;
+}
+
+
+
+
+function relevant_content_cck_preprocess_content_field(&$variables) {
+  // If the field is a relevant content field, we need to add more suggestion types (so we can easily theme all RC fields).
+  // This is necessary so that we can override the default content-field template (which doesn't work correctly for us)
+  if ($variables['field_type'] == 'relevant_content') {
+    $suggestions = array(
+      'content-field-relevant-content',
+      'content-field-relevant-content-'. $variables['field_name'],
+      'content-field-relevant-content-'. $variables['node']->type,
+      'content-field-relevant-content-'. $variables['field_name'] .'-'. $variables['node']->type,
+    );
+
+    $variables['template_files'] = array_merge($variables['template_files'], $suggestions);
+
+    $variables['field_items'] = $variables['items']['0']['view'];
+    $variables['field_header'] = $variables['items']['header']['safe'];
+  }
+}
+
+function relevant_content_cck_theme_registry_alter(&$theme_registry) {
+  // This seems necessary to allow the theme registry to also search the RC folder for template files.
+  $theme_registry['content_field']['theme paths'][] = drupal_get_path('module', 'relevant_content_cck') .'/theme';
+}
+
+function relevant_content_cck_content_is_empty() {
+  return false;
 }

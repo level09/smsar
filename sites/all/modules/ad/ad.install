@@ -1,5 +1,5 @@
 <?php
-// $Id: ad.install,v 1.2.2.4.2.27.2.7.2.4 2009/04/03 17:01:02 jeremy Exp $
+// $Id: ad.install,v 1.2.2.4.2.27.2.7.2.8 2009/10/20 23:31:22 jeremy Exp $
 
 /**
  * @file
@@ -192,7 +192,7 @@ function ad_schema() {
     ),
     'primary key' => array('sid'),
     'indexes' => array(
-      'aid' => array('aid'),
+      'aid_date_action' => array('aid', 'date', 'action'),
       'date' => array('date'),
       'action' => array('action'),
       'adgroup' => array('adgroup'),
@@ -457,3 +457,30 @@ function ad_update_6005() {
   return array();
 }
 
+/**
+ * Flush all caches
+ */
+function ad_update_6006() {
+  drupal_flush_all_caches();
+  return array();
+}
+
+/**
+ * Add new index to ad_statistics table for running reports.
+ */
+function ad_update_6007() {
+  $ret = array();
+  db_add_index($ret, 'ad_statistics', 'aid_date_action', array('aid', 'date', 'action'));
+  db_drop_index($ret, 'ad_statistics', 'aid');
+  return $ret;
+}
+
+/**
+ * If block caching is enabled, make it a per-page cache.  This is necessary
+ * to fix bug #604350.
+ */
+function ad_update_6008() {
+  $ret = array();
+  $ret[] = update_sql("UPDATE {blocks} SET cache = ". BLOCK_CACHE_PER_PAGE ." WHERE module = 'ad'");
+  return $ret;
+}

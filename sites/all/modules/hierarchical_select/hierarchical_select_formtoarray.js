@@ -1,4 +1,3 @@
-// $Id: hierarchical_select_formtoarray.js,v 1.3 2008/06/26 21:55:05 wimleers Exp $
 
 /**
  * @file

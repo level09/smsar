@@ -1,5 +1,5 @@
 <?php
-// $Id: formatted_number.module,v 1.1.2.5 2009/05/20 07:21:36 markuspetrux Exp $
+// $Id: formatted_number.module,v 1.1.2.8 2009/09/20 11:07:02 markuspetrux Exp $
 
 /**
  * @file
@@ -31,11 +31,46 @@
 define('FORMATTED_NUMBER_BIGINT_SUPPORT_ENABLED', 0);
 
 /**
+ * Gets the lengths for the decimal place formatters.
+ *
+ * You can change the value of this variable adding the following to your settings.php file.
+ *
+ * @code
+ * $conf['formatted_number_decimal_place_formatter_lengths'] = array(0, 1, 2);
+ * @endcode
+ *
+ * @return array
+ *   Integers of decimal place lengths.
+ */
+function formatted_number_decimal_place_formatter_lengths() {
+  return variable_get('formatted_number_decimal_place_formatter_lengths', array(0, 1, 2));
+}
+
+/**
+ * Gets the lengths for the significant figure formatters.
+ *
+ * You can change the value of this variable adding the following to your settings.php file.
+ *
+ * @code
+ * $conf['formatted_number_significant_figure_formatter_lengths'] = array(1, 2, 3, 4);
+ * @endcode
+ *
+ * @return array
+ *   Integers of significant figure lengths.
+ */
+function formatted_number_significant_figure_formatter_lengths() {
+  return variable_get('formatted_number_significant_figure_formatter_lengths', array());
+}
+
+/**
  * Implementation of hook_init().
  */
 function formatted_number_init() {
   if (module_exists('diff')) {
     module_load_include('inc', 'formatted_number', 'includes/formatted_number.diff');
+  }
+  if (module_exists('token')) {
+    module_load_include('inc', 'formatted_number', 'includes/formatted_number.token');
   }
 }
 
@@ -43,12 +78,26 @@ function formatted_number_init() {
  * Implementation of hook_theme().
  */
 function formatted_number_theme() {
-  return array(
+  $theme_hooks = array(
     'formatted_number' => array('arguments' => array('element' => NULL)),
     'formatted_number_formatter_default' => array('arguments' => array('element' => NULL), 'function' => 'theme_formatted_number_formatter_generic'),
     'formatted_number_formatter_nozeros' => array('arguments' => array('element' => NULL), 'function' => 'theme_formatted_number_formatter_generic'),
     'formatted_number_formatter_unformatted' => array('arguments' => array('element' => NULL)),
   );
+
+  // Formatters for fixed number of decimal places.
+  foreach (formatted_number_decimal_place_formatter_lengths() as $decimal_places) {
+    $theme_hooks['formatted_number_formatter_dp_'. $decimal_places] = array('arguments' => array('element' => NULL), 'function' => 'theme_formatted_number_formatter_rounded');
+  }
+
+  // Formatters for fixed number of significant figures.
+  if (function_exists('format_number_significant_figures')) {
+    foreach (formatted_number_significant_figure_formatter_lengths() as $significant_figures) {
+      $theme_hooks['formatted_number_formatter_sf_'. $significant_figures] = array('arguments' => array('element' => NULL), 'function' => 'theme_formatted_number_formatter_rounded');
+    }
+  }
+
+  return $theme_hooks;
 }
 
 /**
@@ -336,11 +385,28 @@ function formatted_number_field($op, &$node, $field, &$items, $teaser, $page) {
 function formatted_number_field_formatter_info() {
   $all_field_types = array_keys(formatted_number_get_fields_info());
   $real_field_types = array_keys(formatted_number_get_fields_info('real'));
-  return array(
+
+  $formatters = array(
     'default' => array('label' => t('Default'), 'field types' => $all_field_types),
     'nozeros' => array('label' => t('Remove redundant zeros'), 'field types' => $real_field_types),
     'unformatted' => array('label' => t('Unformatted'), 'field types' => $all_field_types),
   );
+
+  // Formatters for fixed number of decimal places.
+  foreach (formatted_number_decimal_place_formatter_lengths() as $decimal_places) {
+    $label = format_plural($decimal_places, '1 decimal place', '@count decimal places');
+    $formatters['dp_'. $decimal_places] = array('label' => $label, 'field types' => $real_field_types);
+  }
+
+  // Formatters for fixed number of significant figures.
+  if (function_exists('format_number_significant_figures')) {
+    foreach (formatted_number_significant_figure_formatter_lengths() as $significant_figures) {
+      $label = format_plural($significant_figures, '1 significant figure', '@count significant figures');
+      $formatters['sf_'. $significant_figures] = array('label' => $label, 'field types' => $real_field_types);
+    }
+  }
+
+  return $formatters;
 }
 
 /**
@@ -595,6 +661,31 @@ function theme_formatted_number_formatter_generic($element) {
   $field = content_fields($element['#field_name'], $element['#type_name']);
   $decimals = ($element['#formatter'] == 'nozeros' ? -1 : (isset($field['decimals']) ? (int)$field['decimals'] : 0));
   $formatted_number = format_number($value, $decimals);
+
+  $prefixes = isset($field['prefix']) ? explode('|', check_plain($field['prefix'])) : array(0 => '');
+  $suffixes = isset($field['suffix']) ? explode('|', check_plain($field['suffix'])) : array(0 => '');
+  $prefix = (count($prefixes) > 1) ? format_plural($value, $prefixes[0], $prefixes[1]) : $prefixes[0];
+  $suffix = (count($suffixes) > 1) ? format_plural($value, $suffixes[0], $suffixes[1]) : $suffixes[0];
+
+  return $prefix . $formatted_number . $suffix;
+}
+
+/**
+ * Display a formatted number rounded by a fixed number of decimal places
+ * or significant figures.
+ *
+ * @ingroup themeable
+ */
+function theme_formatted_number_formatter_rounded($element) {
+  $value = isset($element['#item']['value']) ? $element['#item']['value'] : NULL;
+  if (!is_numeric($value)) {
+    return '';
+  }
+
+  $field = content_fields($element['#field_name'], $element['#type_name']);
+  $formatter_function = (substr($element['#formatter'], 0, 2) == 'sf' ? 'format_number_significant_figures' : 'format_number');
+  $decimals = (int)substr($element['#formatter'], 3);
+  $formatted_number = $formatter_function($value, $decimals);
 
   $prefixes = isset($field['prefix']) ? explode('|', check_plain($field['prefix'])) : array(0 => '');
   $suffixes = isset($field['suffix']) ? explode('|', check_plain($field['suffix'])) : array(0 => '');

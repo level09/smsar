@@ -1,4 +1,4 @@
-# $Id: sv.po,v 1.1.2.3 2009/01/31 15:28:26 sutharsan Exp $
+# $Id: sv.po,v 1.1.2.4 2009/03/15 23:51:41 sutharsan Exp $
 #
 # Swedish translation of Drupal (simplenews)
 # Copyright 2008 Magnus Gunnarsson <seals@passagen.se>
@@ -549,7 +549,7 @@ msgid "Synchronize with account"
 msgstr "Synkronisera med konto"
 
 #: simplenews.admin.inc:940
-msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deteted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
+msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deleted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
 msgstr "Om ikryssat kommer prenumerationer synkroniseras med webbplatsen konton. När konton raderas kommer prenumerationer med samma e-postadress att tas bort. När konton på webbplatsen spärras eller när spärren tas bort kommer prenumerationerna att avaktiveras/aktiveras. Om detta inte är ikryssat kommer prenumerationerna att vara oförändrade när tillhörande konton raderas eller spärras."
 
 #: simplenews.admin.inc:945

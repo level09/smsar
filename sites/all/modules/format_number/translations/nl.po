@@ -1,0 +1,125 @@
+# $Id: nl.po,v 1.1.2.1 2009/06/06 15:46:30 libeco Exp $
+#
+# Dutch translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  format_number.settings.inc,v 1.1.2.2 2009/02/18 17:07:40 markuspetrux
+#  format_number.module,v 1.1.2.8 2009/02/24 11:55:32 markuspetrux
+#  format_number.info,v 1.1.2.2 2008/11/13 13:25:57 markuspetrux
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2009-06-04 16:45+0200\n"
+"PO-Revision-Date: 2009-06-04 16:52+0100\n"
+"Last-Translator: L.B. Cohn <lichai@999games.nl>\n"
+"Language-Team: Dutch <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+#: format_number.settings.inc:16;66
+msgid "Decimal point"
+msgstr "Decimale punt"
+
+#: format_number.settings.inc:19;69
+msgid "Select the character that will be used as decimal point."
+msgstr "Selecteer het karakter dat zal worden gebruikt als decimale punt."
+
+#: format_number.settings.inc:23;73
+msgid "Thousands separator"
+msgstr "Duizendtallenscheider"
+
+#: format_number.settings.inc:26;76
+msgid "Select the character that will be used as thousands separator."
+msgstr "Selecteer het karakter dat zal worden gebruikt om duizendtallen te scheiden."
+
+#: format_number.settings.inc:30
+msgid "User-configurable number format"
+msgstr "Gebruiker-instelbaar nummerformaat"
+
+#: format_number.settings.inc:32
+msgid "Disabled"
+msgstr "Uitgeschakeld"
+
+#: format_number.settings.inc:32
+msgid "Enabled"
+msgstr "Ingeschakeld"
+
+#: format_number.settings.inc:33
+msgid "When enabled, users can set their own number formatting options."
+msgstr "Als aangezet kunnen gebruiker hun eigen nummerformaatopties instellen."
+
+#: format_number.settings.inc:44;86
+msgid "Decimal point and thousands separator cannot be defined to use the same symbol."
+msgstr "Decimale punt en duizendtallenscheider kunnen niet worden ingesteld op het zelfde symbool."
+
+#: format_number.settings.inc:60
+msgid "Number format settings"
+msgstr "Nummerformaatinstellingen"
+
+#: format_number.module:23
+msgid "The <em>Format Number API</em> module provides a method to configure number formats (site default and user defined) with configurable decimal point and thousand separators. It also exposes several functions that can be used by other contributed or custom modules to display numbers accordingly."
+msgstr "De <em>Nummerformaat API</em>-module levert een methode om nummerformaten in te stellen (sitestandaard en gebruiker-instelbaar) met instelbare decimale punt en duizendtalscheider. Het levert ook enkele functies die kunnen worden gebruikt door andere modules om nummers op deze manier weer te geven."
+
+#: format_number.module:74;88
+msgid "full stop (.)"
+msgstr "volledige stop (.)"
+
+#: format_number.module:75;89
+msgid "comma (,)"
+msgstr "komma (,)"
+
+#: format_number.module:76
+msgid "arabic decimal separator (٫)"
+msgstr "arabische decimale scheider (٫)"
+
+#: format_number.module:87
+msgid "none"
+msgstr "geen"
+
+#: format_number.module:90
+msgid "apostrophe (')"
+msgstr "apostrophe (')"
+
+#: format_number.module:91
+msgid "no-break space ( )"
+msgstr "spatie ( )"
+
+#: format_number.module:92
+msgid "full width comma (，)"
+msgstr "volledige breedte-komma (，)"
+
+#: format_number.module:93
+msgid "arabic thousands separator (٬)"
+msgstr "arabische duizendtalscheider  (٬)"
+
+#: format_number.module:94
+msgid "ethiopic syllable wa (ወ)"
+msgstr "ethiopische lettergreep wa (ወ)"
+
+#: format_number.module:31
+msgid "configure default number format"
+msgstr "conbfigureer standaard nummerformaat"
+
+#: format_number.module:40
+msgid "Number format"
+msgstr "Nummerformaat"
+
+#: format_number.module:41
+msgid "Configure site wide number format settings."
+msgstr "Configureer site nummerformaatinstellingen."
+
+#: format_number.module:0
+msgid "format_number"
+msgstr "nummerformaat"
+
+#: format_number.info:0
+msgid "Format Number API"
+msgstr "Nummerformaat API"
+
+#: format_number.info:0
+msgid "This module provides a method to configure number formats (site default and user defined) with configurable decimal point and thousand separators. It also exposes several functions that can be used by other contributed or custom modules to display numbers accordingly."
+msgstr "Deze module levert een methode om nummerformaten in te stellen (sitestandaard en gebruiker-instelbaar) met instelbare decimale punt en duizendtalscheider. Het levert ook enkele functies die kunnen worden gebruikt door andere modules om nummers op deze manier weer te geven."
+

@@ -1,0 +1,469 @@
+<?php
+// $Id: ad_actions.module,v 1.1.2.4 2009/11/23 22:14:51 Jeremy Exp $
+
+/**
+ * @file
+ * Enable ad triggers and actions.
+ *
+ * Copyright (c) 2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function ad_actions_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/help#ad_actions':
+      $output = '<p>'. t('The ad_actions module provides triggers and actions allowing administrators to create notifications for the ad module.') .'</p>';
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function ad_actions_cron() {
+  // if time, send queued notification emails
+  $result = db_query('SELECT qid, context FROM {ad_actions_queue} WHERE period >= 0 AND scheduled <= %d', time());
+  while ($notify = db_fetch_object($result)) {
+    db_query('DELETE FROM {ad_actions_queue} WHERE qid = %d', $notify->qid);
+    _ad_actions_send_email(unserialize($notify->context));
+  }
+  // trigger "autoactivated" actions, they will end up in the queue
+  $activate = array();
+  $result = db_query('SELECT aid, autoactivate FROM {ads} WHERE autoactivate > 0');
+  while ($ad = db_fetch_array($result)) {
+    module_invoke_all('ad_actions_trigger', 'autoactivated', $ad);
+    $activate[$ad['aid']] = $ad['autoactivate'];
+  }
+  // trigger "autoexpired" actions, they will end up in the queue
+  $expire = array();
+  $result = db_query('SELECT aid, autoexpire FROM {ads} WHERE autoexpire > 0');
+  while ($ad = db_fetch_array($result)) {
+    module_invoke_all('ad_actions_trigger', 'autoexpired', $ad);
+    $expire[$ad['aid']] = $ad['autoexpire'];
+  }
+  // if time, send queued "autoactivated" and "autoexpired" notification emails
+  if (!empty($activate) || !empty($expire)) {
+    $result = db_query('SELECT qid, aid, period, context FROM {ad_actions_queue} WHERE sent = 0 AND period < 0');
+    while ($notify = db_fetch_object($result)) {
+      if (isset($expire[$notify->aid])) {
+        // minus a minus is a plus...
+        if ((time() - $notify->period) >= $expire[$notify->aid]) {
+          db_query('UPDATE {ad_actions_queue} SET sent = 1 WHERE qid = %d', $notify->qid);
+          _ad_actions_send_email(unserialize($notify->context));
+        }
+      }
+      else {
+        // autoexpiration is no longer enabled for this ad,
+        // remove action from queue.
+        db_query('DELETE FROM {ad_actions_queue} WHERE qid = %d', $notify->qid);
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function ad_actions_perm() {
+  return array('administer ad triggers');
+}
+
+/**
+ * Implementation of hook_adapi().
+ */
+function ad_actions_adapi($op, $node) {
+  if ($op == 'statistics_increment') {
+    // trigger whenever statistics are incremented
+    module_invoke_all('ad_actions_trigger', $node['action'], $node);
+  }
+}
+
+/**
+ * Implementation of hook_action_info().
+ * Define new advanced actions and the triggers that can invoke them.
+ */
+function ad_actions_action_info() {
+  return array(
+    'ad_actions_send_email_action_before' => array(
+      'description' => t('Send e-mail before automated ad trigger'),
+      'type' => 'system',
+      'configurable' => TRUE,
+      'hooks' => array(
+        'ad_actions' => array('autoactivated', 'autoexpired'),
+      )
+    ),
+    'ad_actions_send_email_action_after' => array(
+      'description' => t('Send e-mail on or after ad trigger'),
+      'type' => 'system',
+      'configurable' => TRUE,
+      'hooks' => array(
+        'ad_actions' => array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete'),
+      )
+    ),
+  );
+}
+
+
+/**
+ * Return a form definition so the advanced email action can be configured.
+ *
+ * @param $context
+ *   Default values (if we are editing an existing action instance).
+ * @return
+ *   Form definition.
+ */
+function ad_actions_send_email_action_before_form($context) {
+  $form = _ad_actions_email_form($context);
+  $options = array(-31449600 => t('1 year before'), -9676800 => t('16 weeks before'), -4838400 => t('8 weeks before'), -2419200 => t('4 weeks before'), -1814400 => t('3 weeks before'), -1209600 => t('2 weeks before'), -604800 => t('1 week before'), -432000 => t('5 days before'), -259200 => t('3 days before'), -86400 => t('1 day before'), -43200 => t('12 hours before'), -21600 => t('6 hours before'), -10800 => t('3 hours before'), -3600 => t('1 hour before'));
+  $form = array_merge($form, _ad_actions_email_ad_form($context, $options, 'before', -604800));
+  $form = array_merge($form, _ad_actions_email_tokens_form($context));
+  return $form;
+}
+
+/**
+ * Collect action configuration, stored serialized in the
+ * database.
+ */
+function ad_actions_send_email_action_before_submit($form, &$form_state) {
+  $params = array(
+    'recipient' => $form_state['values']['recipient'],
+    'subject' => $form_state['values']['subject'],
+    'message' => $form_state['values']['message'],
+    'before' => $form_state['values']['before'],
+    'disable_notifications' => $form_state['values']['disable_notifications'],
+  );
+  return $params;
+}
+
+/**
+ * Implementation of a configurable Drupal action.
+ * Schedules an email, sent before scheduled actions.
+ */
+function ad_actions_send_email_action_before($object, $context) {
+  if ($context['before']) {
+    if (!db_result(db_query_range("SELECT 1 FROM {ad_actions_queue} WHERE aid = %d AND period = %d AND recipient = '%s'", $object->aid, $context['before'], $context['recipient'], 0, 1))) {
+      db_query("INSERT INTO {ad_actions_queue} (aid, recipient, period, scheduled, context) VALUES(%d, '%s', %d, %d, '%s')", $object->aid, $context['recipient'], $context['before'], time() + $context['before'], serialize($context));
+      watchdog('action', 'Queued email for scheduled trigger to %recipient', array('%recipient' => $context['recipient']));
+    }
+  }
+}
+
+/**
+ * Return a form definition so the advanced email action can be configured.
+ *
+ * @param $context
+ *   Default values (if we are editing an existing action instance).
+ * @return
+ *   Form definition.
+ */
+function ad_actions_send_email_action_after_form($context) {
+  $form = _ad_actions_email_form($context);
+  $options = array(0 => t('immediately'), 3600 => t('1 hour after'), 10800 => t('3 hours after'), 21600 => t('6 hours after'), 43200 => t('12 hours after'), 86400 => t('1 day after'), 259200 => t('3 days after'), 432000 => t('5 days after'), 604800 => t('1 week after'), 1209600 => t('2 weeks after'), 1814400 => t('3 weeks after'), 2419200 => t('4 weeks after'), 4838400 => t('8 weeks after'), 9676800 => t('16 weeks after'), 31449600 => t('1 year after'));
+  $form = array_merge($form, _ad_actions_email_ad_form($context, $options, 'after'));
+  $form = array_merge($form, _ad_actions_email_tokens_form($context));
+  return $form;
+}
+
+/**
+ * Collect action configuration, stored serialized in the
+ * database.
+ */
+function ad_actions_send_email_action_after_submit($form, &$form_state) {
+  // Process the HTML form to store configuration. The keyed array that
+  // we return will be serialized to the database.
+  $params = array(
+    'recipient' => $form_state['values']['recipient'],
+    'subject' => $form_state['values']['subject'],
+    'message' => $form_state['values']['message'],
+    'after' => $form_state['values']['after'],
+    'disable_notifications' => $form_state['values']['disable_notifications'],
+  );
+  return $params;
+}
+
+/**
+ * Implementation of a configurable Drupal action.
+ * Schedules an email, sent before scheduled actions.
+ */
+function ad_actions_send_email_action_after($object, $context) {
+  if ($context['after']) {
+    // send delayed notification email
+    if (!db_result(db_query_range("SELECT 1 FROM {ad_actions_queue} WHERE aid = %d AND period = %d AND recipient = '%s'", $object->aid, $context['after'], $context['recipient'], 0, 1))) {
+      db_query("INSERT INTO {ad_actions_queue} (aid, recipient, period, scheduled, context) VALUES(%d, '%s', %d, %d, '%s')", $object->aid, $context['recipient'], $context['after'], time() + $context['after'], serialize($context));
+      watchdog('action', 'Queued email to %recipient', array('%recipient' => $context['recipient']));
+    }
+  }
+  else {
+    // send instant notification email
+    _ad_actions_send_email($context);
+  }
+}
+
+/**
+ * Implementation of hook_hook_info().
+ * Define all available ad triggers.
+ */
+function ad_actions_hook_info() {
+  return array(
+    'ad_actions' => array(
+      'ad_actions' => array(
+        'click' => array(
+          'runs when' => t('An advertisement has been clicked.'),
+        ),
+        'approved' => array(
+          'runs when' => t('An advertisement has been approved.'),
+        ),
+        'pending' => array(
+          'runs when' => t('An advertisement has been marked as pending.'),
+        ),
+        'offline' => array(
+          'runs when' => t('An advertisement has been marked as offline.'),
+        ),
+        'denied' => array(
+          'runs when' => t('An advertisement has been denied.'),
+        ),
+        'active' => array(
+          'runs when' => t('An advertisement has been activated.'),
+        ),
+        'expired' => array(
+          'runs when' => t('An advertisement has expired.'),
+        ),
+        'created' => array(
+          'runs when' => t('An advertisement has been created.'),
+        ),
+        'update' => array(
+          'runs when' => t('An advertisement has been updated.'),
+        ),
+        'delete' => array(
+          'runs when' => t('An advertisement has been deleted.'),
+        ),
+        'autoactivated' => array(
+          'runs when' => t('Scheduled activation.'),
+        ),
+        'autoexpired' => array(
+          'runs when' => t('Scheduled expiration.'),
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_action_info_alter
+ * Allow ad module triggers to trigger other actions.
+ */
+function ad_actions_action_info_alter(&$info) {
+  // Add this modules's triggers to the core system email action
+  if (isset($info['system_send_email_action']['hooks']['ad_actions'])) {
+    array_merge($info['system_send_email_action']['hooks']['ad_actions'], array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete'));
+  } else {
+    $info['system_send_email_action']['hooks']['ad_actions'] = array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete');
+  }
+ 
+  // Add this modules's triggers to the core system message action
+  if (isset($info['system_message_action']['hooks']['ad_actions'])) {
+    array_merge($info['system_message_action']['hooks']['ad_actions'], array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete'));
+  } else {
+    $info['system_message_action']['hooks']['ad_actions'] = array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete');
+  }
+
+  // Add this modules's triggers to the core system goto action
+  if (isset($info['system_goto_action']['hooks']['ad_actions'])) {
+    array_merge($info['system_goto_action']['hooks']['ad_actions'], array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete'));
+  } else {
+    $info['system_goto_action']['hooks']['ad_actions'] = array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete');
+  }
+
+  // Add this modules's triggers to the token message action
+  if (isset($info['token_actions_message_action']['hooks']['ad_actions'])) {
+    array_merge($info['token_actions_message_action']['hooks']['ad_actions'], array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete'));
+  } else {
+    $info['token_actions_message_action']['hooks']['ad_actions'] = array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete');
+  }
+
+  // Add this modules's triggers to the token send email action
+  if (isset($info['token_actions_send_email_action']['hooks']['ad_actions'])) {
+    array_merge($info['token_actions_send_email_action']['hooks']['ad_actions'], array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete'));
+  } else {
+    $info['token_actions_send_email_action']['hooks']['ad_actions'] = array('click', 'approvated', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete');
+  }
+
+  // Add this modules's triggers to the token goto action
+  if (isset($info['token_actions_goto_action']['hooks']['ad_actions'])) {
+    array_merge($info['token_actions_goto_action']['hooks']['ad_actions'], array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete'));
+  } else {
+    $info['token_actions_goto_action']['hooks']['ad_actions'] = array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete');
+  }
+}
+
+/**
+ * Implementation of hook_menu_alter
+ */
+function ad_actions_menu_alter(&$items) {
+  // In theory we can define this title in HOOK_hook_info(),
+  // but as that doesn't seem to work we're overriding it here.
+  $items['admin/build/trigger/ad_actions']['title'] = 'Advertisements';
+  // Use a custom permissions
+  $items['admin/build/trigger/ad_actions']['access arguments'] = array('administer ad triggers');
+}
+
+/**
+ * Implementation of hook_trigger_name().
+ * Trigger event, launch all appropriate actions.
+ */
+function ad_actions_ad_actions_trigger($op, $ad) {
+  global $user;
+  if (!in_array($op, array('click', 'approved', 'pending', 'offline', 'denied', 'active', 'autoactivated', 'expired', 'autoexpired', 'created', 'update', 'delete'))) {
+    return;
+  }
+  $aids = _trigger_get_hook_aids('ad_actions', $op);
+  $node = node_load($ad['aid']);
+  $context = array(
+    'hook' => 'ad_actions',
+    'op' => $op,
+    'user' => $user,
+    'node' => $node,
+    'ad' => $node,
+  );
+  actions_do(array_keys($aids), $node, $context);
+}
+
+/**
+ * A helper function for building ad action forms.
+ */
+function _ad_actions_email_form($context) {
+  $form = array();
+  $form['recipient'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Recipient'),
+    '#default_value' => isset($context['recipient']) ? $context['recipient'] : '',
+    '#size' => '20',
+    '#maxlength' => '254',
+    '#description' => t('The email address to which the message should be sent. Tokens are allowed. Separate multiple email addresses with commas.'),
+  );
+  $form['subject'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Subject'),
+    '#default_value' => isset($context['subject']) ? $context['subject'] : '',
+    '#size' => '20',
+    '#maxlength' => '254',
+    '#description' => t('The subject of the message. Tokens are allowed.'),
+  );
+  $form['message'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Message'),
+    '#default_value' => isset($context['message']) ? $context['message'] : '',
+    '#cols' => '80',
+    '#rows' => '20',
+    '#description' => t('The message that should be sent. Tokens are allowed.'),
+  );
+
+  return $form;
+}
+
+/**
+ * A helper function for building ad action forms.
+ */
+function _ad_actions_email_ad_form($context, $options, $key, $default = 0) {
+  $form = array();
+  $form[$key] = array(
+    '#type' => 'select',
+    '#title' => t('When to send'),
+    '#options' => $options,
+    '#description' => t('Specify when you would like the email sent. <em>Sending your email any time other than immediately requires cron</em>. Only one delayed email will be generated per advertisement per recipient per configured period even if the trigger event happens multiple times during the delay period.'),
+    '#default_value' => isset($context[$key]) ? $context[$key] : $default,
+  );
+  if (db_table_exists('profile_fields')) {
+    $field = '';
+    $result = db_query('SELECT category, name, title FROM {profile_fields}');
+    $first = TRUE;
+    while ($row = db_fetch_object($result)) {
+      if ($first) {
+        $fields = array('-1' => '- '. t('select a profile field') .' -');
+        $first = FALSE;
+      }
+      $fields[$row->category][$row->name] = $row->title . ' (' . $row->name . ')';
+    }
+    if (!empty($fields)) {
+      $form['disable_notifications'] = array(
+        '#type' =>  'select',
+        '#title' =>  t('Profile field used to disable notifications'),
+        '#options' =>  $fields,
+        '#default_value' => isset($context['disable_notifications']) ? $context['disable_notifications'] : -1,
+        '#description' =>  t("Optionally select a profile field which can be used to disable notifications on a per-user basis for this action. If a user assigns a non-empty value or 0 value to this field, notification emails will be disabled. It is recommended that you assign a checkbox field that when checked will disable all notifications generated by this action to the recipient. Notifications can only be disabled when they are sent to email addresses associated with users on your website."),
+      );
+    }
+  }
+  return $form;
+}
+
+/**
+ * A helper function for building ad action forms.
+ */
+function _ad_actions_email_tokens_form($context) {
+  $form = array();
+  $form['help'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#title' => t('Placeholder tokens'),
+    '#description' => t("The following placeholder tokens can be used in to generate the URL path. Some tokens may not be available, depending on the context in which the action is triggered."),
+  );
+  $form['help']['tokens'] = array(
+    '#value' => theme('token_help', 'all'),
+  );
+  return $form;
+}
+
+/**
+ * Load, into the context, the common objects user and node so we can use their
+ * tokens. Somtimes Trigger, or Actions, load them for us, but sometimes not.
+ */
+function _ad_actions_normalize_context(&$context) {
+  $context['global'] = NULL;
+  if (empty($context['user']) && !empty($context['node'])) {
+    $context['user'] = user_load(array('uid' => $context['node']->uid));
+  }
+  if (empty($context['node']) && !empty($context['comment']) && !empty($context['comment']->nid)) {
+    $context['node'] = node_load($context['comment']->nid);
+  }
+}
+
+function _ad_actions_send_email($context) {
+  _ad_actions_normalize_context($context);
+  $params['from'] = variable_get('site_mail', ini_get('sendmail_from'));
+  $recipient = token_replace_multiple($context['recipient'], $context);
+  $params['subject'] = str_replace(array("\r", "\n"), '', token_replace_multiple($context['subject'], $context));
+  $params['body'] = token_replace_multiple($context['message'], $context);
+
+  // we allow multiple comma separated recipients
+  $recipients = explode(',', $recipient);
+  foreach ($recipients as $recipient) {
+    $recipient = trim($recipient);
+    if (isset($context['disable_notifications']) && $context['disable_notifications'] != '-1') {
+      $account = user_load(array('mail' => $recipient));
+      $field = $context['disable_notifications'];
+      if (!empty($account->$field)) {
+        watchdog('action', 'Notifications to %recipient are disabled, notification not sent', array('%recipient' => $recipient));
+        continue;
+      }
+    }
+
+    if (drupal_mail('ad_actions', 'ad_actions_send_email', $recipient, language_default(), $params)) {
+      watchdog('action', 'Sent email to %recipient', array('%recipient' => $recipient));
+    }
+    else {
+      watchdog('error', 'Unable to send email to %recipient', array('%recipient' => $recipient));
+    }
+  }
+}
+
+function ad_actions_mail($key, &$message, $params) {
+  $message['subject'] = $params['subject'];
+  $message['body'][] = $params['body'];
+}

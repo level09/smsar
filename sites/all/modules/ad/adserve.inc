@@ -1,5 +1,5 @@
 <?php
-// $Id: adserve.inc,v 1.1.2.31.2.8.2.8 2009/05/07 13:52:13 jeremy Exp $
+// $Id: adserve.inc,v 1.1.2.31.2.8.2.10 2009/11/23 19:12:41 Jeremy Exp $
 
 /**
  * @file
@@ -96,11 +96,13 @@ function adserve_variable($variable, $value = NULL) {
     $variables->tids = isset($values['t']) ? preg_replace('/[^0-9,]/', '', $values['t']) : '';
     // Hostid is an md5() which is comprised of numbers and letters a-f.
     $variables->hostid = isset($values['k']) ? preg_replace('/[^0-9a-f]/', '', $values['k']) : '';
-    // Click url
+    // Display url
     $variables->url = isset($values['u']) ? $values['u'] : '';
     if (!$variables->url) {
       $variables->url = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
     }
+    // Display alias
+    $variables->alias = isset($values['l']) ? $values['l'] : '';
     // Quantity is an integer.
     $variables->quantity = isset($values['q']) ? (int)$values['q'] : 0;
     // Ad ID is an integer.
@@ -259,7 +261,7 @@ function adserve_include_drupal() {
     }
   }
   else {
-    $path = explode('/', adserve_variable('ad_dir'));
+    $path = explode('/', str_replace('\\', '/', adserve_variable('ad_dir')));
     while (!empty($path)) {
       // Search for top level Drupal directory to perform bootstrap.
       chdir(implode('/', $path));

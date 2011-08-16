@@ -5,9 +5,9 @@ dependencies[] = taxonomy
 package = Mail
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-03-09
-version = "6.x-1.0-rc6"
+; Information added by drupal.org packaging script on 2010-05-21
+version = "6.x-1.3"
 core = "6.x"
 project = "simplenews"
-datestamp = "1236588951"
+datestamp = "1274456709"
 

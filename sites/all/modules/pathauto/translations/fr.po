@@ -1,22 +1,26 @@
-# translation of fr_pathauto.new_.po to français
-# Françoise L. aka floown <ihavamail@gmail.com>, 2007.
-# $Id: fr.po,v 1.1.2.1 2008/06/26 10:33:55 freso Exp $
-# translation of pathauto.pot to fr.po
+# French translation of Drupal (general)
+# Copyright 2007 Françoise L. aka floown <ihavamail@gmail.com>
+# Copyright 2009 Jérémy Chatard <jchatard@breek.fr>
+# Copyright 2009 Jean-Philippe Fleury <contact@jpfleury.net>
+# Generated from files:
+#  pathauto.admin.inc,v 1.10.2.1 2008/06/24 16:07:51 greggles
+#  pathauto.inc,v 1.45 2008/06/18 20:02:40 greggles
+#  pathauto.info,v 1.4 2007/10/28 21:06:13 greggles
+#  pathauto_node.inc,v 1.47 2008/06/10 21:41:53 freso
+#  pathauto_taxonomy.inc,v 1.39 2008/06/10 21:41:53 freso
+#  pathauto_user.inc,v 1.28 2008/05/28 16:04:35 freso
+#  pathauto.module,v 1.118 2008/06/20 20:01:01 greggles
 msgid ""
 msgstr ""
-"Project-Id-Version: fr_pathauto.new_\n"
+"Project-Id-Version: 2009.2\n"
 "POT-Creation-Date: 2008-06-24 18:52+0200\n"
-"PO-Revision-Date: 2007-06-21 00:41+0200\n"
-"Last-Translator: Françoise L. aka floown <ihavamail@gmail.com>\n"
-"Language-Team: français <ihavamail@gmail.com>\n"
+"PO-Revision-Date: 2009-03-18 12:00-0400\n"
+"Last-Translator: Jean-Philippe Fleury <contact@jpfleury.net>\n"
+"Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms:  nplurals=2; plural=(n > 1);\n"
-"X-Poedit-Language: French\n"
-"X-Poedit-Country: FRANCE\n"
-"X-Poedit-SourceCharset: utf-8\n"
-"X-Generator: KBabel 1.11.4\n"
+"Plural-Forms:  nplurals=2; plural=(n>1);\n"
 
 #: pathauto.admin.inc:22
 msgid ""
@@ -25,6 +29,10 @@ msgid ""
 "work properly. You may need to disable Pathauto and re-enable it to get "
 "Token enabled."
 msgstr ""
+"Il semblerait que le <a href=\"@token_link\">module Token</a> ne soit pas "
+"installé. Merci de vous assurer qu'il est installé pour que Pathauto "
+"fonctionne correctement. Vous devrez peut-être désactiver Pathauto, puis le "
+"réactiver pour que Token s'active."
 
 #: pathauto.admin.inc:38
 msgid "General settings"
@@ -37,40 +45,39 @@ msgstr "Mode verbeux"
 #: pathauto.admin.inc:48
 msgid "Display alias changes (except during bulk updates)."
 msgstr ""
-"Affiche les changements d'alias (sauf durant les mises à jour en masse)"
+"Afficher les changements d'alias (sauf durant les mises à jour en masse)."
 
 #: pathauto.admin.inc:53
 msgid "Separator"
 msgstr "Séparateur"
 
 #: pathauto.admin.inc:57
-#, fuzzy
 msgid ""
 "Character used to separate words in titles. This will replace any spaces and "
 "punctuation characters. Using a space or + character can cause unexpected "
 "results."
 msgstr ""
-"Caractère de séparation des mots dans les titres. Tout espace ou signe de "
-"ponctuation sera remplacé."
+"Caractère utilisé pour séparer les mots dans les titres. Toute espace ou "
+"signe de ponctuation sera remplacé. Utiliser une espace ou le signe + peut "
+"engendrer des résultats inattendus."
 
 #: pathauto.admin.inc:62
 msgid "Character case"
-msgstr ""
+msgstr "Casse des caractères"
 
 #: pathauto.admin.inc:64
 msgid "Leave case the same as source token values."
-msgstr ""
+msgstr "Laisser la casse utilisée dans les chaînes sources."
 
 #: pathauto.admin.inc:64
 msgid "Change to lower case"
-msgstr ""
+msgstr "Changer la casse en miniscule"
 
 #: pathauto.admin.inc:69
 msgid "Maximum alias length"
 msgstr "Longueur maximale d'un alias"
 
 #: pathauto.admin.inc:73
-#, fuzzy
 msgid ""
 "Maximum length of aliases to generate. 100 is recommended. See <a href="
 "\"@pathauto-help\">Pathauto help</a> for details."
@@ -80,20 +87,22 @@ msgstr ""
 
 #: pathauto.admin.inc:78
 msgid "Maximum component length"
-msgstr "Longueur maximale d'un composant "
+msgstr "Longueur maximale d'un composant"
 
 #: pathauto.admin.inc:82
 msgid ""
 "Maximum text length of any component in the alias (e.g., [title]). 100 is "
 "recommended. See <a href=\"@pathauto-help\">Pathauto help</a> for details."
 msgstr ""
-"Longueur maximale de n'importe quel composant d'alias (ex. [title]). 100 est "
-"une valeur recommandée. Voir <a href=\"@pathauto-help\">l'aide de Pathauto</"
-"a> pour plus d'information."
+"Longueur maximale de n'importe quel composant d'alias (ex.: [title]). 100 "
+"est une valeur recommandée. Voir <a href=\"@pathauto-help\">l'aide de "
+"Pathauto</a> pour plus d'information."
 
 #: pathauto.admin.inc:87
 msgid "Maximum number of objects to alias in a bulk update"
 msgstr ""
+"Nombre maximum d'objets dont l'alias doit être généré pendant une mise à "
+"jour en masse"
 
 #: pathauto.admin.inc:91
 msgid ""
@@ -102,26 +111,28 @@ msgid ""
 "speed of your server. If bulk updates \"time out\" or result in a \"white "
 "screen\" then reduce the number."
 msgstr ""
+"Nombre maximum d'objets d'un type donné dont l'alias doit être généré lors "
+"d'une mise à jour en masse. La valeur par défaut est 50, et le nombre "
+"recommandé dépend de la puissance de votre serveur. Si la mise à jour en "
+"masse conduit à une erreur de «temps d'exécution dépassé» ou à un «écran "
+"blanc», réduisez ce nombre."
 
 #: pathauto.admin.inc:95
-#, fuzzy
 msgid "Do nothing. Leave the old alias intact."
-msgstr "Ne rien faire, laisse l'ancien alias."
+msgstr "Ne rien faire. Conserver l'ancien alias."
 
 #: pathauto.admin.inc:96
-#, fuzzy
 msgid "Create a new alias. Leave the existing alias functioning."
-msgstr "Créer un nouvel alias remplaçant l'ancien"
+msgstr "Créer un nouvel alias tout en conservant l'ancien."
 
 #: pathauto.admin.inc:97
-#, fuzzy
 msgid "Create a new alias. Delete the old alias."
-msgstr "Créer un nouvel alias s'ajoutant à l'ancien"
+msgstr "Créer un nouvel alias et supprimer l'ancien."
 
 #: pathauto.admin.inc:100
-#, fuzzy
 msgid "Create a new alias. Redirect from old alias."
-msgstr "Créer un nouvel alias s'ajoutant à l'ancien"
+msgstr ""
+"Créer un nouvel alias et rediriger l'ancien alias vers le nouveau."
 
 #: pathauto.admin.inc:110
 msgid "Update action"
@@ -133,7 +144,7 @@ msgid ""
 "has an alias?"
 msgstr ""
 "Que doit faire Pathauto en cas de mise à jour d'un contenu existant mais "
-"ayant déjà un alias ?"
+"ayant déjà un alias?"
 
 #: pathauto.admin.inc:118
 msgid ""
@@ -143,6 +154,12 @@ msgid ""
 "directory. <strong>This option is disabled on your site because you do not "
 "have an i18n-ascii.txt file in the Pathauto directory.</strong>"
 msgstr ""
+"Lorsqu'un modèle inclut certains caractères (comme les caractères accentués), "
+"Pathauto doit-il les transformer en alphabet ASCII-96? La table de "
+"correspondance est décrite dans le fichier i18n-ascii.txt se trouvant dans "
+"le répertoire de Pathauto. <strong>Cette option est désactivée sur votre "
+"site parce que vous n'avez pas de fichier i18n-ascii.txt dans le répertoire "
+"de Pathauto.</strong>"
 
 #: pathauto.admin.inc:121
 msgid ""
@@ -151,38 +168,47 @@ msgid ""
 "Transliteration is determined by the i18n-ascii.txt file in the Pathauto "
 "directory."
 msgstr ""
+"Lorsqu'un modèle inclut certains caractères (comme les caractères accentués), "
+"Pathauto doit-il les transformer en alphabet ASCII-96? La table de "
+"correspondance est décrite dans le fichier i18n-ascii.txt se trouvant dans "
+"le répertoire de Pathauto."
 
 #: pathauto.admin.inc:129
 msgid "Transliterate prior to creating alias"
-msgstr ""
+msgstr "Translittérer avant de générer l'alias"
 
 #: pathauto.admin.inc:136
 msgid "Reduce strings to letters and numbers from ASCII-96"
 msgstr ""
+"Ne conserver dans les chaînes de caractères que les lettres et les nombres "
+"de l'ASCII-96"
 
 #: pathauto.admin.inc:138
 msgid ""
 "Filters the new alias to only letters and numbers found in the ASCII-96 set."
 msgstr ""
+"Filtre le nouvel alias pour ne conserver que les lettres et les nombres "
+"faisant partie de l'ASCII-96."
 
 #: pathauto.admin.inc:143
 msgid "Strings to Remove"
-msgstr "Chaînes à supprimer"
+msgstr "Chaînes de caractères à supprimer"
 
 #: pathauto.admin.inc:144
 msgid ""
 "Words to strip out of the URL alias, separated by commas. Do not place "
 "punctuation in here and do not use WYSIWYG editors on this field."
 msgstr ""
+"Mots à omettre dans les URL, séparés par des virgules. Ne placez pas de "
+"ponctuation et n'utilisez pas d'éditeur WYSIWYG dans ce champ."
 
 #: pathauto.admin.inc:150
-#, fuzzy
 msgid "Punctuation settings"
-msgstr "Paramètres généraux"
+msgstr "Paramètres de ponctuation"
 
 #: pathauto.admin.inc:161
 msgid "Remove"
-msgstr "Enlever"
+msgstr "Retirer"
 
 #: pathauto.admin.inc:161
 msgid "Replace by separator"
@@ -190,32 +216,37 @@ msgstr "Remplacer par le séparateur"
 
 #: pathauto.admin.inc:161
 msgid "No action (do not replace)"
-msgstr ""
+msgstr "Aucune action (ne pas remplacer)"
 
 #: pathauto.admin.inc:239
-#, fuzzy
 msgid "Replacement patterns"
-msgstr "Remplacer par le séparateur"
+msgstr "Modèles de remplacement"
 
 #: pathauto.admin.inc:243
 msgid "Use -raw replacements for text to avoid problems with HTML entities."
 msgstr ""
+"Utiliser les modèles de remplacement -raw pour le texte afin d'éviter les "
+"problèmes liés aux entités HTML."
 
 #: pathauto.admin.inc:276
 msgid "Internal feed alias text (leave blank to disable)"
-msgstr ""
+msgstr "Alias interne de flux (laissez vide pour désactiver)"
 
 #: pathauto.admin.inc:280
 msgid ""
 "The text to use for aliases for RSS feeds. Examples are \"feed\" and \"0/feed"
 "\"."
 msgstr ""
+"Le texte à utiliser pour les alias des flux RSS. Exemples: \"feed\" et \"0/"
+"feed\""
 
 #: pathauto.admin.inc:335
 msgid ""
 "You are using the token [%token] which is not valid within the scope of "
 "tokens where you are using it."
 msgstr ""
+"Vous utilisez le modèle de remplacement [%token], qui n'est pas valide dans "
+"le contexte des modèles que vous avez choisi."
 
 #: pathauto.admin.inc:343
 msgid ""
@@ -224,14 +255,18 @@ msgid ""
 "unless you really know what you are doing. See the <a href=\"@pathauto-help"
 "\">Pathauto help</a> for more details."
 msgstr ""
+"Vous utilisez le modèle de remplacement [%token], qui dispose d'une version "
+"-raw [%raw_token]. Pour Pathauto, vous devriez utiliser la version -raw des "
+"modèles de remplacement, à moins de savoir ce que vous faites. Voir "
+"<a href=\"@pathauto-help\">l'aide de Pathauto</a> pour plus de détails."
 
 #: pathauto.admin.inc:353
 msgid "NOTE: This field contains potentially incorrect patterns. "
-msgstr ""
+msgstr "ATTENTION: ce champ contient potentiellement des modèles incorrects. "
 
 #: pathauto.admin.inc:355
 msgid "%problems"
-msgstr ""
+msgstr "%problems"
 
 #: pathauto.admin.inc:374
 msgid ""
@@ -240,25 +275,32 @@ msgid ""
 "especially with the catpath and termpath patterns. You should probably set "
 "the action for @name to be \"replace by separator\""
 msgstr ""
+"Vous avez configuré le caractère @name comme étant le séparateur et comme "
+"devant être supprimé dans les chaînes de caractères. Cela peut conduire à "
+"des problèmes avec vos modèles et plus spécifiquement avec les modèles "
+"utilisant les composants catpath et termpath. Vous devriez certainement "
+"définir l'action pour le caractère @name comme étant «remplacer par le "
+"séparateur»"
 
 #: pathauto.admin.inc:399
 msgid "Choose Aliases to Delete"
-msgstr ""
+msgstr "Sélectionner les alias à supprimer"
 
 #: pathauto.admin.inc:408
-#, fuzzy
 msgid "all aliases"
-msgstr "Créer des alias pour les flux RSS"
+msgstr "tous les alias"
 
 #: pathauto.admin.inc:410
 msgid "Delete all aliases. Number of aliases which will be deleted: %count."
-msgstr ""
+msgstr "Supprimer tous les alias. Nombre d'alias qui seront supprimés: %count."
 
 #: pathauto.admin.inc:421
 msgid ""
 "Delete aliases for all @label. Number of aliases which will be deleted: %"
 "count."
 msgstr ""
+"Supprimer les alias pour tous les @label. Nombre d'alias qui seront "
+"supprimés: %count."
 
 #: pathauto.admin.inc:426
 msgid ""
@@ -267,190 +309,192 @@ msgid ""
 "make a backup of the database and/or the url_alias table prior to using this "
 "feature.</p>"
 msgstr ""
+"<p><strong>Note:</strong> il n'y a pas de confirmation. Soyez certain de ce "
+"que vous faites avant de cliquer sur le bouton \"Supprimer les alias "
+"maintenant!\".<br />Vous devriez peut-être faire une sauvegarde de la "
+"base de données ou de la table url_alias avant d'utiliser cette "
+"fonctionnalité.</p>"
 
 #: pathauto.admin.inc:429
 msgid "Delete aliases now!"
-msgstr ""
+msgstr "Supprimer les alias maintenant!"
 
 #: pathauto.admin.inc:443
 msgid "All of your path aliases have been deleted."
-msgstr ""
+msgstr "Tous les alias d'URLs ont été supprimés."
 
 #: pathauto.admin.inc:448
 msgid "All of your %type path aliases have been deleted."
-msgstr ""
+msgstr "Tous les alias pour les types de contenu %type ont été supprimés."
 
 #: pathauto.admin.inc:287
-#, fuzzy
 msgid "Bulk generation of index aliases completed, one alias generated."
 msgid_plural ""
 "Bulk generation of index aliases completed, @count aliases generated."
-msgstr[0] ""
-"Mise à jour en masse des listes d'alias terminée&nbsp;; un alias généré."
-msgstr[1] ""
-"Mise à jour en masse des listes d'alias terminée&nbsp;; @count alias générés."
+msgstr[0] "Mise à jour en masse des alias terminée; un alias généré."
+msgstr[1] "Mise à jour en masse des alias terminée; @count alias générés."
 
 #: pathauto.admin.inc:354
 msgid "Problem token: "
 msgid_plural "Problem tokens: "
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Problème de token:"
+msgstr[1] "Problèmes de token:"
 
 #: pathauto.inc:315
 msgid ""
 "The automatically generated alias %original_alias conflicted with an "
 "existing alias. Alias changed to %alias."
 msgstr ""
+"L'alias généré automatiquement %original_alias est en conflit avec un alias "
+"existant. Il a été changé à %alias."
 
 #: pathauto.inc:381
-#, fuzzy
 msgid "Ignoring alias %dst due to existing path conflict."
-msgstr " du fait d'un conflit de chemin"
+msgstr "L'alias %dst a été ignoré à cause d'un conflit de chemin."
 
 #: pathauto.inc:388
 msgid "Ignoring alias %dst because it is the same as the internal path."
-msgstr ""
+msgstr "L'alias %dst a été ignoré car il est le même que le chemin interne."
 
 #: pathauto.inc:408
-#, fuzzy
 msgid ""
 "Created new alias %dst for %src, replacing %old_alias. %old_alias now "
 "redirects to %dst"
-msgstr "Nouvel alias %dst crée pour %src remplaçant %oldalias"
+msgstr ""
+"Nouvel alias %dst créé pour %src, remplaçant %old_alias. L'ancien alias "
+"redirige maintenant vers %dst"
 
 #: pathauto.inc:411
-#, fuzzy
 msgid "Created new alias %dst for %src, replacing %old_alias"
-msgstr "Nouvel alias %dst crée pour %src remplaçant %oldalias"
+msgstr "Nouvel alias %dst créé pour %src, remplaçant %old_alias"
 
 #: pathauto.inc:414
 msgid "Created new alias %dst for %src"
-msgstr "Créer un nouvel alias %dst pour %src"
+msgstr "Nouvel alias %dst créé pour %src"
 
 #: pathauto.inc:477
 msgid "Double quotes \""
-msgstr ""
+msgstr "Guillemets droits \""
 
 #: pathauto.inc:478
 msgid "Single quotes (apostrophe) '"
-msgstr ""
+msgstr "Apostrophe '"
 
 #: pathauto.inc:479
 msgid "Back tick `"
-msgstr ""
+msgstr "Accent grave `"
 
 #: pathauto.inc:480
 msgid "Comma ,"
-msgstr ""
+msgstr "Virgule ,"
 
 #: pathauto.inc:481
 msgid "Period ."
-msgstr ""
+msgstr "Point ."
 
 #: pathauto.inc:482
 msgid "Hyphen -"
-msgstr ""
+msgstr "Trait d'union -"
 
 #: pathauto.inc:483
 msgid "Underscore _"
-msgstr ""
+msgstr "Barre de soulignement _"
 
 #: pathauto.inc:484
 msgid "Colon :"
-msgstr ""
+msgstr "Deux-points :"
 
 #: pathauto.inc:485
 msgid "Semicolon ;"
-msgstr ""
+msgstr "Point-virgule ;"
 
 #: pathauto.inc:486
 msgid "Pipe |"
-msgstr ""
+msgstr "Barre verticale |"
 
 #: pathauto.inc:487
 msgid "Left curly bracket {"
-msgstr ""
+msgstr "Accolade ouvrante {"
 
 #: pathauto.inc:488
 msgid "Left square bracket ["
-msgstr ""
+msgstr "Crochet ouvrant ["
 
 #: pathauto.inc:489
 msgid "Right curly bracket }"
-msgstr ""
+msgstr "Accolade fermante }"
 
 #: pathauto.inc:490
 msgid "Right square bracket ]"
-msgstr ""
+msgstr "Crochet fermant ]"
 
 #: pathauto.inc:491
 msgid "Plus +"
-msgstr ""
+msgstr "Symbole plus +"
 
 #: pathauto.inc:492
 msgid "Equal ="
-msgstr ""
+msgstr "Signe égale ="
 
 #: pathauto.inc:493
 msgid "Asterisk *"
-msgstr ""
+msgstr "Astérisque *"
 
 #: pathauto.inc:494
 msgid "Ampersand &"
-msgstr ""
+msgstr "Esperluette &"
 
 #: pathauto.inc:495
 msgid "Percent %"
-msgstr ""
+msgstr "Signe pour cent %"
 
 #: pathauto.inc:496
 msgid "Caret ^"
-msgstr ""
+msgstr "Accent circonflexe ^"
 
 #: pathauto.inc:497
 msgid "Dollar $"
-msgstr ""
+msgstr "Symbole dollar $"
 
 #: pathauto.inc:498
 msgid "Hash #"
-msgstr ""
+msgstr "Croisillon #"
 
 #: pathauto.inc:499
 msgid "At @"
-msgstr ""
+msgstr "Arrobase @"
 
 #: pathauto.inc:500
 msgid "Exclamation !"
-msgstr ""
+msgstr "Point d'exclamation !"
 
 #: pathauto.inc:501
 msgid "Tilde ~"
-msgstr ""
+msgstr "Tilde ~"
 
 #: pathauto.inc:502
 msgid "Left parenthesis ("
-msgstr ""
+msgstr "Parenthèse ouvrante ("
 
 #: pathauto.inc:503
 msgid "right parenthesis )"
-msgstr ""
+msgstr "Parenthèse fermante )"
 
 #: pathauto.inc:504
-#, fuzzy
 msgid "Question mark ?"
-msgstr "Guillemets"
+msgstr "Point d'interrogation ?"
 
 #: pathauto.inc:505
 msgid "Less than <"
-msgstr ""
+msgstr "Chevron ouvrant <"
 
 #: pathauto.inc:506
 msgid "Greater than >"
-msgstr ""
+msgstr "Chevron fermant >"
 
 #: pathauto.inc:507
 msgid "Back slash \\"
-msgstr ""
+msgstr "Barre oblique inverse \\"
 
 #: pathauto.inc:437 pathauto.info:0
 msgid "Pathauto"
@@ -461,72 +505,69 @@ msgid ""
 "It appears that you have installed Pathauto, which depends on token, but "
 "token is either not installed or not installed properly."
 msgstr ""
+"Il semblerait que vous avez installé Pathauto, qui dépend de Token, mais "
+"celui-ci ne semble pas installé ou mal installé."
 
 #: pathauto_node.inc:20
 msgid "Node path settings"
-msgstr "Réglages pour les chemins de nods"
+msgstr "Réglages des chemins des noeuds"
 
 #: pathauto_node.inc:21
 msgid ""
 "Default path pattern (applies to all node types with blank patterns below)"
 msgstr ""
-"Modèle de chemin par défaut (appliqué à tous les types de node avec un "
-"modèle vide)"
+"Modèle de chemin par défaut (appliqué à tous les types de noeuds dont le "
+"modèle ci-dessous est vide)"
 
 #: pathauto_node.inc:22
 msgid "content/[title-raw]"
-msgstr ""
+msgstr "content/[title-raw]"
 
 #: pathauto_node.inc:23
-#, fuzzy
 msgid "Bulk generate aliases for nodes that are not aliased"
 msgstr ""
-"Génère des listes d'alias pour chaque node qui n'en est pas encore doté."
+"Générer des alias en masse pour les noeuds qui n'en sont pas encore dotés"
 
 #: pathauto_node.inc:24
 msgid ""
 "Generate aliases for all existing nodes which do not already have aliases."
 msgstr ""
-"Génère des listes d'alias pour chaque node qui n'en est pas encore doté."
+"Générer des alias pour tous les noeuds déjà existants qui n'en sont pas "
+"encore dotés."
 
 #: pathauto_node.inc:37;79
 msgid "Language neutral"
-msgstr ""
+msgstr "Indépendant de la langue"
 
 #: pathauto_node.inc:44
-#, fuzzy
 msgid ""
 "Default path pattern for @node_type (applies to all @node_type node types "
 "with blank patterns below)"
 msgstr ""
-"Modèle de chemin par défaut (appliqué à tous les types de node avec un "
-"modèle vide)"
+"Modèle de chemin par défaut pour les contenus de type @node_type (appliqué à "
+"tous les contenus de type @node_type dont le modèle ci-dessous est vide)"
 
 #: pathauto_node.inc:47
-#, fuzzy
 msgid "Pattern for all @node_type paths in @language"
-msgstr "Modèle de chemin pour tout ce qui est %nodetypename"
+msgstr "Modèle de chemin pour les contenus de type @node_type en @language"
 
 #: pathauto_node.inc:50
-#, fuzzy
 msgid "Pattern for all language neutral @node_type paths"
-msgstr "Modèle de chemin pour tout ce qui est %nodetypename"
+msgstr ""
+"Modèle de chemin pour les contenus de type @node_type indépendants de la "
+"langue"
 
 #: pathauto_node.inc:55
-#, fuzzy
 msgid "Pattern for all @node_type paths"
-msgstr "Modèle de chemin pour tout ce qui est %nodetypename"
+msgstr "Modèle de chemin pour les contenus de type @node_type"
 
 #: pathauto_node.inc:121
-#, fuzzy
 msgid "Bulk generation of nodes completed, one alias generated."
 msgid_plural "Bulk generation of nodes completed, @count aliases generated."
-msgstr[0] "Mise à jour en masse des nodes terminée&nbsp;; un alias généré."
-msgstr[1] ""
-"Mise à jour en masse des nodes terminée&nbsp;; @count alias générés."
+msgstr[0] "Mise à jour en masse des noeuds terminée; un alias généré."
+msgstr[1] "Mise à jour en masse des noeuds terminée; @count alias générés."
 
 #: pathauto_taxonomy.inc:20
-#, fuzzy
 msgid "Taxonomy term path settings"
 msgstr "Réglages des chemins des catégories"
 
@@ -534,79 +575,71 @@ msgstr "Réglages des chemins des catégories"
 msgid ""
 "Default path pattern (applies to all vocabularies with blank patterns below)"
 msgstr ""
-"Modèle de chemin par défaut (appliqué à tout vocabulaire ayant un champ vide "
-"dessous)"
+"Modèle de chemin par défaut (appliqué à tout vocabulaire dont le modèle ci-"
+"dessous est vide)"
 
 #: pathauto_taxonomy.inc:22
-#, fuzzy
 msgid "category/[vocab-raw]/[catpath-raw]"
-msgstr "[vocab]/[catpath]"
+msgstr "category/[vocab-raw]/[catpath-raw]"
 
 #: pathauto_taxonomy.inc:32
-#, fuzzy
 msgid "Bulk generate aliases for terms that are not aliased"
-msgstr "Génère également des alias pour les flux RSS."
+msgstr ""
+"Générer des alias en masse pour les termes qui n'en sont pas encore dotés"
 
 #: pathauto_taxonomy.inc:33
-#, fuzzy
 msgid ""
 "Generate aliases for all existing terms which do not already have aliases."
 msgstr ""
-"Génère des listes d'alias pour chaque node qui n'en est pas encore doté."
+"Générer des alias pour tous les termes déjà existants qui n'en sont pas "
+"encore dotés."
 
 #: pathauto_taxonomy.inc:42
 msgid "Pattern for all %vocab-name paths"
 msgstr "Modèle pour chaque chemin de %vocab-name"
 
 #: pathauto_taxonomy.inc:134
-#, fuzzy
 msgid "Forum path settings"
-msgstr "Réglages pour les chemins de nods"
+msgstr "Réglages des chemins des forums"
 
 #: pathauto_taxonomy.inc:135
-#, fuzzy
 msgid "Pattern for forums and forum containers"
-msgstr "Modèle pour les comptes utilisateurs"
+msgstr "Modèle pour les forums et conteneurs de forum"
 
 #: pathauto_taxonomy.inc:136
-#, fuzzy
 msgid "[vocab-raw]/[catpath-raw]"
-msgstr "[vocab]/[catpath]"
+msgstr "[vocab-raw]/[catpath-raw]"
 
 #: pathauto_taxonomy.inc:146
-#, fuzzy
 msgid "Bulk generate forum paths"
-msgstr "Mise à jour en masse des chemins de node"
+msgstr "Mise à jour en masse des chemins de forum"
 
 #: pathauto_taxonomy.inc:147
-#, fuzzy
 msgid ""
 "Generate aliases for all existing forums and forum containers which do not "
 "already have aliases."
 msgstr ""
-"Génère un alias pour chaque page utilisateur qui n'en est pas encore doté."
+"Générer des alias pour tous les forums et conteneurs de forum déjà existants "
+"qui n'en sont pas encore dotés."
 
 #: pathauto_taxonomy.inc:92
-#, fuzzy
 msgid "Bulk generation of terms completed, one alias generated."
 msgid_plural "Bulk generation of terms completed, @count aliases generated."
-msgstr[0] "Mise à jour en masse des termes terminée&nbsp;; un alias généré."
-msgstr[1] ""
-"Mise à jour en masse des termes terminée&nbsp;; @count alias générés."
+msgstr[0] "Mise à jour en masse des termes terminée; un alias généré."
+msgstr[1] "Mise à jour en masse des termes terminée; @count alias générés."
 
 #: pathauto_taxonomy.inc:168
-#, fuzzy
 msgid ""
 "Bulk update of forums and forum containers completed, one alias generated."
 msgid_plural ""
 "Bulk update of forums and forum containers completed, @count aliases "
 "generated."
 msgstr[0] ""
-"Mise à jour en masse des alias des utilisateurs terminée&nbsp;; un alias "
+"Mise à jour en masse des forums et conteneurs de forum terminée; un alias "
 "généré."
 msgstr[1] ""
-"Mise à jour en masse des alias des utilisateurs terminée&nbsp;; @count alias "
-"générés."
+"Mise à jour en masse des forums et conteneurs de forum terminée; @count "
+"alias générés."
 
 #: pathauto_user.inc:20
 msgid "User path settings"
@@ -617,21 +650,22 @@ msgid "Pattern for user account page paths"
 msgstr "Modèle pour les comptes utilisateurs"
 
 #: pathauto_user.inc:22
-#, fuzzy
 msgid "users/[user-raw]"
-msgstr "user/[user]"
+msgstr "users/[user-raw]"
 
 #: pathauto_user.inc:32
-#, fuzzy
 msgid "Bulk generate aliases for users that are not aliased"
-msgstr "Génère également des alias pour les flux RSS."
+msgstr ""
+"Générer des alias en masse pour les utilisateurs qui n'en sont pas encore "
+"dotés"
 
 #: pathauto_user.inc:33
 msgid ""
 "Generate aliases for all existing user account pages which do not already "
 "have aliases."
 msgstr ""
-"Génère un alias pour chaque page utilisateur qui n'en est pas encore doté."
+"Générer des alias pour toutes les pages d'utilisateur déjà existantes qui "
+"n'en sont pas encore dotées."
 
 #: pathauto_user.inc:49
 msgid "Blog path settings"
@@ -639,88 +673,81 @@ msgstr "Réglages des chemins des blogues"
 
 #: pathauto_user.inc:50
 msgid "Pattern for blog page paths"
-msgstr "Modèle pour les blogues"
+msgstr "Modèle de chemin pour les blogues"
 
 #: pathauto_user.inc:51
-#, fuzzy
 msgid "blogs/[user-raw]"
-msgstr "blog/[user]"
+msgstr "blogs/[user-raw]"
 
 #: pathauto_user.inc:57
-#, fuzzy
 msgid "Bulk generate aliases for blogs that are not aliased"
-msgstr "Génère également des alias pour les flux RSS."
+msgstr ""
+"Générer des alias en masse pour les blogues qui n'en sont pas encore dotés"
 
 #: pathauto_user.inc:58
 msgid ""
 "Generate aliases for all existing blog pages which do not already have "
 "aliases."
-msgstr "Génère un alias pour chaque blogue qui n'en est pas encore doté."
+msgstr ""
+"Générer des alias pour toutes les pages de blogue déjà existantes qui n'en "
+"sont pas encore dotées."
 
 #: pathauto_user.inc:74
 msgid "User-tracker path settings"
-msgstr "Réglages des chemin des pages de suivi des utilisateurs"
+msgstr "Réglages des chemins des pages de suivi des utilisateurs"
 
 #: pathauto_user.inc:75
 msgid "Pattern for user-tracker page paths"
-msgstr "Modèle pour les pages de suivi des utilisateurs"
+msgstr "Modèle de chemin pour les pages de suivi des utilisateurs"
 
 #: pathauto_user.inc:76
-#, fuzzy
 msgid "users/[user-raw]/track"
-msgstr "user/[user]/track"
+msgstr "users/[user-raw]/track"
 
 #: pathauto_user.inc:82
-#, fuzzy
 msgid "Bulk generate aliases for user-tracker paths that are not aliased"
 msgstr ""
-"Génère un alias pour chaque page de suivi des utilisateurs qui n'en est pas "
-"encore doté."
+"Générer des alias en masse pour les pages de suivi des utilisateurs qui n'en "
+"sont pas encore dotées"
 
 #: pathauto_user.inc:83
 msgid ""
 "Generate aliases for all existing user-tracker pages which do not already "
 "have aliases."
 msgstr ""
-"Génère un alias pour chaque page de suivi des utilisateurs qui n'en est pas "
-"encore doté."
+"Générer des alias pour toutes les pages de suivi des utilisateurs déjà "
+"existantes qui n'en sont pas encore dotées."
 
 #: pathauto_user.inc:107
-#, fuzzy
 msgid "Bulk generation of users completed, one alias generated."
 msgid_plural "Bulk generation of users completed, @count aliases generated."
 msgstr[0] ""
-"Mise à jour en masse des alias des utilisateurs terminée&nbsp;; un alias "
-"généré."
+"Mise à jour en masse des alias des utilisateurs terminée; un alias généré."
 msgstr[1] ""
-"Mise à jour en masse des alias des utilisateurs terminée&nbsp;; @count alias "
+"Mise à jour en masse des alias des utilisateurs terminée; @count alias "
 "générés."
 
 #: pathauto_user.inc:129
-#, fuzzy
 msgid "Bulk generation of user blogs completed, one alias generated."
 msgid_plural ""
 "Bulk generation of user blogs completed, @count aliases generated."
 msgstr[0] ""
-"Mise à jour en masse des alias des blogues terminée&nbsp;; un alias généré."
+"Mise à jour en masse des alias des blogues terminée; un alias généré."
 msgstr[1] ""
-"Mise à jour en masse des alias des blogues terminée&nbsp;; @count alias "
-"générés."
+"Mise à jour en masse des alias des blogues terminée; @count alias générés."
 
 #: pathauto_user.inc:153
-#, fuzzy
 msgid "Bulk generation of user tracker pages completed, one alias generated."
 msgid_plural ""
 "Bulk generation of user tracker pages completed, @count aliases generated."
 msgstr[0] ""
-"Mise à jour en masse des alias des pages de suivi des utilisateurs "
-"terminée&nbsp;; un alias généré."
+"Mise à jour en masse des alias des pages de suivi des utilisateurs terminée; "
+"un alias généré."
 msgstr[1] ""
-"Mise à jour en masse des alias des pages de suivi des utilisateurs "
-"terminée&nbsp;; @count alias générés."
+"Mise à jour en masse des alias des pages de suivi des utilisateurs terminée; "
+"@count alias générés."
 
 #: pathauto.module:27
-#, fuzzy
 msgid ""
 "<p>Provides a mechanism for modules to automatically generate aliases for "
 "the content they manage.</p>\n"
@@ -756,95 +783,102 @@ msgstr ""
 "<p>Les valeurs des paramètres <strong>Longueur maximale d'un alias</strong> "
 "et <strong>Longueur maximale d'un composant</strong> sont définies par "
 "défaut à 100 jusqu'à une une limite de 128 pour Pathauto. Cette taille est "
-"fixée par la longueur 'dst' de la colonne url_alias dans la base de donnée. "
+"fixée par la longueur \"dst\" de la colonne url_alias dans la base de donnée. "
 "C'est le schéma par défaut de la base pour cette colonne. En modifiant la "
-"valeur du champ au maximum vous risquez de créer des problèmes dans les "
-"situations suivantes. Quand le système rajoute un suffixe aux alias d'URLs, "
-"par exemple '/feed', veuillez prendre en considération tous les cas de "
-"rallongement de x caractères selon les modules actifs ou les réglages de "
-"Pathauto. C'est pourquoi la valeur par défaut et recommandée est 100. <p>"
+"valeur du champ au maximum vous risquez de créer des problèmes lorsque le "
+"système rajoute un suffixe aux alias d'URLs, par exemple \"/feed\" pour les "
+"alias des flux RSS. Ces suffixes dépendent des modules activés et de vos "
+"réglages de Pathauto. Vous devez donc choisir une valeur correspondant à la "
+"longueur de \"dst\" moins celle de tout suffixe potentiel. C'est pourquoi la "
+"valeur par défaut et recommandée est 100.</p><p><strong>Modèles de "
+"remplacement bruts</strong>&nbsp;: Dans Pathauto, il est approprié "
+"d'utiliser les modèles de remplacement bruts, c'est-à-dire ceux ayant le "
+"suffixe -raw. Le système s'occupera de filtrer adéquatement les contenus "
+"saisis par les utilisateurs. Le système de filtrage de la ponctuation de "
+"Pathauto pourrait causer des problèmes si les remplacements de la forme -raw "
+"n'étaient pas utilisés.</p>"
 
 #: pathauto.module:164
-#, fuzzy
 msgid "As [cat], but including its supercategories separated by /."
-msgstr "Identique à [cat] mais incluant les supercatégories."
+msgstr ""
+"Identique à [cat], mais incluant les catégories parentes (séparées par /)."
 
 #: pathauto.module:165
-#, fuzzy
 msgid ""
 "As [cat-raw], but including its supercategories separated by /. WARNING - "
 "raw user input."
-msgstr "Identique à [cat] mais incluant les supercatégories."
+msgstr ""
+"Identique à [cat-raw], mais incluant les catégories parentes (séparées "
+"par /). ATTENTION: saisie utilisateur brute."
 
 #: pathauto.module:166;171
 msgid "URL alias for the term."
-msgstr ""
+msgstr "Alias d'URL pour le terme."
 
 #: pathauto.module:169
-#, fuzzy
 msgid "As [term], but including its supercategories separated by /."
-msgstr "Identique à [cat] mais incluant les supercatégories."
+msgstr ""
+"Identique à [term], mais incluant les termes parents (séparés par /)."
 
 #: pathauto.module:170
-#, fuzzy
 msgid ""
 "As [term-raw], but including its supercategories separated by /. WARNING - "
 "raw user input."
-msgstr "Identique à [cat] mais incluant les supercatégories."
+msgstr ""
+"Identique à [term-raw], mais incluant les termes parents (séparés par /). "
+"ATTENTION: saisie utilisateur brute."
 
 #: pathauto.module:176
 msgid "URL alias for the parent book."
-msgstr ""
+msgstr "Alias d'URL pour le livre parent."
 
 #: pathauto.module:188
-#, fuzzy
 msgid "users"
-msgstr "[user]"
+msgstr "utilisateurs"
 
 #: pathauto.module:188
 msgid "content"
-msgstr ""
+msgstr "contenu"
 
 #: pathauto.module:190
 msgid "user blogs"
-msgstr ""
+msgstr "blogues des utilisateurs"
 
 #: pathauto.module:193
 msgid "vocabularies and terms"
-msgstr ""
+msgstr "vocabulaires et termes"
 
 #: pathauto.module:196
-#, fuzzy
 msgid "user trackers"
-msgstr "user/[user]/track"
+msgstr "pages de suivi des utilisateurs"
 
 #: pathauto.module:199
 msgid "forums"
-msgstr ""
+msgstr "forums"
 
 #: pathauto.module:284
 msgid ""
 "An alias will be generated for you. If you wish to create your own alias "
 "below, untick this option."
 msgstr ""
+"Un alias sera généré pour vous. Si vous souhaitez créer ci-dessous votre "
+"propre alias, décochez cette option."
 
 #: pathauto.module:286
-#, fuzzy
 msgid ""
 " To control the format of the generated aliases, see the <a href=\"@pathauto"
 "\">Pathauto settings</a>."
 msgstr ""
-"Pour contrôler le format des alias générés voir <a href=\"admin/settings/"
-"pathauto\">les réglages de Pathauto</a>"
+"Pour contrôler le format des alias générés, voir <a href=\"@pathauto\">les "
+"réglages de Pathauto</a>."
 
 #: pathauto.module:294
 msgid "Automatic alias"
-msgstr ""
+msgstr "Alias automatique"
 
 #: pathauto.module:319
-#, fuzzy
 msgid "Update path alias"
-msgstr "Action de mise à jour"
+msgstr "Mettre à jour l'alias"
 
 #: pathauto.module:49
 msgid "administer pathauto"
@@ -852,17 +886,15 @@ msgstr "administrer Pathauto"
 
 #: pathauto.module:49
 msgid "notify of path changes"
-msgstr ""
+msgstr "notifier les changements d'alias"
 
 #: pathauto.module:57
-#, fuzzy
 msgid "Automated alias settings"
-msgstr "Réglages pour les chemins de nods"
+msgstr "Réglages des alias automatiques"
 
 #: pathauto.module:68
-#, fuzzy
 msgid "Delete aliases"
-msgstr "Créer des alias pour les flux RSS"
+msgstr "Supprimer les alias"
 
 #: pathauto.module:0
 msgid "pathauto"
@@ -875,265 +907,3 @@ msgid ""
 msgstr ""
 "Offre un mécanisme permettant aux modules de générer automatiquement un "
 "alias lié au contenu qu'ils gèrent."
-
-#~ msgid "[vocab]"
-#~ msgstr "[vocab]"
-
-#~ msgid "The vocabulary that the page's first category belongs to."
-#~ msgstr "Le vocabulaire de la première catégorie affectée à la page."
-
-#~ msgid "[cat]"
-#~ msgstr "[cat]"
-
-#~ msgid "[catpath]"
-#~ msgstr "[catpath]"
-
-#~ msgid "[menu]"
-#~ msgstr "[menu]"
-
-#~ msgid "The name of the menu the node belongs to."
-#~ msgstr "Le nom du menu auquel le node appartient."
-
-#~ msgid "[menupath]"
-#~ msgstr "[menupath]"
-
-#~ msgid ""
-#~ "The menu path (as reflected in the breadcrumb), not including Home or "
-#~ "[menu]."
-#~ msgstr ""
-#~ "Le chemin du menu (comme visible dans le fil d'ariane) sans inclure "
-#~ "l'accueil ou [menu]."
-
-#~ msgid "[lang]"
-#~ msgstr "[lang]"
-
-#~ msgid "Language code of the document"
-#~ msgstr "Code de la langue du document"
-
-#~ msgid "You are not authorized to access the pathauto settings."
-#~ msgstr "Vous n'êtes pas autorisé à accéder aux réglages de Pathauto."
-
-#~ msgid "Create index aliases"
-#~ msgstr "Créer des listes d'alias"
-
-#~ msgid ""
-#~ "When a pattern generates a hierarchical alias (i.e., any alias containing "
-#~ "a slash), generate aliases for each step of the hierarchy which can be "
-#~ "used to list content within that hierarchy. For example, if a node alias "
-#~ "\"music/concert/beethoven\" is created, also create an alias \"music/"
-#~ "concert\" which will list all concert nodes, and an alias \"music\" which "
-#~ "will list all music nodes."
-#~ msgstr ""
-#~ "Quand un modèle génère un alias hiérarchisé (par ex. composé de slash) "
-#~ "cette option génère également, pour chaque élément intermédiaire de la "
-#~ "hiérarchie, une liste des différents contenus. Par exemple, si l'alias "
-#~ "d'un node \"/musique/concert/beethoven\" est créé, sera généré l'alias \"/"
-#~ "musique/concert\" qui listera tous les nodes des concerts et un alias "
-#~ "\"musique\" listant tous les nodes de musiques."
-
-#~ msgid "Bulk generate index aliases"
-#~ msgstr "Génère des listes d'alias en masse"
-
-#~ msgid "Generate index aliases based on all pre-existing aliases."
-#~ msgstr ""
-#~ "Génère des listes d'alias suivant l'indication d'un alias préexistant."
-
-#~ msgid "Words to strip out of the URL alias, separated by commas"
-#~ msgstr "Mots à ne pas faire figurer dans les URLs (à séparer d'une virgule)"
-
-#~ msgid "Ignoring alias "
-#~ msgstr "Ignorer les alias"
-
-#~ msgid "Configure how pathauto generates clean URLs for your content."
-#~ msgstr ""
-#~ "Configurer la façon dont Pathauto va générer pour votre contenu les "
-#~ "<em>URLs simplifiées</em>."
-
-#~ msgid "[title]"
-#~ msgstr "[title]"
-
-#~ msgid ""
-#~ "The title of the node, with spaces and punctuation replaced by the "
-#~ "separator."
-#~ msgstr ""
-#~ "Le titre du node avec les espaces et la ponctuation remplacés par le "
-#~ "séparateur."
-
-#~ msgid "[nid]"
-#~ msgstr "[nid]"
-
-#~ msgid "The id number of the node."
-#~ msgstr "L'ID du node."
-
-#~ msgid "The name of the user who created the node."
-#~ msgstr "Le nom de l'utilisateur qui a crée le node."
-
-#~ msgid "[type]"
-#~ msgstr "[type]"
-
-#~ msgid "The node type (e.g., \"page\", \"story\", etc.)."
-#~ msgstr "Le type de node (ex. \"page\", \"story\", etc)."
-
-#~ msgid "[yyyy]"
-#~ msgstr "[yyyy]"
-
-#~ msgid "The year the node was created."
-#~ msgstr "L'année de création du node."
-
-#~ msgid "[mm]"
-#~ msgstr "[mm]"
-
-#~ msgid "The two-digit month (01-12) the node was created."
-#~ msgstr "Les deux chiffres du mois (01-12) de la création du node."
-
-#~ msgid "[mon]"
-#~ msgstr "[mon]"
-
-#~ msgid "The three-letter month (jan-dec) the node was created."
-#~ msgstr "Les trois lettres du mois (jan-déc) de la création du node."
-
-#~ msgid "[dd]"
-#~ msgstr "[dd]"
-
-#~ msgid "The two-digit day of the month (00-31) the node was created."
-#~ msgstr "Les deux chiffres du jour (01-31) de la création du node."
-
-#~ msgid "[day]"
-#~ msgstr "[day]"
-
-#~ msgid ""
-#~ "The three-letter day of the week (sun-sat) that the node was created."
-#~ msgstr "Les trois lettres du jour (lun-dim) de la création du node."
-
-#~ msgid "[hour]"
-#~ msgstr "[hour]"
-
-#~ msgid "The two-digit hour (00-23) the node was created."
-#~ msgstr "Les deux chiffres de l'heure (00-23) de la création du node."
-
-#~ msgid "[min]"
-#~ msgstr "[min]"
-
-#~ msgid "The two-digit minute (00-59) the node was created."
-#~ msgstr "Les deux chiffres des minutes (00-59) de la création du node."
-
-#~ msgid "[sec]"
-#~ msgstr "[sec]"
-
-#~ msgid "The two-digit second (00-59) the node was created."
-#~ msgstr "Les deux chiffres des secondes (00-59) de la création du node."
-
-#~ msgid "[week]"
-#~ msgstr "[week]"
-
-#~ msgid "The week number (1-52) of the year the node was created."
-#~ msgstr "Semaine (1-52) de l'année de création du node."
-
-#~ msgid "The name of the lowest-weight category that the page belongs to."
-#~ msgstr ""
-#~ "Le nom de la catégorie de poids le plus léger auquel appartient le node."
-
-#~ msgid "[catalias]"
-#~ msgstr "[catalias]"
-
-#~ msgid ""
-#~ "The alias for the lowest-weight category that the page belongs to. This "
-#~ "is useful for long category names. You must first set up aliases for your "
-#~ "categories."
-#~ msgstr ""
-#~ "L'alias de catégorie la plus 'légère' à laquelle appartient la page. "
-#~ "C'est utile pour les catégories ayant des noms à rallonge. Vous devez "
-#~ "naturellement en premier lieu fixer le nom de vos catégories."
-
-#~ msgid "[book]"
-#~ msgstr "[book]"
-
-#~ msgid "For book pages, the title of the top-level book."
-#~ msgstr "Pour les pages de livre, le titre du chapitre supérieur."
-
-#~ msgid "[bookpath]"
-#~ msgstr "[bookpath]"
-
-#~ msgid "For book pages, the full hierarchy from the top-level book."
-#~ msgstr ""
-#~ "Pour les pages de livre, la hiérarchie complète à partir du chapitre "
-#~ "supérieur."
-
-#~ msgid ""
-#~ "An alias will be automatically generated from the title and other node "
-#~ "attributes, in addition to any alias manually provided above."
-#~ msgstr ""
-#~ "Un alias sera généré automatiquement à partir du titre ou d'autres "
-#~ "attributs du node en plus de ceux précisés manuellement."
-
-#~ msgid "[eventyyyy]"
-#~ msgstr "[eventyyyy]"
-
-#~ msgid "The year the event starts."
-#~ msgstr "L'année où débute l'événement."
-
-#~ msgid "[eventmm]"
-#~ msgstr "[eventmm]"
-
-#~ msgid "The two-digit month (01-12) the event starts."
-#~ msgstr "Les deux chiffres du mois (01-12) où débute l'événement."
-
-#~ msgid "[eventmon]"
-#~ msgstr "[eventmon]"
-
-#~ msgid "The three-letter month (jan-dec) the event starts."
-#~ msgstr "Les trois lettres du mois (jan-déc) où débute l'événement."
-
-#~ msgid "[eventdd]"
-#~ msgstr "[eventdd]"
-
-#~ msgid "The two-digit day of the month (00-31) the event starts."
-#~ msgstr "Les deux chiffres du jour du mois (01-31) où débute l'événement."
-
-#~ msgid "[eventday]"
-#~ msgstr "[eventday]"
-
-#~ msgid "The three-letter day of the week (sun-sat) the event starts."
-#~ msgstr ""
-#~ "Les trois lettres du jour de la semaine (lun-dim) où débute l'événement."
-
-#~ msgid "[eventweek]"
-#~ msgstr "[eventweek]"
-
-#~ msgid "The week number (1-52) of the year the event starts."
-#~ msgstr "La semaine (1-52) de l'année où débute l'événement."
-
-#~ msgid "The name of the category."
-#~ msgstr "Le nom de la catégorie."
-
-#~ msgid "[tid]"
-#~ msgstr "[tid]"
-
-#~ msgid "The id number of the category."
-#~ msgstr "L'ID de la catégorie."
-
-#~ msgid "Bulk update category paths"
-#~ msgstr "Mise à jour en masse des chemins des catégories"
-
-#~ msgid ""
-#~ "Generate aliases for all existing categories which do not already have "
-#~ "aliases."
-#~ msgstr "Génère un alias pour chaque catégorie qui n'en est pas encore doté."
-
-#~ msgid "The name of the user."
-#~ msgstr "Le nom de l'utilisateur."
-
-#~ msgid "[uid]"
-#~ msgstr "[uid]"
-
-#~ msgid "The id number of the user."
-#~ msgstr "L'ID  de l'utilisateur."
-
-#~ msgid "Bulk update user paths"
-#~ msgstr "Mise à jour en masse des chemins utilisateurs"
-
-#~ msgid "Bulk update blog paths"
-#~ msgstr "Mise à jour en masse des chemins des blogues"
-
-#~ msgid "Bulk update user-tracker paths"
-#~ msgstr "Mise à jour en masse des pages de suivi des utilisateurs"

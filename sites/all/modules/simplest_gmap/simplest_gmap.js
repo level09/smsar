@@ -1,4 +1,3 @@
-// $Id: simplest_gmap.js,v 1.1.2.1 2009/04/13 17:53:40 troy Exp $
 Drupal.behaviors.simplestGmap = function (context) {
   if (!GBrowserIsCompatible()) {
     return;
@@ -134,12 +133,11 @@ function sgAddMarker(map_id, coords) {
     });
     
     GEvent.addListener(marker, "click", function() {
-      marker.openInfoWindowHtml('You can drag marker.<br /> You can also <a href="#" onclick="sgDeleteMarker(\'' + gmap.map.map_id + '\'); return false">delete it</a>');
+      marker.openInfoWindowHtml(Drupal.t('You can drag marker.<br /> You can also <a href="#" onclick="!code">delete it</a>', {'!code': "sgDeleteMarker('" + gmap.map.map_id + "'); return false;"}));
     });
     
-   
     gmap.addOverlay(marker);    
-    marker.openInfoWindowHtml('You can drag marker.<br /> You can also <a href="#" onclick="sgDeleteMarker(\'' + gmap.map.map_id + '\'); return false">delete it</a>');
+    marker.openInfoWindowHtml(Drupal.t('You can drag marker.<br /> You can also <a href="#" onclick="!code">delete it</a>', {'!code': "sgDeleteMarker('" + gmap.map.map_id + "'); return false;"}));
   } else {
     var marker = new GMarker(coords);
     gmap.addOverlay(marker); 
@@ -169,8 +167,8 @@ function sgUpdateControls(gmap) {
   if (!gmap.map.input_mode) return;
    
   if (!gmap.map.marker) {
-    $('#' + gmap.map.map_id + '_controls').html('<div class="marker-add"><a href="#" onclick="sgAddMarker(\'' + gmap.map.map_id + '\');return false;">Add marker here!</a></div>');
+    $('#' + gmap.map.map_id + '_controls').html('<div class="marker-add"><a href="#" onclick="sgAddMarker(\'' + gmap.map.map_id + '\');return false;">' + Drupal.t( 'Add marker here!' ) + '</a></div>');
   } else {
-    $('#' + gmap.map.map_id + '_controls').html('<div class="marker-remove"><a href="#" onclick="sgDeleteMarker(\'' + gmap.map.map_id + '\');return false;">Delete marker!</a></div>');
+    $('#' + gmap.map.map_id + '_controls').html('<div class="marker-remove"><a href="#" onclick="sgDeleteMarker(\'' + gmap.map.map_id + '\');return false;">' + Drupal.t( 'Delete marker!' ) + '</a></div>');
   }
 }

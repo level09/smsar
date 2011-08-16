@@ -34,40 +34,42 @@ function ad_channel_cache_filter($ads) {
         $urls = unserialize($channel->urls);
         $frontpage = adserve_variable('site_frontpage') ? adserve_variable('site_frontpage') : 'node';
         $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote($frontpage, '/') .'\2'), preg_quote($urls, '/')) .')$/';
-        $match = preg_match($regexp, adserve_variable('url'));
-        _debug_echo("ad_channel_cache: checking aid($aid) against channel($chid) path(". adserve_variable('url') .") regexp($regexp) match($match) display[$display_by_url]");
-        // display ad on all except matching urls
-        if ($display_by_url == 0) {
-          if (empty($urls) || !$match) {
-            _debug_echo("ad_channel_cache: aid($aid) is valid");
-            $valid_ads[$chid][] = $aid;
-            if ($nochannel_display == 1) {
-              $nochannel_percent[$chid] = $channel->no_channel_percent;
-              _debug_echo("ad_channel_cache: channel($chid) no_channel_percent($nochannel_percent[$chid])");
+        foreach (array('url', 'alias') as $search) {
+          $match = preg_match($regexp, adserve_variable($search));
+          _debug_echo("ad_channel_cache: checking aid($aid) against channel($chid) path(". adserve_variable($search) .") regexp($regexp) match($match) display[$display_by_url]");
+          // display ad on all except matching urls
+          if ($display_by_url == 0) {
+            if (empty($urls) || !$match) {
+              _debug_echo("ad_channel_cache: aid($aid) is valid");
+              $valid_ads[$chid][] = $aid;
+              if ($nochannel_display == 1) {
+                $nochannel_percent[$chid] = $channel->no_channel_percent;
+                _debug_echo("ad_channel_cache: channel($chid) no_channel_percent($nochannel_percent[$chid])");
+              }
+              else {
+                _debug_echo("ad_channel_cache: channel($chid)");
+              }
+              break;
             }
-            else {
-              _debug_echo("ad_channel_cache: channel($chid)");
-            }
-            break;
           }
-        }
-        // display ad on matching urls
-        else {
-          if (!empty($urls) && $match) {
-            _debug_echo("ad_channel_cache: aid($aid) is valid");
-            $valid_ads[$chid][] = $aid;
-            if ($nochannel_display == 1) {
-              $nochannel_percent[$chid] = $channel->no_channel_percent;
-              _debug_echo("ad_channel_cache: channel($chid) no_channel_percent($nochannel_percent[$chid])");
+          // display ad on matching urls
+          else {
+            if (!empty($urls) && $match) {
+              _debug_echo("ad_channel_cache: aid($aid) is valid");
+              $valid_ads[$chid][] = $aid;
+              if ($nochannel_display == 1) {
+                $nochannel_percent[$chid] = $channel->no_channel_percent;
+                _debug_echo("ad_channel_cache: channel($chid) no_channel_percent($nochannel_percent[$chid])");
+              }
+              else {
+                _debug_echo("ad_channel_cache: channel($chid)");
+              }
+              break;
             }
-            else {
-              _debug_echo("ad_channel_cache: channel($chid)");
-            }
-            break;
           }
+          // no match so we didn't hit a break, ad is not valid
+          _debug_echo("ad_channel_cache: aid($aid) is not valid");
         }
-        // no match so we didn't hit a break, ad is not valid
-        _debug_echo("ad_channel_cache: aid($aid) is not valid");
       }
     }
     else {
@@ -94,7 +96,7 @@ function ad_channel_cache_filter($ads) {
     $frequencies = array();
     foreach (array_keys($valid_ads) as $chid) {
       if ($chid) {
-        if (isset($nochannel_percent[$chid]) && $nochannel_percent[$chid]) {
+        if (isset($nochannel_percent[$chid])) {
           $frequencies[$chid] = $nochannel_percent[$chid];
           _debug_echo("ad_channel_cache: channel $chid has a non-channel ad frequency of ". $nochannel_percent[$chid]."%");
         }
@@ -114,24 +116,31 @@ function ad_channel_cache_filter($ads) {
       $num_channels = sizeof($valid_ads);
 
       foreach (array_keys($valid_ads) as $chid) {
-        if (isset($frequencies[$chid])) {
-           // for a given channel, ensure the proper ratio to non-channel ads
-          if ($frequencies[$chid] <=  50) { // increase occurrences of $chid
-            $balanced_channels[] = 0;
-            $frequency = round(100 / $frequencies[$chid]) - 1;
-            _debug_echo("ad_channel_cache: adjusting ratio of channel($chid) to $frequency:1 relative non-channel ads");
-            for ($i = 1; $i <= $frequency; $i++) {
-              $balanced_channels[] = $chid;
-            }
-          }
-          else { // add $chid and additional non-channel ads
-            $balanced_channels[] = $chid;
-            $frequency = round(100 / (100 - $frequencies[$chid])) - 1;
-            _debug_echo("ad_channel_cache: adjusting ratio of channel($chid) to 1:$frequency relative non-channel ads");
-            for ($i = 1; $i <= $frequency; $i++) {
+        // if there are no non-channel ads, there is no need to balance
+        if (count($valid_ads[0]) > 0) {
+          if (isset($frequencies[$chid])) {
+             // for a given channel, ensure the proper ratio to non-channel ads
+            if ($frequencies[$chid] <=  50) { // increase occurrences of $chid
               $balanced_channels[] = 0;
+              $frequency = round(100 / $frequencies[$chid]) - 1;
+              _debug_echo("ad_channel_cache: adjusting ratio of channel($chid) to $frequency:1 relative non-channel ads");
+              for ($i = 1; $i <= $frequency; $i++) {
+                $balanced_channels[] = $chid;
+              }
+            }
+            else { // add $chid and additional non-channel ads
+              $balanced_channels[] = $chid;
+              $frequency = round(100 / (100 - $frequencies[$chid])) - 1;
+              _debug_echo("ad_channel_cache: adjusting ratio of channel($chid) to 1:$frequency relative non-channel ads");
+              for ($i = 1; $i <= $frequency; $i++) {
+                $balanced_channels[] = 0;
+              }
             }
           }
+        }
+        else {
+         _debug_echo("ad_channel_cache: NOT adjusting ratio of channel($chid) to relative non-channel ads as there are no non-channel ads");
+          $balanced_channels[] = $chid;
         }
       }
       _debug_echo('ad_channel_cache: channel 0 contains all non-channel ads');

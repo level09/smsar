@@ -1,0 +1,19 @@
+Dec 18, 2010
+  - Fixed bug selecting the wrong revision id
+  - Fixed notice errors in PressFlow 
+
+Oct 3, 2010
+  - Added UPGRADE instructions file
+  - added .install file
+
+Sept 2, 2010
+  - Changed name of module to Similar By Terms 2
+  - added more documentation to README and changed to markdown format
+
+Aug 29, 2010
+  - Moved the generation of tids to the arguments section
+  - Allow limiting to specific vocabularies
+  - Allow passing in of multiple nodes
+  - Added "don't show this node in results" checkbox to nid argument section
+  - Created a displayable field which shows the % of similarity rather than count
+  

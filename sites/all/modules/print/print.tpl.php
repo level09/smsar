@@ -1,5 +1,4 @@
 <?php
-// $Id: print.tpl.php,v 1.8.2.15 2009/07/09 12:00:52 jcnventura Exp $
 
 /**
  * @file
@@ -12,14 +11,15 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="<?php print $print['language']; ?>" xml:lang="<?php print $print['language']; ?>">
   <head>
     <?php print $print['head']; ?>
+    <?php print $print['base_href']; ?>
     <title><?php print $print['title']; ?></title>
     <?php print $print['scripts']; ?>
+    <?php print $print['sendtoprinter']; ?>
     <?php print $print['robots_meta']; ?>
-    <?php print $print['base_href']; ?>
     <?php print $print['favicon']; ?>
     <?php print $print['css']; ?>
   </head>
-  <body<?php print $print['sendtoprinter']; ?>>
+  <body>
     <?php if (!empty($print['message'])) {
       print '<div class="print-message">'. $print['message'] .'</div><p />';
     } ?>
@@ -29,10 +29,7 @@
     <div class="print-breadcrumb"><?php print $print['breadcrumb']; ?></div>
     <hr class="print-hr" />
     <h1 class="print-title"><?php print $print['title']; ?></h1>
-    <div class="print-submitted"><?php print $print['submitted']; ?></div>
-    <div class="print-created"><?php print $print['created']; ?></div>
     <div class="print-content"><?php print $print['content']; ?></div>
-    <div class="print-taxonomy"><?php print $print['taxonomy']; ?></div>
     <div class="print-footer"><?php print $print['footer_message']; ?></div>
     <hr class="print-hr" />
     <div class="print-source_url"><?php print $print['source_url']; ?></div>

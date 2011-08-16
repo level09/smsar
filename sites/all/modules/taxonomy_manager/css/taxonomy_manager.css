@@ -47,23 +47,29 @@
   margin-top: 0em;
 }
 
-.treeview, .treeview ul {
+/* address .treeview additional with #taxonomy-manager to make it compatible with the admin module */
+#taxonomy-manager .treeview, 
+.treeview, 
+.treeview ul {
   padding: 0;
   margin: 0;
   list-style: none;
 }
 
+#taxonomy-manager .treeview .form-item,
 .treeview .form-item {
   margin: 0;
   padding: 0;
   display: inline;
 }
 
+#taxonomy-manager .treeview li,
 .treeview li { 
   margin: 0;
   padding: 0 0 0 15px;
 }
 	
+#taxonomy-manager .hitArea,
 .hitArea {
   float: left;
   height: 15px;
@@ -75,12 +81,30 @@
   _display: inline;
 }
 
-.treeview li { background: url(../images/tv-item.gif) 0 0 no-repeat; }
-.treeview .collapsable { background-image: url(../images/tv-collapsable.gif); }
-.treeview .expandable { background-image: url(../images/tv-expandable.gif); }
-.treeview .last { background-image: url(../images/tv-item-last.gif); }
-.treeview .lastCollapsable { background-image: url(../images/tv-collapsable-last.gif); }
-.treeview .lastExpandable { background-image: url(../images/tv-expandable-last.gif); }
+#taxonomy-manager .treeview li,
+.treeview li { 
+  background: url(../images/tv-item.gif) 0 0 no-repeat; 
+}
+#taxonomy-manager .treeview .collapsable,
+.treeview .collapsable { 
+  background-image: url(../images/tv-collapsable.gif); 
+}
+#taxonomy-manager .treeview .expandable,
+.treeview .expandable { 
+  background-image: url(../images/tv-expandable.gif); 
+}
+#taxonomy-manager .treeview .last,
+.treeview .last { 
+  background-image: url(../images/tv-item-last.gif); 
+}
+#taxonomy-manager .treeview .lastCollapsable,
+.treeview .lastCollapsable { 
+  background-image: url(../images/tv-collapsable-last.gif); 
+}
+#taxonomy-manager .treeview .lastExpandable,
+.treeview .lastExpandable { 
+  background-image: url(../images/tv-expandable-last.gif); 
+}
 
 .term-line {
   display: inline;
@@ -92,7 +116,6 @@
 }
 
 .term-has-more-siblings {
-  dispaly: inline;
   height: 38px;
   cursor: pointer;
 }
@@ -431,3 +454,13 @@ input.double-tree-disable {
 .clear {
   clear: both;
 }	
+
+/**
+ overwrites some css settings from the admin module, which break the layout of the taxonomy manager
+*/
+#taxonomy-manager div.form-item:after,
+#taxonomy-manager ul.links:after,
+#taxonomy-manager div.admin-panel .body:after,
+#taxonomy-manager .clear-block:after {
+  display: inline;
+}

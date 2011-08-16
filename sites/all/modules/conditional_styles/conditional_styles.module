@@ -1,6 +1,4 @@
 <?php
-// $Id: conditional_styles.module,v 1.3 2009/05/25 09:53:55 johnalbin Exp $
-
 /**
  * Implements HOOK_theme().
  */
@@ -13,21 +11,26 @@ function conditional_styles_theme($existing, $type, $theme, $path) {
  * Implements MODULE_preprocess_page().
  */
 function conditional_styles_preprocess_page(&$vars, $hook) {
-  // Append them to $styles and add a $conditional_styles variable.
-  $vars['styles'] .= $vars['conditional_styles'] = variable_get('conditional_styles_' . $GLOBALS['theme'], '');
+  // Add a $conditional_styles variable and append them to $styles.
+  $language = $GLOBALS['language']->direction == LANGUAGE_RTL ? '_rtl' : '';
+  $vars['conditional_styles'] = variable_get('conditional_styles_' . $GLOBALS['theme'] . $language, '');
+  $vars['styles'] .= $vars['conditional_styles'];
 }
 
 /**
  * Implements MODULE_preprocess_maintenance_page().
  */
 function conditional_styles_preprocess_maintenance_page(&$vars, $hook) {
-  // Append them to $styles and add a $conditional_styles variable.
-  $vars['styles'] .= $vars['conditional_styles'] = variable_get('conditional_styles_' . $GLOBALS['theme'], '');
+  // Add a $conditional_styles variable and append them to $styles.
+  $language = $GLOBALS['language']->direction == LANGUAGE_RTL ? '_rtl' : '';
+  $vars['conditional_styles'] = variable_get('conditional_styles_' . $GLOBALS['theme'] . $language, '');
+  $vars['styles'] .= $vars['conditional_styles'];
 }
 
 /**
  * Implements HOOK_enable().
  */
 function conditional_styles_enable() {
-  drupal_rebuild_theme_registry();
+  // Flush the .info file cache, the page cache and the theme registry.
+  drupal_flush_all_caches();
 }

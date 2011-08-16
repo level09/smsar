@@ -529,7 +529,7 @@ msgid "Synchronize with account"
 msgstr "Synchronizeer met account"
 
 #: simplenews.admin.inc:936
-msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deteted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
+msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deleted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
 msgstr "Wanneer aangevinkt, worden de inschrijvingen gesynchronizeerd met de gebruikers van de site. Wanneer de gebruikers worden verwijderd, worden ook de inschrijvingen met hetzelfde e-mailadres verwijderd. Wanneer gebruikers van de site worden geblokkeerd/gedeblokkeerd, worden de inschrijvingen gedeactiveerd/geactiveerd. Wanneer niet aangevinkt, blijven de inschrijvingen onveranderd wanneer de geassocieerde gebruikers worden verwijderd of geblokkeerd."
 
 #: simplenews.admin.inc:941

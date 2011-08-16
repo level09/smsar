@@ -1,5 +1,5 @@
 <?php
-// $Id: format_number.module,v 1.1.2.8 2009/02/24 11:55:32 markuspetrux Exp $
+// $Id: format_number.module,v 1.1.2.13 2009/12/26 07:36:02 markuspetrux Exp $
 
 /**
  * @file
@@ -48,6 +48,15 @@ function format_number_menu() {
 }
 
 /**
+ * Implementation of hook_theme().
+ */
+function format_number_theme() {
+  return array(
+    'numericfield' => array('arguments' => array('element' => NULL)),
+  );
+}
+
+/**
  * Implementation of hook_user().
  *
  * Allows users to individually set their number format.
@@ -57,7 +66,7 @@ function format_number_user($type, &$edit, &$user, $category = NULL) {
     module_load_include('inc', 'format_number', 'format_number.settings');
     return format_number_settings_user($edit);
   }
-  else if ($type == 'validate' && $category == 'account' && variable_get('format_number_user_configurable', 0)) {
+  elseif ($type == 'validate' && $category == 'account' && variable_get('format_number_user_configurable', 0)) {
     module_load_include('inc', 'format_number', 'format_number.settings');
     format_number_settings_user_validate($edit);
     return;
@@ -116,10 +125,10 @@ function format_number_get_options($name = NULL) {
       'decimal_point' => variable_get('format_number_decimal_point', '.'),
     );
     if (variable_get('format_number_user_configurable', 0) && $user->uid) {
-      if (strlen($user->thousands_sep)) {
+      if (drupal_strlen($user->thousands_sep)) {
         $format_options['thousands_sep'] = $user->thousands_sep;
       }
-      if (strlen($user->decimal_point)) {
+      if (drupal_strlen($user->decimal_point)) {
         $format_options['decimal_point'] = $user->decimal_point;
       }
     }
@@ -137,7 +146,9 @@ function format_number_add_js() {
   static $ready;
   if (!isset($ready)) {
     $ready = TRUE;
-    drupal_add_js(drupal_get_path('module', 'format_number') .'/format_number.js');
+    $module_path = drupal_get_path('module', 'format_number');
+    drupal_add_css($module_path .'/format_number.css');
+    drupal_add_js($module_path .'/format_number.js');
     drupal_add_js(array('format_number' => format_number_get_options()), 'setting');
   }
 }
@@ -165,7 +176,7 @@ function format_number($number, $decimals = 0) {
 
   if ($decimals < 0) {
     // Count decimal places (ignoring trailing zeros to the right of the decimal point).
-    $decimals = (strpos($number, '.') === FALSE ? 0 : strlen(preg_replace('#^.*\.([0-9]*?)0*$#', '\1', $number)));
+    $decimals = (strpos($number, '.') === FALSE ? 0 : drupal_strlen(preg_replace('#^.*\.([0-9]*?)0*$#', '\1', $number)));
   }
   // Avoid issues caused by PHP rounding limitations.
   if ($decimals > FORMAT_NUMBER_MAX_PRECISION) {
@@ -175,6 +186,30 @@ function format_number($number, $decimals = 0) {
   // number_format() can only deal with one chararcter symbols, so that
   // we tell him to use the placeholders X and Z that we replace later.
   return str_replace(array('X', 'Z'), array($format_options['decimal_point'], $format_options['thousands_sep']), number_format($number, $decimals, 'X', 'Z'));
+}
+
+/**
+ * Formats numbers to a specified number of significant figures.
+ *
+ * @param number $number
+ *   The number to format.
+ * @param integer $significant_figures
+ *   The number of significant figures to round and format the number to.
+ * @return string
+ *   The rounded and formatted number.
+ */
+function format_number_significant_figures($number, $significant_figures) {
+  // Compute the number of decimal places we need to round and format the
+  // number to (may be negative).
+  $decimals = floor($significant_figures - log10(abs($number)));
+  // Round as a regular number.
+  $number = round($number, $decimals);
+  // We do not want decimals if the resulting number is zero.
+  if ($number == 0) {
+    $decimals = 0;
+  }
+  // Leave the formatting to format_number().
+  return format_number($number, $decimals);
 }
 
 /**
@@ -271,7 +306,7 @@ function parse_formatted_number($formatted_number, $required = TRUE) {
 
   // When only one non-numeric symbol is present, we need to figure out
   // if it is a thousands separator or a decimal point.
-  else if ($non_numeric_symbols_count == 1) {
+  elseif ($non_numeric_symbols_count == 1) {
     $unknown_symbol = array_keys($non_numeric_symbols);
     $unknown_symbol = array_shift($unknown_symbol);
 
@@ -287,7 +322,7 @@ function parse_formatted_number($formatted_number, $required = TRUE) {
     }
 
     // When unknown symbol is not a dot (.), nor a comma (,)...
-    else if ($unknown_symbol != '.' && $unknown_symbol != ',') {
+    elseif ($unknown_symbol != '.' && $unknown_symbol != ',') {
       if (isset($decimal_point_options[$unknown_symbol])) {
         // This is a valid decimal point symbol.
         $formatted_number = str_replace($unknown_symbol, '.', $formatted_number);
@@ -309,7 +344,7 @@ function parse_formatted_number($formatted_number, $required = TRUE) {
         // This is a valid decimal point symbol.
         $formatted_number = str_replace($unknown_symbol, '.', $formatted_number);
       }
-      else if ($unknown_symbol == $format_options['thousands_sep']) {
+      elseif ($unknown_symbol == $format_options['thousands_sep']) {
         // This is a valid thousands separator symbol.
         $formatted_number = str_replace($unknown_symbol, '', $formatted_number);
       }
@@ -321,4 +356,220 @@ function parse_formatted_number($formatted_number, $required = TRUE) {
   }
 
   return ($is_negative && 0 != $formatted_number ? '-' : '') . $formatted_number;
+}
+
+/**
+ * Implementation of hook_elements().
+ */
+function format_number_elements() {
+  return array(
+    'numericfield' => array(
+      '#input' => TRUE,
+      '#precision' => 12,
+      '#decimals' => 0,
+      '#process' => array('format_number_numericfield_process'),
+    ),
+  );
+}
+
+/**
+ * Compute the lower or upper bounds of a number.
+ *
+ * @param $direction
+ *   'lower' to compute the minimum possible value.
+ *   'upper' to compute the maximum possible value.
+ * @param $precision
+ *   Integer that indicates the total number of digits available to store the
+ *   number, including the digits to the right of the decimal point.
+ * @param $decimals
+ *   Integer that indicates the number of available digits to the right of
+ *   the decimal point.
+ * @return
+ *   The minimum or maximum possible value.
+ */
+function format_number_compute_boundary($direction, $precision = 0, $decimals = 0) {
+  return (float)(($direction == 'lower' ? '-' : '') . str_repeat('9', $precision - $decimals) .'.'. str_repeat('9', $decimals));
+}
+
+/**
+ * Process an individual numeric form element.
+ *
+ * @param $element
+ *   The form element being processed.
+ * @param $edit
+ *   The incoming POST data to populate the form element.
+ * @param $form_state
+ *   A keyed array containing the current state of the form.
+ * @param $form
+ *   An associative array containing the structure of the form.
+ *
+ * @ingroup forms
+ */
+function format_number_numericfield_process($element, $edit, $form_state, $form) {
+  $element_precision = (isset($element['#precision']) && (int)$element['#precision'] > 0 ? (int)$element['#precision'] : 12);
+  $element_decimals = (isset($element['#decimals']) && (int)$element['#decimals'] >= 0 ? (int)$element['#decimals'] : 0);
+  $element_minimum = (isset($element['#minimum']) ? parse_formatted_number($element['#minimum']) : NULL);
+  if (!is_numeric($element_minimum)) {
+    $element_minimum = format_number_compute_boundary('lower', $element_precision, $element_decimals);
+  }
+
+  // Compute size and maxlength for the input element, but still allow the
+  // user specify these values in the form definition.
+  if (empty($element['#size']) || empty($element['#maxlength'])) {
+    $element_maxlength = $element_precision;
+    if ($element_decimals > 0) {
+      $element_maxlength++;
+    }
+    if (isset($element_minimum) && $element_minimum < 0) {
+      $element_maxlength++;
+    }
+    $thousands_sep = format_number_get_options('thousands_sep');
+    if (!empty($thousands_sep)) {
+      $element_maxlength += (ceil(($element_precision - $element_decimals) / 3) - 1);
+    }
+    if (empty($element['#size'])) {
+      $element['#size'] = $element_maxlength + 1;
+    }
+    if (empty($element['#maxlength'])) {
+      $element['#maxlength'] = $element_maxlength;
+    }
+  }
+
+  // Format the element value. A valid PHP number is expected. It may come from
+  // user defined form or from element value callback. In any case, our element
+  // validation callback will generate a valid PHP number, or flag an error. Our
+  // goal now is generate a number formatted with site or user defined options,
+  // if value is a valid PHP number.
+  $value = (!empty($element['#value']) && is_string($element['#value']) ? $element['#value'] : '');
+  if (is_numeric($value)) {
+    $value = format_number($value, $element_decimals);
+  }
+  $element['#value'] = $value;
+
+  // Pass decimal places to the client-side javascript using HTML attribute.
+  if (isset($element['#attributes']) && is_array($element['#attributes'])) {
+    $element['#attributes']['decimals'] = $element_decimals;
+  }
+  else {
+    $element['#attributes'] = array('decimals' => $element_decimals);
+  }
+
+  // Attach a validation callback to the form element.
+  if (isset($element['#element_validate']) && is_array($element['#element_validate'])) {
+    array_shift($element['#element_validate'], 'format_number_numericfield_validate');
+  }
+  else {
+    $element['#element_validate'] = array('format_number_numericfield_validate');
+  }
+
+  return $element;
+}
+
+/**
+ * Helper function to determine the value for a numeric form element.
+ *
+ * @param $element
+ *   The form element whose value is being populated.
+ * @param $edit
+ *   The incoming POST data to populate the form element. If this is FALSE,
+ *   the element's default value should be returned.
+ * @return
+ *   The data that will appear in the $form_state['values'] collection
+ *   for this element. Return nothing to use the default.
+ *
+ * @ingroup forms
+ */
+function form_type_numericfield_value($element, $edit = FALSE) {
+  if ($edit !== FALSE) {
+    // Equate $edit to the form value to ensure it's marked for validation.
+    $value = trim(str_replace(array("\r", "\n"), '', $edit));
+    // If input is not empty, we want a valid PHP number now.
+    // If input cannot be parsed as a valid PHP number, our element validation
+    // callback will take care of it.
+    if ($value != '' && ($parsed = parse_formatted_number($value)) !== FALSE) {
+      $value = $parsed;
+    }
+    return $value;
+  }
+}
+
+/**
+ * Validation of an individual numeric form element.
+ *
+ * @param $element
+ *   The form element being processed.
+ * @param $form_state
+ *   A keyed array containing the current state of the form.
+ *
+ * @ingroup forms
+ */
+function format_number_numericfield_validate($element, &$form_state) {
+  $value = $element['#value'];
+
+  if ($element['#required'] || $value != '') {
+    $value = parse_formatted_number($value, $element['#required']);
+
+    // Validate number format.
+    if (!is_numeric($value)) {
+      form_error($element, t('%name: The specified number @num is invalid.', array('%name' => $element['#title'], '@num' => $element['#value'])));
+      return;
+    }
+
+    // Validate number boundaries.
+    $element_precision = (isset($element['#precision']) && (int)$element['#precision'] > 0 ? (int)$element['#precision'] : 12);
+    $element_decimals = (isset($element['#decimals']) && (int)$element['#decimals'] >= 0 ? (int)$element['#decimals'] : 0);
+    $element_minimum = (isset($element['#minimum']) ? parse_formatted_number($element['#minimum']) : NULL);
+    if (!is_numeric($element_minimum)) {
+      $element_minimum = format_number_compute_boundary('lower', $element_precision, $element_decimals);
+    }
+    $element_maximum = (isset($element['#maximum']) ? parse_formatted_number($element['#maximum']) : NULL);
+    if (!is_numeric($element_maximum)) {
+      $element_maximum = format_number_compute_boundary('upper', $element_precision, $element_decimals);
+    }
+    if ($value < $element_minimum) {
+      form_error($element, t('%name: The value may be no smaller than @minimum.', array('%name' => $element['#title'], '@minimum' => $element_minimum)));
+      return;
+    }
+    elseif ($value > $element_maximum) {
+      form_error($element, t('%name: The value may be no larger than @maximum.', array('%name' => $element['#title'], '@maximum' => $element_maximum)));
+      return;
+    }
+  }
+
+  // Update the form element with parsed number, so it gets a valid PHP number
+  // that can be processed in math operations or store in the database.
+  if ($element['#value'] != $value) {
+    form_set_value($element, $value, $form_state);
+  }
+}
+
+/**
+ * Render a numeric form element.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ * @return
+ *   A themed HTML string representing the input element.
+ *
+ * @ingroup themeable
+ */
+function theme_numericfield($element) {
+  format_number_add_js();
+
+  $size = empty($element['#size']) ? '' : ' size="'. $element['#size'] .'"';
+  $maxlength = empty($element['#maxlength']) ? '' : ' maxlength="'. $element['#maxlength'] .'"';
+  $output = '';
+  _form_set_class($element, array('form-numeric'));
+
+  if (isset($element['#field_prefix'])) {
+    $output .= '<span class="field-prefix">'. $element['#field_prefix'] .'</span> ';
+  }
+
+  $output .= '<input type="text"'. $maxlength .' name="'. $element['#name'] .'" id="'. $element['#id'] .'"'. $size .' value="'. check_plain($element['#value']) .'"'. drupal_attributes($element['#attributes']) .' />';
+
+  if (isset($element['#field_suffix'])) {
+    $output .= ' <span class="field-suffix">'. $element['#field_suffix'] .'</span>';
+  }
+
+  return theme('form_element', $element, $output);
 }

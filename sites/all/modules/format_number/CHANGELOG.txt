@@ -1,0 +1,77 @@
+// $Id: CHANGELOG.txt,v 1.1.2.10 2009/12/26 07:39:54 markuspetrux Exp $
+
+6.x-1.6
+=======
+
+Features:
+- #636066 by seals: Added Swedish translation.
+- #438116 Implement numeric input element at Forms API level. Requires running update.php to clear theme registry.
+- Updated translation template.
+
+Bugfixes:
+- Use variable_del() to erase module variables upon module uninstallation rather than using DELETE query against the {variable} table.
+- Fixed a couple of Coder module issues.
+
+
+6.x-1.5
+=======
+
+There is no need to run update.php. Just be sure to clear your javascript caches.
+
+Features:
+- Added Dutch translation (by libeco).
+- Added CHANGELOG.txt.
+- #570268 by jonathan_hunt: Add a 3rd argument to Drupal.formatNumber() to tell if we want the result truncated of rounded.
+- #580540 by Bevan: Implement rounding to significant figures.
+- Make javaScript compatible with other libraries than jQuery. See:
+  http://drupal.org/update/modules/6/7#javascript_compatibility
+- Use single quotes rather than double quotes in javascript file.
+
+
+6.x-1.4
+=======
+
+Features:
+- Added description to settings menu item.
+
+Bugfixes:
+- #353897 by xmarket: Fix problems with multibyte characters used as decimail point and/or thousands separators.
+- Avoid PHP notice during user settings validation.
+
+
+6.x-1.3
+=======
+
+Features:
+- #334969 by ztyx: Add support for ascii space when no-break space is used as thousands separator.
+
+
+6.x-1.2
+=======
+
+Features:
+- Added javascript version of the API.
+- Added translation template.
+- Passing $decimals = -1 to format_number() can be used to format any number of decimal places.
+- Updated README.txt
+
+Bugfixes:
+- Fix sign checking in parse_formatted_number().
+
+
+6.x-1.1
+=======
+
+Features:
+- Moved form settings code to a separate file.
+- Settings form now based on a known set of symbols (see CLDR By-Type Chart: number.symbol).
+- New exposed APIs (see README.txt).
+
+Bugfixes:
+- #331916 by ztyx: Small comment fix.
+
+
+6.x-1.0
+=======
+
+- First release.

@@ -10,7 +10,7 @@ module:
 
    The ad project is a large and complex collection of modules.  As new
   features are added, unfortunately new bugs are sometimes added too.  And
-  unfortunately these bugs can go undetected in my development environement.
+  unfortunately these bugs can go undetected in my development environment.
   By installing the ad module on your server, testing it, and reporting any
   problems that you run into, you help to improve the project.
 

@@ -1,7 +1,7 @@
 <?php
-// $ID: $
+// $Id: textactions.inc,v 1.1.2.16 2009/09/04 23:28:04 dman Exp $
 /**
- * Helper functions for imagecache_textactions
+ * @file Helper functions for imagecache_textactions
  * 
  * Static text2canvas and dynamic caption functions
  * 
@@ -156,7 +156,13 @@ function textactions_text2canvas_form($action) {
 function textactions_text2canvas_validate_fontfile(&$element, &$form_status) {
   if (! $fontfile = textactions_find_font($element['#value'], TRUE)) {
     // Just warn, don't prevent
-    drupal_set_message(t("Unable to confirm that the font '%fontfile' is available on your system. This may fail, or your system may provide an appropriate fallback, depending on your toolkit behaviour.", array('%fontfile' => $element['#value'])), 'warning' );
+    drupal_set_message(t("
+      Unable to confirm that the font '%fontfile' is available on your system. 
+      This may fail, or your system may provide an appropriate fallback, 
+      depending on your toolkit behaviour. 
+      Ensure the path to the ttf file is correct, 
+      and permissions allow the webserver to read the file and directory.", 
+      array('%fontfile' => $element['#value'])), 'warning' );
   }
   else {
     drupal_set_message(t("Font was found OK at %fontfile", array('%fontfile' => $fontfile)), 'notice');
@@ -203,11 +209,12 @@ function textactions_text2canvas_image(&$image, $action = array()) {
   else {
     $text = $action['text'];
   }
+  $text = strip_tags($text);
 
   // Calculate position by first creating a temp image containing the text and accessing its dimensions
   $temp = textactions_create_font_image($action['size'], $action['angle'], $fontpath, $text );
 
-  if(! $temp) {
+  if (! $temp) {
     drupal_set_message(t('Failed to generate text image. Cannot calculate text dimensions. Not overlaying text.'), 'error');
     return;
   }
@@ -217,7 +224,7 @@ function textactions_text2canvas_image(&$image, $action = array()) {
   $y_ins = textactions_keyword_filter($action['ypos'], $image->info['height'], $temp['height'], $temp['by'], 'y');
 
   // convert color from hex (as it is stored in the UI)
-  if($action['RGB']['HEX'] && $deduced = hex_to_rgb($action['RGB']['HEX'])) {
+  if ($action['RGB']['HEX'] && $deduced = hex_to_rgb($action['RGB']['HEX'])) {
     $action['RGB'] = array_merge($action['RGB'], $deduced);
   }
 
@@ -233,24 +240,19 @@ function textactions_text2canvas_image(&$image, $action = array()) {
  * 
  * TODO further code review for safety etc
  * 
- * @param $image object, such as it is
+ * @param $image object, as provided by imageapi
  * @param $action definition
  * 
- * @return $text Plain string to be placed on the imagecache process.
+ * @return $text Plain or code string to be placed on the imagecache process.
  */
-function textactions_evaluate_text($image, $action) {
-  // Try to load the attached node - if any
+function MOVED_textactions_evaluate_text($image, $action) {
 
-  // This file_data object MAY be filled up with extra data (by ref) 
-  // when doing the lookup, eg 
-  // $file_data->description, $file_data->alt, $file_data->timestamp
-  
   // HOOK_metadata from file attempts to glean info from any direction possible - EXIF, XMP, DB, description.txt
   // @see the meta_* project
   $meta = module_invoke_all('metadata_from_file', $image->source);
   $file_data = (object) $meta;
 
-
+  // Try to load the attached node - if any
   static $panic; #This can trigger recursion! build-load-build-etc
   if ($panic) return;
   $panic = TRUE;
@@ -263,7 +265,12 @@ function textactions_evaluate_text($image, $action) {
   $GLOBALS['node'] = $node;
   $GLOBALS['file_data'] = $file_data;
   
-  $text = @drupal_eval('<'.'?php global $node; global $image; global $file_data; '.$action['text'].' ?'.'>');
+  $text = @drupal_eval('<'.'?php global $node; global $image; global $file_data; '. $action['text'] .' ?'.'>');
+
+  // Warn about errors in the php code if I can
+  if (empty($text) && function_exists('error_get_last') && $last_error = error_get_last()) {
+    drupal_set_message("Problem evaluating dynamic text. <br/><code>{$action['text']}</code><br/> ". $last_error['message'], 'error');
+  }
 
   return $text;
 }
@@ -275,26 +282,28 @@ function textactions_evaluate_text($image, $action) {
  */
 function textactions_create_font_image( $size, $angle, $font, $char ) {
     $rect = imagettfbbox( $size, 0, $font, $char );
-    if(!$rect) {
+    if (!$rect) {
       return NULL;
     }
-    if( 0 == $angle ) {
+    if ( 0 == $angle ) {
         $imh = $rect[1] - $rect[7];
         $imw = $rect[2] - $rect[0];
         $bx = -1 - $rect[0];
         $by = -1 - $rect[7];
-    } else {
+    } 
+    else {
         $rad = deg2rad( $angle );
         $sin = sin( $rad );
         $cos = cos( $rad );
-        if( $angle > 0 ) {
+        if ( $angle > 0 ) {
             $tmp = $rect[6] * $cos + $rect[7] * $sin;
             $bx = -1 - round( $tmp );
             $imw = round( $rect[2] * $cos + $rect[3] * $sin - $tmp );
             $tmp = $rect[5] * $cos - $rect[4] * $sin;
             $by = -1 - round( $tmp );
             $imh = round( $rect[1] * $cos - $rect[0] * $sin - $tmp );
-        } else {
+        } 
+        else {
             $tmp = $rect[0] * $cos + $rect[1] * $sin;
             $bx = -1 - round( $tmp );
             $imw = round( $rect[4] * $cos + $rect[5] * $sin - $tmp );
@@ -304,7 +313,7 @@ function textactions_create_font_image( $size, $angle, $font, $char ) {
         }
     }
   
-  return array('width'=>$imw, 'height'=>$imh, 'bx'=>$bx, 'by'=>$by);
+  return array('width' => $imw, 'height' => $imh, 'bx' => $bx, 'by' => $by);
 }
 
 /**
@@ -326,7 +335,10 @@ function textactions_keyword_filter($value, $current_pixels, $new_pixels, $adj, 
   // check if we have plus or minus values
   $v = explode('+', $value);
   $v2 = explode('-', $value);
-  if (!empty($v2[1])) {$v[1]=-intval($v2[1]); $v[0]=$v2[0];}
+  if (!empty($v2[1])) {
+    $v[1]=-intval($v2[1]); 
+    $v[0]=$v2[0];
+  }
 
   switch ($v[0]) {
     case 'top':
@@ -342,11 +354,10 @@ function textactions_keyword_filter($value, $current_pixels, $new_pixels, $adj, 
       break;
   }
   
-  // perform the adjustment
+  // Perform the adjustment.
   $value=$value+$adj;
-  // add any extra negative or positive
-  if (!empty($v[1])) {$value=$value+$v[1];}
-  #print $current_pixels.' . '.$new_pixels.' . '.$adj.' . '.$xy.'<br />';if ($xy=='y'){exit;}
+  // Add any extra negative or positive.
+  if (!empty($v[1])) $value = $value + $v[1];
   return $value;
 }
 
@@ -376,7 +387,7 @@ function imageapi_gd_image_overlaytext_alpha(&$image, $text, $size = 12, $x = 0,
   imagealphablending($image->resource, TRUE);
 
   $bounds = imagettftext($image->resource, $size, $angle, $x, $y, $color, $fontfile, $text);
-  if (empty($bounds)) { return FALSE; }
+  if (empty($bounds)) return FALSE;
   return TRUE;
 }
 
@@ -414,7 +425,7 @@ function textactions_find_font($fontpath, $strict = FALSE) {
     return realpath($tryfontpath);
   }
 
-  // Try files
+  // Try in the files directory
   $tryfontpath =  file_create_path($fontpath);
   if (is_file($tryfontpath)) {
     return realpath($tryfontpath);

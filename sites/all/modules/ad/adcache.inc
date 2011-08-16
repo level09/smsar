@@ -213,24 +213,35 @@ function adserve_cache_build_hooks($cache) {
  * Default function for retrieving list of ids.
  */
 function adserve_cache_id($type, $id) {
+  _debug_echo("adserve_cache_id: type($type) id($id)");
   switch ($type) {
     case 'nids':
       $result = db_query("SELECT aid FROM {ads} WHERE adstatus = 'active' AND aid IN(%s)", $id);
+      _debug_echo("adserve_cache_id: SELECT aid FROM {ads} WHERE adstatus = 'active' AND aid IN($id)");
       break;
     case 'tids':
       $result = db_query("SELECT a.aid FROM {ads} a INNER JOIN {term_node} n ON a.aid = n.nid WHERE a.adstatus = 'active' AND n.tid IN(%s)", $id);
+      _debug_echo("adserve_cache_id: SELECT a.aid FROM {ads} a INNER JOIN {term_node} n ON a.aid = n.nid WHERE a.adstatus = 'active' AND n.tid IN($id)");
       break;
     case 'default':
       $result = db_query("SELECT a.aid FROM {ads} a LEFT JOIN {term_node} n ON a.aid = n.nid WHERE a.adstatus = 'active' AND n.tid IS NULL");
+      _debug_echo("adserve_cache_id: SELECT a.aid FROM {ads} a LEFT JOIN {term_node} n ON a.aid = n.nid WHERE a.adstatus = 'active' AND n.tid IS NULL");
       break;
     default:
-      _debug_echo("Unsupported type '$type'.");
+      _debug_echo("adserve_cache_id: unsupported type '$type'.");
   }
 
   $ids = array();
   if (isset($result)) {
     while ($ad = db_fetch_object($result)) {
-      $ids[$ad->aid] = $ad->aid;
+      // perform node access check
+      $node = node_load($ad->aid);
+      if (node_access('view', $node) !== FALSE) {
+        $ids[$ad->aid] = $ad->aid;
+      }
+      else {
+        _debug_echo("adserve_cache_id: Ad '$ad->aid' failed access check.");
+      }
     }
   }
   return $ids;
@@ -313,8 +324,8 @@ function adserve_cache_increment($action, $aid) {
       $views = (int)db_result(db_query("SELECT SUM(count) FROM {ad_statistics} WHERE aid = %d AND action = 'view' AND date >= %d", $aid, date('YmdH', $ad->activated)));
       if ($views >= $ad->maxviews) {
         db_query("UPDATE {ads} SET adstatus = 'expired', autoexpire = 0, autoexpired = %d, expired = %d WHERE aid = %d", time(), time(), $aid);
-        ad_statistics_increment('autoexpired', $aid);
-        ad_statistics_increment('expired', $aid);
+        ad_statistics_increment($aid, 'autoexpired');
+        ad_statistics_increment($aid, 'expired');
       }
     }
   }

@@ -1,5 +1,5 @@
 <?php
-// $Id: ad.admin.inc,v 1.1.2.9.2.6 2009/07/11 16:39:21 jeremy Exp $
+// $Id: ad.admin.inc,v 1.1.2.9.2.7 2009/11/23 06:40:02 Jeremy Exp $
 
 /**
  * @file
@@ -565,8 +565,8 @@ function ad_admin_configure_settings($form_state) {
   $form['search']['ad_meta_noindex'] = array(
     '#type' => 'checkbox',
     '#title' => t('Remove ads from remote search engines'),
-    '#default_value' => variable_get('ad_meta_noindex', 1),
-    '#description' => t('If enabled, advertisement nodes will include the !noindex, telling remote search engines to not include these nodes in their search index.  This meta tag will appear on any page that an advertisement node is displayed on, even if a page is comprised of both ad nodes and other site content.  It will not be displayed when advertisements are displayed via blocks, calls to ad(), or other display methods when the page is comprised of non-ad content.', array('!noindex' => l(t('noindex meta tag'), 'http://en.wikipedia.org/wiki/Noindex'))),
+    '#default_value' => variable_get('ad_meta_noindex', 0),
+    '#description' => t('If enabled, advertisement nodes will include the !noindex, telling remote search engines to not include these nodes in their search index.  This meta tag will appear on any page that an advertisement node is displayed on, even if a page is comprised of both ad nodes and other site content.  It will not be displayed when advertisements are displayed via blocks, calls to ad(), or other display methods when the page is comprised of non-ad content. This option is disabled by default as users with this option enabled and custom home pages have accidentally caused important pages such as their front page to not be indexed by popular search engines.', array('!noindex' => l(t('noindex meta tag'), 'http://en.wikipedia.org/wiki/Noindex'))),
   );
 
   $form['iframe'] = array(

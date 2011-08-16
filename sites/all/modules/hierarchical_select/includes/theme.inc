@@ -1,5 +1,4 @@
 <?php
-// $Id: theme.inc,v 1.7 2009/08/15 10:52:07 wimleers Exp $
 
 /**
  * @file
@@ -13,6 +12,48 @@
  */
 
 /**
+ * Return a themed Hierarchical Select form element.
+ *
+ * @param element
+ *   An associative array containing the properties of the element.
+ *   Properties used: title, description, id, required
+ * @param $value
+ *   The form element's data.
+ * @return
+ *   A string representing the form element.
+ *
+ * @ingroup themeable
+ */
+function theme_hierarchical_select_form_element($element, $value) {
+  $output = '<div class="form-item hierarchical-select-wrapper-wrapper"';
+  if (!empty($element['#id'])) {
+    $output .= ' id="'. $element['#id'] .'-wrapper"';
+  }
+  $output .= ">\n";
+  $required = !empty($element['#required']) ? '<span class="form-required" title="'. t('This field is required.') .'">*</span>' : '';
+
+  if (!empty($element['#title'])) {
+    $title = $element['#title'];
+    if (!empty($element['#id'])) {
+      $output .= ' <label for="'. $element['#id'] .'">'. t('!title: !required', array('!title' => filter_xss_admin($title), '!required' => $required)) ."</label>\n";
+    }
+    else {
+      $output .= ' <label>'. t('!title: !required', array('!title' => filter_xss_admin($title), '!required' => $required)) ."</label>\n";
+    }
+  }
+
+  $output .= " $value\n";
+
+  if (!empty($element['#description'])) {
+    $output .= ' <div class="description">'. $element['#description'] ."</div>\n";
+  }
+
+  $output .= "</div>\n";
+
+  return $output;
+}
+
+/**
  * Format a hierarchical select.
  *
  * @param $element
@@ -24,24 +65,32 @@ function theme_hierarchical_select($element) {
   $output = '';
 
   // Update $element['#attributes']['class'].
+  if (!isset($element['#attributes']['class'])) {
+    $element['#attributes']['class'] = '';
+  }
   $hsid = $element['hsid']['#value'];
   $level_labels_style = variable_get('hierarchical_select_level_labels_style', 'none');
   $classes = array(
    'hierarchical-select-wrapper',
    "hierarchical-select-level-labels-style-$level_labels_style",
+   // Classes that make it possible to override the styling of specific
+   // instances of Hierarchical Select, based on either the ID of the form
+   // element or the config that it uses.
+   'hierarchical-select-wrapper-for-name-' . $element['#id'],
+   (isset($element['#config']['config_id'])) ? 'hierarchical-select-wrapper-for-config-' . $element['#config']['config_id'] : NULL,
   );
   $element['#attributes']['class'] .= ' '. implode(' ', $classes);
   $element['#attributes']['id'] = "hierarchical-select-$hsid-wrapper";
   $element['#id'] = "hierarchical-select-$hsid-wrapper"; // This ensures the label's for attribute is correct.
 
   $output .= theme(
-    'form_element',
+    'hierarchical_select_form_element',
     array(
       '#title' => $element['#title'],
       '#description' => $element['#description'],
       '#id' => $element['#id'],
       '#required' => $element['#required'],
-      '#error' => $element['#error'],
+      '#error' => isset($element['#error']) ? $element['#error'] : '',
     ),
     '<div '. drupal_attributes($element['#attributes']) .'>'. $element['#children'] .'</div>'
   );
@@ -74,11 +123,14 @@ function theme_hierarchical_select_selects_container($element) {
  * @return
  *   A themed HTML string representing the form element.
  */
-// TODO: check if this has changed in D6.
 function theme_hierarchical_select_select($element) {
   $select = '';
   $size = $element['#size'] ? ' size="'. $element['#size'] .'"' : '';
-  _form_set_class($element, array('form-select'));
+  $class = array('form-select');
+  if (form_get_error($element) === '') {
+    $class = array_merge($class, array('error'));
+  }
+  _form_set_class($element, $class);
   $multiple = isset($element['#multiple']) && $element['#multiple'];
   return '<select name="'. $element['#name'] .''. ($multiple ? '[]' : '') .'"'. ($multiple ? ' multiple="multiple" ' : '') . drupal_attributes($element['#attributes']) .' id="'. $element['#id'] .'" '. $size .'>'. _hierarchical_select_options($element) .'</select>';
 }
@@ -145,6 +197,10 @@ function theme_hierarchical_select_textfield($element) {
 function theme_hierarchical_select_dropbox_table($element) {
   $output = '';
 
+  $class = 'dropbox';
+  if (form_get_error($element) === '') {
+    $class .= ' error';
+  }
 
   $title     = $element['title']['#value'];
   $separator = $element['separator']['#value'];
@@ -152,7 +208,7 @@ function theme_hierarchical_select_dropbox_table($element) {
 
   $separator_html = '<span class="hierarchical-select-item-separator">'. $separator .'</span>';
 
-  $output .= '<div class="dropbox">';
+  $output .= '<div class="' . $class . '">';
   $output .= '<table>';
   $output .= '<caption class="dropbox-title">'. $title .'</caption>';
   $output .= '<tbody>';
@@ -212,7 +268,7 @@ function theme_hierarchical_select_common_config_form_level_labels($form) {
   $output .= drupal_render($form['status']);
 
   $output .= '<div class="level-labels-settings">';
-  if (count(element_children($form['labels']))) {
+  if (isset($form['labels']) && count(element_children($form['labels']))) {
     foreach (element_children($form['labels']) as $depth) {
       $row = array();
       $row[]['data'] = ($depth == 0) ? t('Root level') : t('Sublevel !depth', array('!depth' => $depth));
@@ -253,7 +309,7 @@ function theme_hierarchical_select_common_config_form_editability($form) {
   $output .= drupal_render($form['status']);
 
   $output .= '<div class="editability-per-level-settings">';
-  if (count(element_children($form['item_types']))) {
+  if (isset($form['item_types']) && count(element_children($form['item_types']))) {
     foreach (element_children($form['item_types']) as $depth) {
       $row = array();
       $row[]['data'] = ($depth == 0) ? t('Root level') : t('Sublevel !depth', array('!depth' => $depth));

@@ -1,5 +1,5 @@
 <?php
-// $Id: imagecache_canvasactions.module,v 1.3.2.12 2009/05/02 04:54:50 dman Exp $
+// $Id: imagecache_canvasactions.module,v 1.3.2.17 2011/02/17 09:43:16 dman Exp $
 
 /**
  * @file A collection of canvas (layer) type manipulations for imagecache -
@@ -61,27 +61,27 @@ function imagecache_canvasactions_imagecache_actions() {
       'file' => 'canvasactions.inc',
     ),
     'canvasactions_file2canvas' => array(
-      'name' => t('Overlay: file image to canvas (watermark)'),
+      'name' => t('Overlay (watermark)'),
       'description' => t(' Choose the file image you wish to use as an overlay, and position it in a layer on top of the canvas.'),
       'file' => 'canvasactions.inc',
     ),
     'canvasactions_canvas2file' => array(
-      'name' => t('Underlay: place a file image under the current image (background)'),
+      'name' => t('Underlay (background)'),
       'description' => t(' Choose the file image you wish to use as an background, and position the processed image on it.'),
       'file' => 'canvasactions.inc',
     ),
     'canvasactions_source2canvas' => array(    
-     'name' => t('Overlay: source image to canvas'),   
+     'name' => t('Overlay: source image to canvas'),
      'description' => t('Places the source image onto the canvas for compositing.'),   
      'file' => 'canvasactions.inc',    
     ),
     'canvasactions_roundedcorners' => array(
-      'name' => t('Rounded Corners: Set a radius to crop corners by.'),
+      'name' => t('Rounded Corners'),
       'description' => t(' This is true cropping, not overlays, so the result <em>can</em> be transparent.'),
       'file' => 'canvasactions.inc',
     ),
     'canvasactions_aspect' => array(
-      'name' => t('Aspect switcher: '),
+      'name' => t('Aspect switcher: Switch between portrait and landscape.'),
       'description' => t(' Use different effects depending on whether the image is landscape of portrait shaped. This re-uses other preset definitions, and just chooses between them based on the rule.'),
       'file' => 'canvasactions.inc',
     ),
@@ -118,7 +118,7 @@ function imagecache_canvasactions_imagecache_actions() {
  * 
  * @ingroup imageapi
  */
-function imageapi_image_overlay(&$image, $layer, $x, $y, $alpha = 100, $reverse = FALSE) {
+function imageapi_image_overlay(&$image, &$layer, $x, $y, $alpha = 100, $reverse = FALSE) {
   if (is_string($layer) ) {
     if (! file_exists($layer)) {
       trigger_error("Image file does not exist. Attempted to overlay $layer", E_USER_ERROR);
@@ -131,7 +131,7 @@ function imageapi_image_overlay(&$image, $layer, $x, $y, $alpha = 100, $reverse 
   $x = imagecache_actions_keyword_filter($x, $image->info['width'], $layer->info['width']);
   $y = imagecache_actions_keyword_filter($y, $image->info['height'], $layer->info['height']);
 
-  return imageapi_toolkit_invoke('overlay', $image, array($layer, $x, $y, $alpha, $reverse));
+  return imageapi_toolkit_invoke('overlay', $image, array(&$layer, $x, $y, $alpha, $reverse));
 }
 
 /**
@@ -168,35 +168,38 @@ function imageapi_image_overlay(&$image, $layer, $x, $y, $alpha = 100, $reverse 
  * @return bool success
  */
 function imageapi_gd_image_overlay(&$image, &$layer, $x, $y, $alpha = 100, $reverse = FALSE) {
-
+  if (empty($layer->resource)) {
+    trigger_error("Invalid input to ". __FUNCTION__ . " 'layer' is not a valid resource");
+    #dpm($layer);
+    return FALSE;
+  }
   // If the given alpha is 100%, we can use imagecopy - which actually works, 
   // Is more efficient, and seems to retain the overlays partial transparancy
   // Still does not work great for indexed gifs though?
 
-  if($alpha == 100 && ($layer->info['mime_type'] != 'image/gif')) {
+  if ($alpha == 100 && ($layer->info['mime_type'] != 'image/gif')) {
     imagealphablending($image->resource, TRUE);
     imagesavealpha($image->resource, TRUE);
     imagealphablending($layer->resource, TRUE);
     imagesavealpha($layer->resource, TRUE);
     imagecopy($image->resource, $layer->resource, $x, $y, 0, 0, $layer->info['width'], $layer->info['height']);
     imagedestroy($layer->resource);
-    return TRUE;
+    #imagealphablending($image->resource, FALSE);
   }
-  // else imagecopymerge fails and we have to use the slow library 
-
-  require_once('watermark.inc');
-  $watermark = new watermark();
-  $image->resource = $watermark->create_watermark($image->resource, $layer->resource, $x, $y, $alpha);
+  else {
+    // Else imagecopymerge fails and we have to use the slow library 
+    require_once('watermark.inc');
+    $watermark = new watermark();
+    $image->resource = $watermark->create_watermark($image->resource, $layer->resource, $x, $y, $alpha);
+    imagedestroy($layer->resource);
+  }
 
   if ($reverse) {
     // When doing underlay, It's the second image object that we really care about. 
     // Update that with the result
     $layer->resource = $image->resource;
+    $layer->info = $image->info;
   }
-  else {
-    imagedestroy($layer->resource);
-  }
-  
   return TRUE;
 }
 
@@ -213,13 +216,26 @@ function imageapi_imagemagick_image_overlay(&$image, &$layer, $x = 0, $y = 0, $a
   $layer_filepath = $layer->source;
   # TODO - alpha channels
   # I spent ages on the docs, but it appears my version of convert does not support -merge, -watermark or -dissolve
-  # Bloody libraries. - I tried  [6.2.8 06/11/08] because that's what I could get for my distro.
+  // Bloody libraries - I tried  [6.2.8 06/11/08] because thats what I could get for my distro.
   
   # This just drops the image on, no alpha:
-  $image->ops[] = "  \"$layer_filepath\" -geometry +$x+$y  -composite    "  ;
+  if ($alpha == 100) {
+    $image->ops[] = "  \"$layer_filepath\" -geometry +$x+$y  -composite    "  ;
+  }
+  else {
+    $compose_arg = "  ";
+    # $compose_arg = " -compose dissolve ";
+    // -compose disolve is supposed to work, but doesn't in available imagemagick versions
+    $geometry_arg = " -geometry +$x+$y ";
+    $alpha_arg = " -set \"option:compose:args\" $alpha ";
+    $image->ops[] = "  \"$layer_filepath\" $compose_arg $geometry_arg $alpha_arg  -composite ";
+ 
+  }
+  #  watchdog('imagecache_canvas', print_r($image->ops, 1) );          
+  # This also worked
+  #  $image->ops[] = ' -draw "image over {$x},{$y} 0,0 \'{$layer_filepath}\'"'  ;
 
-  # This also worked.
-  #  $image->ops[] = ' -draw "image over '.$x.','.$y.' 0,0 \''. $layer_filepath .'\'"'  ;
+  // TODO - I may end up with a different sized image from doing this?
 
   return TRUE;
 }

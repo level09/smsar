@@ -1,5 +1,5 @@
 <?php
-// $Id: flag_actions.module,v 1.1.2.11 2008/09/18 15:37:47 mooffie Exp $
+// $Id: flag_actions.module,v 1.1.2.14 2010/05/08 01:30:33 quicksketch Exp $
 
 /**
  * @file
@@ -108,11 +108,13 @@ function flag_actions_get_actions($flag_name = NULL, $reset = FALSE) {
 
   // Filter actions to a specified flag.
   if (isset($flag_name)) {
+    $specific_flag_actions = array();
     foreach ($flag_actions as $aid => $action) {
-      if ($action->flag != $flag_name) {
-        unset($flag_actions[$aid]);
+      if ($action->flag == $flag_name) {
+        $specific_flag_actions[$aid] = $action;
       }
     }
+    return $specific_flag_actions;
   }
 
   return $flag_actions;
@@ -131,7 +133,7 @@ function flag_actions_get_actions($flag_name = NULL, $reset = FALSE) {
  *   The action parameters.
  */
 function flag_actions_insert_action($fid, $event, $threshold, $callback, $parameters) {
-  db_query('INSERT INTO {flag_actions} (fid, event, threshold, callback, parameters) VALUES (%d, "%s", %d, "%s", "%s")', $fid, $event, $threshold, $callback, serialize($parameters));
+  db_query("INSERT INTO {flag_actions} (fid, event, threshold, callback, parameters) VALUES (%d, '%s', %d, '%s', '%s')", $fid, $event, $threshold, $callback, serialize($parameters));
   return db_last_insert_id('flag_actions', 'aid');
 }
 
@@ -146,7 +148,7 @@ function flag_actions_insert_action($fid, $event, $threshold, $callback, $parame
  *   The action parameters.
  */
 function flag_actions_update_action($aid, $event, $threshold, $parameters) {
-  return db_query('UPDATE {flag_actions} SET event = "%s", threshold = %d, parameters = "%s" WHERE aid = %d', $event, $threshold, serialize($parameters), $aid);
+  return db_query("UPDATE {flag_actions} SET event = '%s', threshold = %d, parameters = '%s' WHERE aid = %d", $event, $threshold, serialize($parameters), $aid);
 }
 
 /**
@@ -441,6 +443,19 @@ function flag_actions_form($form_state, $aid = NULL, $flag_name = NULL) {
 }
 
 /**
+ * Generic submit handler for validating flag actions.
+ */
+function flag_actions_form_validate($form, &$form_state) {
+  // Special validation handlers may be needed to save this form properly.
+  // Try to load the action's validation routine if needed.
+  $callback = $form_state['values']['flag']['callback'];
+  $validate_function = $callback . '_validate';
+  if (function_exists($validate_function)) {
+    $validate_function($form, $form_state);
+  }
+}
+
+/**
  * Generic submit handler for saving flag actions.
  */
 function flag_actions_form_submit($form, &$form_state) {
@@ -458,8 +473,9 @@ function flag_actions_form_submit($form, &$form_state) {
   $threshold  = $form_state['values']['flag']['threshold'];
   $callback   = $form_state['values']['flag']['callback'];
 
-  $parameters = $form_state['values'];
-  unset($parameters['flag']);
+  // Specialized forms may need to execute their own submit handlers on save.
+  $submit_function = $callback . '_submit';
+  $parameters = function_exists($submit_function) ? $submit_function($form, $form_state) : array();
 
   if (empty($aid)) {
     $aid = flag_actions_insert_action($flag->fid, $event, $threshold, $callback, $parameters);

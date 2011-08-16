@@ -1,4 +1,8 @@
-// $Id: CHANGELOG.txt,v 1.7 2009/05/25 15:13:45 johnalbin Exp $
+Conditional Styles 6.x-1.2, 2011-04-05
+--------------------------------------
+- #337975: Follow-up; add missing support for RTL languages
+- #1046090 by daniels: $styles is destroyed by rare bug with APC
+- When db is down, allow include file to work from within themes (like Zen)
 
 Conditional Styles 6.x-1.1, 2009-05-25
 --------------------------------------

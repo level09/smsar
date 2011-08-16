@@ -1,5 +1,4 @@
 <?php
-// $Id: print_mail.inc,v 1.2.2.24 2009/08/20 02:19:19 jcnventura Exp $
 
 /**
  * @file
@@ -12,6 +11,9 @@
  */
 
 require_once(drupal_get_path('module', 'print') .'/print.pages.inc');
+
+// Include MIME library
+@include_once('Mail/mime.php');
 
 /**
  * Menu callback for the send by e-mail form.
@@ -26,7 +28,7 @@ function print_mail_form($form_state) {
   if ((!user_access('administer print')) && (!flood_is_allowed('print_mail', $print_mail_hourly_threshold))) {
     $form['flood'] = array(
       '#type' => 'markup',
-      '#value' => '<p>'. t('You cannot send more than %number messages per hour. Please try again later.', array('%number' => $print_mail_hourly_threshold)) .'</p>',
+      '#value' => '<p>'. format_plural($print_mail_hourly_threshold,'You cannot send more than 1 message per hour. Please try again later.', 'You cannot send more than @count messages per hour. Please try again later.') . '</p>',
     );
     return $form;
   }
@@ -36,11 +38,18 @@ function print_mail_form($form_state) {
   $form = array();
 
   // Remove the printmail/ prefix
-  $path = explode('/', $_GET['q']);
-  unset($path[0]);
-  $path = implode('/', $path);
-  if (is_numeric($path)) {
-    $path = 'node/'. $path;
+  $path_arr = explode('/', $_GET['q']);
+  unset($path_arr[0]);
+  $path = implode('/', $path_arr);
+  if (ctype_digit($path_arr[1])) {
+    if (drupal_lookup_path('source', $path)) {
+      // This is a numeric alias
+      $path = drupal_get_normal_path($path);
+    }
+    else {
+      // normal nid
+      $path = 'node/' . $path;
+    }
   }
   $cid = isset($_GET['comment']) ? (int)$_GET['comment'] : NULL;
   $title = _print_get_title($path);
@@ -57,11 +66,13 @@ function print_mail_form($form_state) {
 
   $form['path'] = array('#type' => 'value', '#value' => $path);
   $form['cid'] =  array('#type' => 'value', '#value' => $cid);
+  $form['title'] = array('#type' => 'value', '#value' => $title);
 
   $form['fld_from_addr'] = array(
     '#type' => 'textfield',
     '#title' => t('Your e-mail'),
     '#size' => 62,
+    '#required' => TRUE,
   );
   $form['fld_from_name'] = array(
     '#type' => 'textfield',
@@ -74,21 +85,27 @@ function print_mail_form($form_state) {
     '#rows' => 3,
     '#resizable' => FALSE,
     '#description' => t('Enter multiple addresses separated by commas and/or different lines.'),
+    '#required' => TRUE,
   );
   $form['fld_subject'] = array(
     '#type' => 'textfield',
     '#title' => t('Subject'),
     '#size' => 62,
+    '#required' => TRUE,
   );
-  $form['fld_title'] = array(
-    '#type' => 'item',
-    '#title' => t('Page to be sent'),
-    '#value' => l($title, $path, array('attributes' => array('title' => t('View page')))),
-  );
+  if (!empty($title)) {
+    $form['fld_title'] = array(
+      '#type' => 'item',
+      '#title' => t('Page to be sent'),
+      '#value' => '<span id="sent-title">'. l($title, $path, array('attributes' => array('title' => t('View page')))) .'</span>',
+      '#id' => 'sent-title',
+    );
+  }
   $form['txt_message'] = array(
     '#type' => 'textarea',
     '#title' => t('Your message'),
     '#rows' => 6,
+    '#required' => TRUE,
   );
 
   if ($print_mail_teaser_choice) {
@@ -109,7 +126,7 @@ function print_mail_form($form_state) {
   );
   $form['btn_clear'] = array(
     '#type' => 'markup',
-    '#value' => '<input type="reset" name="clear" value="'. t('Clear form') .'" class="form-submit" /> ',
+    '#value' => '<input type="reset" name="clear" id="edit-btn-clear" value="'. t('Clear form') .'" class="form-submit" />',
   );
   $form['btn_cancel'] = array(
     '#name' => 'cancel',
@@ -118,11 +135,11 @@ function print_mail_form($form_state) {
   );
 
   if ($user->uid != 0) {
-    $user_name = $user->name;
+    $user_name = check_plain(strip_tags(theme('username', $user)));
     $form['fld_from_addr']['#default_value'] = $user->mail;
     $form['fld_from_addr']['#disabled'] = TRUE;
     $form['fld_from_addr']['#value'] = $user->mail;
-    $form['fld_from_name']['#default_value'] = $user->name;
+    $form['fld_from_name']['#default_value'] = $user_name;
   }
   else {
     $user_name = t('Someone');
@@ -170,6 +187,8 @@ function theme_print_mail_form($form) {
  */
 function print_mail_form_validate($form, &$form_state) {
   if (array_key_exists('cancel', $form['#post'])) {
+    form_set_error(NULL,'',TRUE);
+    drupal_get_messages('error');
     return;
   }
   $from_addr = trim($form_state['values']['fld_from_addr']);
@@ -179,7 +198,7 @@ function print_mail_form_validate($form, &$form_state) {
   }
 
   // All new-lines are replaced by commas
-  $to_addrs = preg_replace('![\r|\n|,]+!', ',', $form_state['values']['txt_to_addrs']);
+  $to_addrs = preg_replace('![\r|\n|,]+!', ',', trim($form_state['values']['txt_to_addrs']));
   // Create an array from the string
   $to_array = explode(',', $to_addrs);
   // Verify each element of the array
@@ -212,21 +231,10 @@ function print_mail_form_validate($form, &$form_state) {
     }
   }
 
-  $subject = trim($form_state['values']['fld_subject']);
-  if (empty($subject)) {
-    form_set_error('fld_subject', t('You must enter a subject.'));
-  }
-  $message = trim($form_state['values']['txt_message']);
-  if (empty($message)) {
-    form_set_error('txt_message', t('You must enter a message.'));
-  }
-
   $form_state['values']['fld_from_addr'] = $from_addr;
   $form_state['values']['fld_from_name'] = trim($form_state['values']['fld_from_name']);
   // Re-create the string from the re-organized array
   $form_state['values']['txt_to_addrs'] = implode(', ', $to_array);
-  $form_state['values']['fld_subject'] = $subject;
-  $form_state['values']['txt_message'] = $message;
 }
 
 /**
@@ -254,14 +262,16 @@ function print_mail_form_submit($form, &$form_state) {
     $print['content'] = preg_replace_callback($pattern, '_print_mail_encode_urls', $print['content']);
 
     if ($print !== FALSE) {
+      $print_mail_send_option_default = variable_get('print_mail_send_option_default', PRINT_MAIL_SEND_OPTION_DEFAULT);
+
       $params = array();
       $params['subject'] = $form_state['values']['fld_subject'];
+      $params['message'] = $sender_message;
+      $params['link'] = $print['url'];
+      $params['title'] = $form_state['values']['title'];
 
       $node = $print['node'];
-      ob_start();
-      include_once(_print_get_template(PRINT_MAIL_FORMAT, $print['type']));
-      $params['body'] = ob_get_contents();
-      ob_end_clean();
+      $params['body'] = theme('print_page', $print, PRINT_MAIL_FORMAT, $node);
       $params['body'] = drupal_final_markup($params['body']);
 
       $ok = FALSE;
@@ -282,11 +292,11 @@ function print_mail_form_submit($form, &$form_state) {
         if (!in_array(FALSE, $can_send)) {
           if ($use_job_queue) {
             // Use job queue to send mails during cron runs
-            job_queue_add('drupal_mail', t('print_mail: From %from', array('%from' => $from)), array('print_mail', 'sendpage', $to, language_default(), $params, $from, TRUE), $this_file, TRUE);
+            job_queue_add('drupal_mail', t('print_mail: From %from', array('%from' => $from)), array('print_mail', $print_mail_send_option_default, $to, language_default(), $params, $from, TRUE), $this_file, TRUE);
           }
           else {
             // Send mail immediately using Drupal's mail handler
-            $ret = drupal_mail('print_mail', 'sendpage', $to, language_default(), $params, $from, TRUE);
+            $ret = drupal_mail('print_mail', $print_mail_send_option_default, $to, language_default(), $params, $from, TRUE);
           }
           if ($ret['result'] || $use_job_queue) {
             // Call to hook_print_mail_after_send in order to provide information to other modules.
@@ -316,12 +326,54 @@ function print_mail_form_submit($form, &$form_state) {
  * Implementation of hook_mail().
  */
 function print_mail_mail($key, &$message, $params) {
+  $message['subject'] = $params['subject'];
+
   switch ($key) {
     case 'sendpage':
-      $message['subject'] = $params['subject'];
       $message['body'] = $params['body'];
       $message['headers']['Content-Type'] = 'text/html; charset=utf-8';
-    break;
+      break;
+    case 'sendlink':
+      // Generate plain-text and html versions of message with link
+      $sendlink_plain = $params['message'] .'\n\n'. $params['link'];
+      $sendlink_html = $params['message'] .'<br/><br/>'. l($params['title'], $params['link']);
+
+      // Send HTML-only version if MIME library not present
+      if (!class_exists('Mail_mime')) {
+        $message['body'] = $sendlink_html;
+        $message['headers']['Content-Type'] = 'text/html; charset=utf-8';
+        break;
+      }
+      // no break on purpose
+    case 'plain-attachment':
+    case 'inline-attachment':
+      // Configure new MIME object
+      $mime = new Mail_mime("\n");
+      $mime_params['html_encoding'] = '7bit';
+
+      // Pass message contents into MIME object
+      switch ($key) {
+        case 'sendlink':
+          $mime->setTXTBody($sendlink_plain);
+          $mime->setHTMLBody($sendlink_html);
+          break;
+        case 'inline-attachment':
+          $mime->setHTMLBody($params['body']);
+          // no break on purpose
+        case 'plain-attachment':
+          $mime->setTXTBody($params['message']);
+          $mime->addAttachment($params['body'], 'text/html', 'Attachment.html', FALSE);
+          break;
+      }
+
+      // Store MIME message output in message array
+      $message['body'] = $mime->get($mime_params);
+      $message['headers'] = $mime->headers($message['headers']);
+
+      // Strip special characters from Content-Type header
+      // Required to prevent mime_header_encode() from disrupting Content-Type header
+      $message['headers']['Content-Type'] = preg_replace('/[^\x20-\x7E]/', '', $message['headers']['Content-Type']);
+      break;
   }
 }
 

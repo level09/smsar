@@ -477,7 +477,7 @@ msgid "Synchronize with account"
 msgstr "Synkronoi käyttäjätilien kanssa"
 
 #: simplenews.admin.inc:817
-msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deteted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
+msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deleted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
 msgstr "Valittuna tilaukset synkronoidaan käyttäjätilien kanssa. Kun käyttäjätili poistetaan, myös käyttäjän sähköpostiosoitteeseen liittyvät uutiskirjetilaukset perutaan. Kun käyttäjätili suljetaan tai avataan uudelleen, käyttäjätiliin liittyvät uutiskirjetilaukset perutaan tai aktivoidaan uudelleen. Kun kohta ei ole valittuna, käyttäjätilimuutokset eivät vaikuta uutiskirjetilauksiin."
 
 #: simplenews.admin.inc:822

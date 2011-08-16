@@ -1,5 +1,5 @@
 <?php
-// $Id: relevant_content.module,v 1.2.2.6 2008/11/06 13:37:48 njt1982 Exp $
+// $Id: relevant_content.module,v 1.2.2.8 2010/11/17 17:58:22 njt1982 Exp $
 
 /**
  * @file
@@ -174,7 +174,7 @@ function relevant_content_admin_block_form($form_state, $delta = NULL) {
     '#size' => 3,
     '#maxlength' => 3,
     '#required' => TRUE,
-    '#default_value' => is_null($delta) ? 0 : $settings[$delta]['limit'],
+    '#default_value' => is_null($delta) ? 5 : $settings[$delta]['limit'],
   );
 
   $form['settings']['header_text'] = array(
@@ -184,6 +184,26 @@ function relevant_content_admin_block_form($form_state, $delta = NULL) {
     '#rows' => 3,
     '#default_value' => is_null($delta) ? '' : $settings[$delta]['header_text'],
   );
+
+  if (module_exists('token')) {
+    $form['settings']['token_settings'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Token pattern'),
+      '#description' => t('Optionally define a token pattern here to override the default output. Please use plain text only.'),
+      '#default_value' => is_null($delta) ? '' : $settings[$delta]['token_settings'],
+    );
+
+    $form['settings']['token_help'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Token Help'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['settings']['token_help']['body'] = array(
+      '#type' => 'markup',
+      '#value' => theme('token_help', array('global', 'node')),
+    );
+  }
 
   $form['settings']['op'] = array(
     '#type' => 'value',
@@ -237,10 +257,11 @@ function relevant_content_admin_block_form_submit($form, &$form_state) {
   $settings = variable_get('relevant_content', array());
 
   $settings[$form_state['values']['settings']['delta']] = array(
-    'types'       => array_filter($form_state['values']['settings']['types']),
-    'vocabs'      => array_filter($form_state['values']['settings']['vocabs']),
-    'limit'       => (int)$form_state['values']['settings']['limit'],
-    'header_text' => $form_state['values']['settings']['header_text'],
+    'types'          => array_filter($form_state['values']['settings']['types']),
+    'vocabs'         => array_filter($form_state['values']['settings']['vocabs']),
+    'limit'          => (int)$form_state['values']['settings']['limit'],
+    'header_text'    => $form_state['values']['settings']['header_text'],
+    'token_settings' => isset($form_state['values']['settings']['token_settings']) ? $form_state['values']['settings']['token_settings'] : NULL,
   );
 
   variable_set('relevant_content', $settings);
@@ -357,7 +378,7 @@ function relevant_content_block($op = 'list', $delta = 0, $edit = array()) {
         $header = isset($settings[$delta]['header_text']) ? $settings[$delta]['header_text'] : FALSE;
         return array(
           'subject' => t('Relevant Content'),
-          'content' => theme('relevant_content_block', $nodes, $header),
+          'content' => theme('relevant_content_block', $nodes, $header, $delta),
         );
       }
       break;
@@ -393,7 +414,7 @@ function relevant_content_get_page_terms($node = NULL) {
     $terms = relevant_content_term_cache();
   }
 
-  // Provide a hook_relelvant_content_terms where other modules can change the relevant terms if needed...
+  // Provide a hook_relevant_content_terms where other modules can change the relevant terms if needed...
   drupal_alter('relevant_content_terms', $terms);
 
   return $terms;
@@ -406,7 +427,7 @@ function relevant_content_get_page_terms($node = NULL) {
 function relevant_content_theme($existing, $type, $theme, $path) {
   return array(
     'relevant_content_block' => array(
-      'arguments' => array($nodes => array(), $header => FALSE),
+      'arguments' => array($nodes => array(), $header => FALSE, $delta = NULL),
     ),
   );
 }
@@ -424,10 +445,38 @@ function relevant_content_theme($existing, $type, $theme, $path) {
  *   Optional string to display at the top of the block
  */
 
-function theme_relevant_content_block($nodes, $header = FALSE) {
+function theme_relevant_content_block($nodes, $header = FALSE, $delta = NULL) {
+  // Default to "link" type
+  $type = 'link';
+
+  // If we have a delta (we should - only 3rd party legacy code should cause us not to) then get the settings and token settings.
+  // Also check tokens is enabled. Its optional
+  if (module_exists('token') && isset($delta)) {
+    $settings = variable_get('relevant_content', array());
+
+    // Cleanup the token pattern
+    $token_pattern = check_plain(trim($settings[$delta]['token_settings']));
+
+    // If the token pattern is not empty, switch to tokens mode
+    if (!empty($token_pattern)) {
+      $type = 'tokens';
+    }
+  }
+
   $items = array();
   foreach ($nodes as $node) {
-    $items[] = l($node['title'], 'node/'. $node['nid']);
+    // If we're a link, default to a hyperlink - otherwise we should use tokens.
+    switch ($type) {
+      default :
+      case 'link' :
+        $items[] = l($node['title'], 'node/'. $node['nid']);
+        break;
+
+      case 'tokens' :
+        $objects = array('global' => NULL, 'node' => node_load($node['nid']));
+        $items[] = token_replace_multiple($token_pattern, $objects);
+        break;
+    }
   }
 
   $output = '';
@@ -454,10 +503,15 @@ function theme_relevant_content_block($nodes, $header = FALSE) {
  *   Array - Optional: An array of Node ID's to exclude. Useful for excluding the node you might be comparing to currently. Default: No exclusions.
  * @param $limit
  *   Integer - Optional: Integer controlling the maximum number of nodes returned. Default: 5
+ * @param $languages
+ *   Array - Optional: An array of languages to restrict nodes to.
+ *                     An empty string in the array corresponds to Language Neutral nodes.
+ *                     An empty array will include all nodes regardless of language.
+ *
  * @return mixed
  *   FALSE if no result or error or an associative array with node ID's as keys and the value's as arrays of nid's, vid's, title's, type's & term match counts.
  */
-function relevant_content_get_nodes($types, $terms, $exclude = array(), $limit = 5) {
+function relevant_content_get_nodes($types, $terms, $exclude = array(), $limit = 5, $languages = array()) {
   // If terms or types are empty, there isn't anything to match to so not a lot of point continuing.
   if (empty($terms) || empty($types)) return FALSE;
 
@@ -483,6 +537,14 @@ function relevant_content_get_nodes($types, $terms, $exclude = array(), $limit =
   }
 
 
+  // Define SQL for language restriction
+  $language_sql = '';
+  if (!empty($languages)) {
+    $language_sql = 'AND n.language IN ('. db_placeholders($languages, 'varchar') .')';
+    $values = array_merge($values, array_values($languages));
+  }
+
+
   // Add the result limit to the values array
   $values = array_merge($values, array($limit));
 
@@ -505,7 +567,7 @@ SQL;
 
 
   // Run the query and loop over the resultset, storing the returned nodes in an array using the Node ID as a key and the 5 fields selected as the values
-  $result = db_query($sql, $values);
+  $result = db_query(db_rewrite_sql($sql), $values);
   $nodes = array();
   while ($row = db_fetch_array($result)) {
     $nodes[$row['nid']] = $row;

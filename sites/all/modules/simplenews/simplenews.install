@@ -1,5 +1,5 @@
 <?php
-// $Id: simplenews.install,v 1.8.2.24 2009/03/09 07:45:19 sutharsan Exp $
+// $Id: simplenews.install,v 1.8.2.33 2010/05/21 15:37:41 sutharsan Exp $
 
 /**
  * @file
@@ -11,29 +11,29 @@
  */
 function simplenews_schema() {
   $schema['simplenews_subscriptions'] = array(
-    'description' => t('Subscribers to {simplenews_newsletters}.'),
+    'description' => 'Subscribers to {simplenews_newsletters}.',
     'fields' => array(
        'snid' => array(
-        'description' => t('Primary key: Unique subscription ID.'),
+        'description' => 'Primary key: Unique subscription ID.',
         'type' => 'serial',
         'not null' => TRUE,
       ),
       'activated' => array(
-        'description' => t('Boolean indicating the status of the subscription.'),
+        'description' => 'Boolean indicating the status of the subscription.',
         'type' => 'int',
         'size' => 'tiny',
         'not null' => TRUE,
         'default' => 0,
       ),
       'mail' => array(
-        'description' => t('The subscription email address.'),
+        'description' => 'The subscription email address.',
         'type' => 'varchar',
         'length' => 64,
         'not null' => TRUE,
         'default' => '',
       ),
       'uid' => array(
-        'description' => t('The {users}.uid that has the same email address.'),
+        'description' => 'The {users}.uid that has the same email address.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
@@ -43,7 +43,7 @@ function simplenews_schema() {
         'length' => 12,
         'not null' => TRUE,
         'default' => '',
-        'description' => t('Anonymous subscriber preferred language. Empty for authenticated users.'),
+        'description' => 'Anonymous subscriber preferred language. Empty for authenticated users.',
       ),
     ),
     'indexes' => array(
@@ -54,49 +54,49 @@ function simplenews_schema() {
   );
 
   $schema['simplenews_newsletters'] = array(
-    'description' => t('Simplenews newsletter data.'),
+    'description' => 'Simplenews newsletter data.',
     'fields' => array(
       'nid' => array(
-        'description' => t('{node} that is used as newsletter.'),
+        'description' => '{node} that is used as newsletter.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'vid' => array(
-        'description' => t('The {node}.vid that identifies the version used as newsletter.'),
+        'description' => 'The {node}.vid that identifies the version used as newsletter.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'tid' => array(
-        'description' => t('The {term_data}.tid (= newsletter series) this issue belongs to.'),
+        'description' => 'The {term_data}.tid (= newsletter series) this issue belongs to.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       's_status' => array(
-        'description' => t('Send status of the newsletter issue (0 = not send; 1 = pending; 2 = send). '),
+        'description' => 'Sent status of the newsletter issue (0 = not send; 1 = pending; 2 = send). ',
         'type' => 'int',
         'size' => 'tiny',
         'not null' => TRUE,
         'default' => 0,
       ),
       's_format' => array(
-        'description' => t('Format of the newsletter (plain or html).'),
+        'description' => 'Format of the newsletter (plain or html).',
         'type' => 'varchar',
         'length' => 8,
         'not null' => TRUE,
         'default' => '',
       ),
       'priority' => array(
-        'description' => t('Email priority according to RFC 2156 and RFC 5231 (0 = none; 1 = highest; 2 = high; 3 = normal; 4 = low; 5 = lowest).'),
+        'description' => 'Email priority according to RFC 2156 and RFC 5231 (0 = none; 1 = highest; 2 = high; 3 = normal; 4 = low; 5 = lowest).',
         'type' => 'int',
         'size' => 'tiny',
         'not null' => TRUE,
         'default' => 0,
       ),
       'receipt' => array(
-        'description' => t('Boolean indicating request for email receipt confirmation according to RFC 2822.'),
+        'description' => 'Boolean indicating request for email receipt confirmation according to RFC 2822.',
         'type' => 'int',
         'size' => 'tiny',
         'not null' => TRUE,
@@ -125,49 +125,56 @@ function simplenews_schema() {
     'primary key' => array('snid', 'tid'),
   );
   $schema['simplenews_mail_spool'] = array(
-    'description' => t('Spool for temporary storage of newsletter emails.'),
+    'description' => 'Spool for temporary storage of newsletter emails.',
     'fields' => array(
       'msid' => array(
-        'description' => t('The primary identifier for a mail spool record.'),
+        'description' => 'The primary identifier for a mail spool record.',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
         ),
       'mail' => array(
-        'description' => t('The formatted email address of mail message receipient.'),
+        'description' => 'The formatted email address of mail message receipient.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
       'nid' => array(
-        'description' => t('The {node}.nid of this newsletter.'),
+        'description' => 'The {node}.nid of this newsletter.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'vid' => array(
-        'description' => t('The {node}.vid of this newsletter.'),
+        'description' => 'The {node}.vid of this newsletter.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'tid' => array(
-        'description' => t('The {term_data}.tid this newsletter issue belongs to.'),
+        'description' => 'The {term_data}.tid this newsletter issue belongs to.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'status' => array(
-        'description' => t('The send status of the email (0 = hold, 1 = pending, 2 = send).'),
+        'description' => 'The sent status of the email (0 = hold, 1 = pending, 2 = done).',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
         'size' => 'tiny',
       ),
+      'error' => array(
+        'description' => 'A boolean indicating whether an error occured while sending the email.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'timestamp' => array(
-        'description' => t('The time status was set or changed.'),
+        'description' => 'The time status was set or changed.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -185,8 +192,13 @@ function simplenews_schema() {
  */
 function simplenews_install() {
   if (drupal_install_schema('simplenews')) {
-    drupal_set_message(t('Simplenews installation instructions are available on the <a href="!simplenews_help">Simplenews help page</a>.',
-    array('!simplenews_help' => url('admin/help/simplenews'))));
+    if (module_exists('help')) {
+      drupal_set_message(t('Simplenews installation instructions are available on the <a href="!simplenews_help">Simplenews help page</a>.',
+        array('!simplenews_help' => url('admin/help/simplenews'))));
+    }
+    else {
+      drupal_set_message(t('Simplenews was successfully installed.'));
+    }
   }
   else {
     drupal_set_message(t('The installation of Simplenews was not successful.'), 'error');
@@ -243,7 +255,7 @@ function _simplenews_install_vocabulary() {
     $vocabulary = array(
       'name' => t('Newsletter'),
       'multiple' => '0',
-      'required' => '0',
+      'required' => '1',
       'hierarchy' => '0',
       'relations' => '0',
       'module' => 'simplenews',
@@ -357,36 +369,36 @@ function simplenews_update_6000() {
  */
 function simplenews_update_6001() {
     $schema['simplenews_mail_cache'] = array(
-    'description' => t(''),
+    'description' => '',
     'fields' => array(
       'mcid' => array(
-        'description' => t('The primary identifier for a mail cache record.'),
+        'description' => 'The primary identifier for a mail cache record.',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
         ),
       'tid' => array(
-        'description' => t('The {term_data}.tid this newsletter issue belongs to.'),
+        'description' => 'The {term_data}.tid this newsletter issue belongs to.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'subject' => array(
-        'description' => t('The subject of this mail message.'),
+        'description' => 'The subject of this mail message.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
       'mail' => array(
-        'description' => t('The formatted email address of mail message receipient.'),
+        'description' => 'The formatted email address of mail message receipient.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
       'status' => array(
-        'description' => t('The send status of the email (0 = hold, 1 = pending, 2 = send).'),
+        'description' => 'The sent status of the email (0 = hold, 1 = pending, 2 = send).',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -394,14 +406,14 @@ function simplenews_update_6001() {
         'size' => 'tiny',
       ),
       'timestamp' => array(
-        'description' => t('The time status was set or changed.'),
+        'description' => 'The time status was set or changed.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
       ),
       'message' => array(
-        'description' => t('The mail message array.'),
+        'description' => 'The mail message array.',
         'type' => 'blob',
         'not null' => FALSE,
         'size' => 'big',
@@ -453,41 +465,41 @@ function simplenews_update_6003() {
  */
 function simplenews_update_6004() {
   $schema['simplenews_mail_spool'] = array(
-    'description' => t('Spool for temporary storage of newsletter emails.'),
+    'description' => 'Spool for temporary storage of newsletter emails.',
     'fields' => array(
       'msid' => array(
-        'description' => t('The primary identifier for a mail spool record.'),
+        'description' => 'The primary identifier for a mail spool record.',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
         ),
       'mail' => array(
-        'description' => t('The formatted email address of mail message receipient.'),
+        'description' => 'The formatted email address of mail message receipient.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
       'nid' => array(
-        'description' => t('The {node}.nid of this newsletter.'),
+        'description' => 'The {node}.nid of this newsletter.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'vid' => array(
-        'description' => t('The {node}.vid of this newsletter.'),
+        'description' => 'The {node}.vid of this newsletter.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'tid' => array(
-        'description' => t('The {term_data}.tid this newsletter issue belongs to.'),
+        'description' => 'The {term_data}.tid this newsletter issue belongs to.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'status' => array(
-        'description' => t('The send status of the email (0 = hold, 1 = pending, 2 = send).'),
+        'description' => 'The sent status of the email (0 = hold, 1 = pending, 2 = send).',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -495,7 +507,7 @@ function simplenews_update_6004() {
         'size' => 'tiny',
       ),
       'timestamp' => array(
-        'description' => t('The time status was set or changed.'),
+        'description' => 'The time status was set or changed.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -522,7 +534,7 @@ function simplenews_update_6005() {
       'length' => 12,
       'not null' => TRUE,
       'default' => '',
-      'description' => t('Subscriber preferred language.'),
+      'description' => 'Subscriber preferred language.',
     )
   );
 
@@ -582,4 +594,44 @@ function simplenews_update_6008() {
   $vocabulary['required'] = TRUE;
   taxonomy_save_vocabulary($vocabulary);
   return array();
+}
+
+/**
+ * Addition of error to simplenews_mail_cache to mark an email error.
+ */
+function simplenews_update_6009() {
+  $ret = array();
+  db_add_field($ret, 'simplenews_mail_spool', 'error', array('type' => 'int', 'not null' => TRUE, 'default' => 0));
+  return $ret;
+}
+
+function simplenews_update_6200() {
+  // Added for compatibility with HEAD.
+  return array();
+}
+
+/**
+ * Faulty update function. Corrected by the next one.
+ *
+ * @see simplenews_update_6011().
+ */
+function simplenews_update_6010() {
+  $ret = array();
+  // Function removed.
+  
+  return $ret;
+}
+
+/**
+ * Correction of field size mismatch caused by simplenews_update_6009().
+ */
+function simplenews_update_6011() {
+  $ret = array();
+  db_change_field($ret, 'simplenews_mail_spool', 'error', 'error', array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+  ));
+  return $ret;
 }

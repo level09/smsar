@@ -1,5 +1,4 @@
 <?php
-// $Id: simplest_gmap.install,v 1.1.2.1 2009/04/13 17:53:40 troy Exp $
 
 /**
  * Implementation of hook_install().

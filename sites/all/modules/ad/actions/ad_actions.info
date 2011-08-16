@@ -1,0 +1,14 @@
+; $Id: ad_actions.info,v 1.1.2.1 2009/10/20 00:20:58 jeremy Exp $
+name = Ad actions
+package = Ad
+dependencies[] = trigger
+dependencies[] = token
+description = Enable ad triggers and actions, useful for creating notification emails.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-11-30
+version = "6.x-2.2"
+core = "6.x"
+project = "ad"
+datestamp = "1259599504"
+

@@ -1,4 +1,4 @@
-# $Id: fr.po,v 1.1.2.2 2009/01/28 08:56:21 sutharsan Exp $
+# $Id: fr.po,v 1.1.2.3 2009/03/15 23:51:41 sutharsan Exp $
 #
 # French translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
@@ -541,7 +541,7 @@ msgid "Synchronize with account"
 msgstr "Synchroniser avec le compte"
 
 #: simplenews.admin.inc:940
-msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deteted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
+msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deleted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
 msgstr "Si coché, les abonnements seront synchronisés avec le compte du site. Quand le compte est détruit, les abonnements avec la même adresse de courriel sera supprimé. Quand les comptes du site sont bloqués ou débloqués, les désabonnements seront activés ou désactivés. Si non coché, les abonnements, ne seront pas changés quand les comptes associés sont supprimés ou bloqués."
 
 #: simplenews.admin.inc:945

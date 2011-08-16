@@ -1,5 +1,5 @@
 <?php
-// $Id: simplenews.admin.inc,v 1.5.2.49 2009/03/09 07:45:19 sutharsan Exp $
+// $Id: simplenews.admin.inc,v 1.5.2.54 2010/04/19 08:14:29 sutharsan Exp $
 
 /**
  * @file
@@ -139,6 +139,7 @@ function simplenews_admin_types_form(&$form_state, $tid = NULL) {
     // We will create a new newsletter.
     // Provide vocabulary id for the newsletter to be added to.
     $term = (object)array('vid' => variable_get('simplenews_vid', ''));
+    $term->tid = '';
   }
 
   $form['name'] = array(
@@ -146,7 +147,7 @@ function simplenews_admin_types_form(&$form_state, $tid = NULL) {
     '#title' => t('Newsletter name'),
     '#size' => 50,
     '#maxlength' => 128,
-    '#description' => t('This name of this newsletter.'),
+    '#description' => t('The name of this newsletter.'),
     '#required' => TRUE,
     '#default_value' => isset($term->name) ? $term->name : '',
   );
@@ -214,7 +215,7 @@ function simplenews_admin_types_form(&$form_state, $tid = NULL) {
   // If we are editing a newsletter term, show delete option and store tid.
   // tid is used in validation and submission functions to differentiate
   // between form actions of creating a new or editing an existing term.
-  if (isset($term->tid)) {
+  if ($term->tid) {
     $form['delete'] = array(
       '#type' => 'submit',
       '#value' => t('Delete'),
@@ -896,12 +897,12 @@ function simplenews_admin_settings_mail(&$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Use cron to send newsletters'),
     '#default_value' => variable_get('simplenews_use_cron', TRUE),
-    '#description' => t('When checked cron will be used to send newsletters (recommended). Test newsletters and confirmation emails will be send immediately. Leave unchecked for testing purposes.'),
+    '#description' => t('When checked cron will be used to send newsletters (recommended). Test newsletters and confirmation emails will be sent immediately. Leave unchecked for testing purposes.'),
   );
   $throttle = drupal_map_assoc(array(1, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000));
   $throttle[999999] = t('Unlimited');
   if (function_exists('getrusage')) {
-    $description_extra = '<br />'. t('Cron execution must not exceed the PHP maximum execution time of %max seconds. You find the time spend to send emails in the <a href="/admin/reports/dblog">Recent log entries</a>.', array('%max' => ini_get('max_execution_time')));
+    $description_extra = '<br />'. t('Cron execution must not exceed the PHP maximum execution time of %max seconds. You find the time spend to send emails in the !recent_logs.', array('%max' => ini_get('max_execution_time'), '!recent_logs' => l(t('Recent log entries'), 'admin/reports/dblog')));
   }
   else {
     $description_extra = '<br />'. t('Cron execution must not exceed the PHP maximum execution time of %max seconds.', array('%max' => ini_get('max_execution_time')));
@@ -947,7 +948,7 @@ function simplenews_admin_settings_subscription(&$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Synchronize with account'),
     '#default_value' => variable_get('simplenews_sync_account', TRUE),
-    '#description' => t('When checked subscriptions will be synchronized with site accounts. When accounts are deteted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked.'),
+    '#description' => t('When checked subscriptions will be synchronized with site accounts. When accounts are deleted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked.'),
   );
 
   // These email tokens are shared for all settings, so just define

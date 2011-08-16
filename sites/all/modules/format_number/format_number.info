@@ -3,9 +3,9 @@ name = Format Number API
 description = This module provides a method to configure number formats (site default and user defined) with configurable decimal point and thousand separators. It also exposes several functions that can be used by other contributed or custom modules to display numbers accordingly.
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-02-24
-version = "6.x-1.4"
+; Information added by drupal.org packaging script on 2009-12-26
+version = "6.x-1.6"
 core = "6.x"
 project = "format_number"
-datestamp = "1235477427"
+datestamp = "1261813832"
 

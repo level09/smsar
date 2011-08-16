@@ -1,5 +1,4 @@
 <?php
-// $Id: hs_taxonomy.module,v 1.34 2009/07/29 20:48:41 wimleers Exp $
 
 /**
  * @file
@@ -12,19 +11,26 @@
 
 // Add per-vocabulary settings for Hierarchical Select.
 function hs_taxonomy_form_taxonomy_form_vocabulary_alter(&$form, &$form_state) {
-  require_once(drupal_get_path('module', 'hierarchical_select') .'/includes/common.inc');
+  module_load_include('inc', 'hierarchical_select', 'includes/common');
 
-  $vid = $form['vid']['#value'];
+  $vid = (isset($form['vid'])) ? $form['vid']['#value'] : NULL;
+  $vocabulary = ($vid) ? taxonomy_vocabulary_load($vid) : NULL;
+
+  // Don't add the per-vocabulary settings for Hierarchical Select when the
+  // vocabulary still needs to be created or is a freetagging vocabulary.
+  if (!$vid || $vocabulary->tags) {
+    return;
+  }
 
   if (variable_get("taxonomy_hierarchical_select_$vid", 0)) {
-    $form['tags']['#attributes']['disabled'] = TRUE;
-    $form['tags']['#description'] = t(
+    $form['settings']['tags']['#attributes']['disabled'] = TRUE;
+    $form['settings']['tags']['#description'] = t(
       "This setting is irrelevant when you're using Hierarchical Select.
       <br />Use Hierarchical Select's %editability-settings instead.",
       array('%editability-settings' => t('Editability settings'))
     );
-    $form['multiple']['#attributes']['disabled'] = TRUE;
-    $form['multiple']['#description'] = t(
+    $form['settings']['multiple']['#attributes']['disabled'] = TRUE;
+    $form['settings']['multiple']['#description'] = t(
       "This setting is managed by the Hierarchical Select configuration, by
       the %enable-dropbox setting.",
       array('%enable-dropbox' => t('Enable the dropbox'))
@@ -53,12 +59,12 @@ function hs_taxonomy_form_taxonomy_form_vocabulary_alter(&$form, &$form_state) {
   // Add the Hierarchical Select config form.
   $module = 'hs_taxonomy';
   $params = array(
-    'vid'         => $vid,
-    'exclude_tid' => NULL,
-    'root_term'   => NULL,
+    'vid'                        => $vid,
+    'exclude_tid'                => NULL,
+    'root_term'                  => NULL,
+    'entity_count_for_node_type' => NULL,
   );
   $config_id = "taxonomy-$vid";
-  $vocabulary = taxonomy_vocabulary_load($vid);
   $defaults = array(
     // Enable the save_lineage setting by default if the multiple parents
     // vocabulary option is enabled.
@@ -135,19 +141,19 @@ function hs_taxonomy_form_taxonomy_form_term_alter(&$form, &$form_state) {
       'status'   => 1,
     ),
     'params' => array(
-      'vid'         => $form['vid']['#value'],
-      'exclude_tid' => $form['tid']['#value'],
+      'vid'         => isset($form['vid']['#value']) ? $form['vid']['#value'] : NULL,
+      'exclude_tid' => isset($form['tid']['#value']) ? $form['tid']['#value'] : NULL,
       'root_term'   => TRUE,
     ),
   );
 
   // Use Hierarchical Select for selecting the parent term(s).
-  $parent = array_keys(taxonomy_get_parents($form['tid']['#value']));
+  $parent = isset($form['tid']['#value']) ? array_keys(taxonomy_get_parents($form['tid']['#value'])) : array();
   $form['advanced']['parent'] = array(
     '#type'   => 'hierarchical_select',
     '#config' => $config,
     // Copied from core.
-    '#title'         => t('Parents'), 
+    '#title'         => t('Parents'),
     '#description'   => t('Parent terms') .'.',
     '#weight'        => -15,
     '#default_value' => $parent,
@@ -155,12 +161,12 @@ function hs_taxonomy_form_taxonomy_form_term_alter(&$form, &$form_state) {
   $form['advanced']['parent']['#config']['dropbox']['title'] = t('All parent terms');
 
   // Use Hierarchical Select for selecting the related term(s).
-  $related = array_keys(taxonomy_get_related($form['tid']['#value']));
+  $related = isset($form['tid']['#value']) ? array_keys(taxonomy_get_related($form['tid']['#value'])) : array();
   $form['advanced']['relations'] = array(
     '#type'   => 'hierarchical_select',
     '#config' => $config,
     // Copied from core.
-    '#title'         => t('Related terms'), 
+    '#title'         => t('Related terms'),
     '#weight'        => -15,
     '#default_value' => $related,
   );
@@ -194,22 +200,28 @@ function hs_taxonomy_form($vid, $value = 0, $help = NULL) {
   require_once(drupal_get_path('module', 'hierarchical_select') .'/includes/common.inc');
 
   $vocabulary = taxonomy_vocabulary_load($vid);
-  $title = check_plain($vocabulary->name);
-  $description = ($help) ? $help : $vocabulary->help;
+  if (module_exists('i18ntaxonomy')) {
+    $title = check_plain(tt("taxonomy:vocabulary:$vid:name", $vocabulary->name));
+    $description = check_plain(($help) ? $help : tt("taxonomy:vocabulary:$vid:help", $vocabulary->help));
+  }
+  else {
+    $title = check_plain($vocabulary->name);
+    $description = check_plain(($help) ? $help : $vocabulary->help);
+  }
 
   $form_item = array(
     '#type'          => 'hierarchical_select',
     '#config'        => array(
       'module' => 'hs_taxonomy',
       'params' => array(
-        'vid'         => $vid,
-        'exclude_tid' => NULL,
-        'root_term'   => NULL,
-      ),      
+        'vid'                        => $vid,
+        'exclude_tid'                => NULL,
+        'root_term'                  => NULL,
+        'entity_count_for_node_type' => NULL,
+      ),
     ),
     '#title'         => $title,
     '#default_value' => $value,
-    '#options'       => $options,
     '#description'   => $description,
     '#weight'        => -15,
   );
@@ -222,7 +234,7 @@ function hs_taxonomy_form($vid, $value = 0, $help = NULL) {
 /**
  * Implementation of hook_form_alter().
  */
-function hs_taxonomy_form_alter(&$form, &$form_state, $form_id) {
+function hs_taxonomy_form_alter(&$form, $form_state, $form_id) {
   // Change the term selection of nodes. Only affects hierarchical
   // vocabularies.
   if (isset($form['type']) && isset($form['#node']) && (variable_get('taxonomy_override_selector', FALSE)) && $form['type']['#value'] .'_node_form' == $form_id) {
@@ -233,7 +245,8 @@ function hs_taxonomy_form_alter(&$form, &$form_state, $form_id) {
     }
     else {
       // After preview the terms must be converted to objects.
-      if (isset($form_state['node_preview'])) {
+      reset($node->taxonomy);
+      if (!is_object(current($node->taxonomy))) {
         $node->taxonomy = taxonomy_preview_terms($node);
       }
       $terms = $node->taxonomy;
@@ -266,8 +279,27 @@ function hs_taxonomy_form_alter(&$form, &$form_state, $form_id) {
           '#weight' => $vocabulary->weight,
           '#maxlength' => 255,
         );
+
+        if (module_exists('i18ntaxonomy')) {
+          $vid = $vocabulary->vid;
+          // Special treatment for tags, add some help texts
+          $type = i18ntaxonomy_vocabulary($vid);
+          if ($type == I18N_TAXONOMY_LOCALIZE || $type == I18N_TAXONOMY_TRANSLATE) {
+            $form['taxonomy']['tags'][$vid]['#title'] = i18nstrings_string("taxonomy:vocabulary:$vid:name", $form['taxonomy']['tags'][$vid]['#title']);
+            $form['taxonomy']['tags'][$vid]['#description'] = i18nstrings("taxonomy:vocabulary:$vid:help", $form['taxonomy']['tags'][$vid]['#description']);
+          }
+          if ($type == I18N_TAXONOMY_LOCALIZE) {
+            $form['taxonomy']['tags'][$vid]['#description'] .= ' '. t('This is a localizable vocabulary, so only terms in %language are allowed here.', array('%language' => language_default('name')));
+          }
+        }
       }
       else {
+        // Just looking at $vocabulary->required is not sufficient: the forum
+        // module does not correctly set $vocabulary->required and hence the
+        // forum vocabulary does not have it set. It's made required through
+        // some hardcoded piece of Forms API logic. Therefore we have to do
+        // more extensive checks to decide to make the form item required.
+        $required = (isset($form['taxonomy'][$vocabulary->vid]['#required'])) ? $form['taxonomy'][$vocabulary->vid]['#required'] : $vocabulary->required;
         // Extract terms belonging to the vocabulary in question.
         $default_terms = array();
         foreach ($terms as $term) {
@@ -276,10 +308,37 @@ function hs_taxonomy_form_alter(&$form, &$form_state, $form_id) {
             $default_terms[$term->tid] = $term;
           }
         }
+
         $form_function = variable_get("taxonomy_hierarchical_select_$vocabulary->vid", 0) ? 'hs_taxonomy_form' : 'taxonomy_form';
+
+        if ($form_function == 'hs_taxonomy_form' && module_exists('i18ntaxonomy')) {
+          $vid = $vocabulary->vid;
+          if (is_numeric($vid) && i18ntaxonomy_vocabulary($vid) == I18N_TAXONOMY_LOCALIZE) {
+            // Rebuild this vocabulary's form.
+            $vocabulary = taxonomy_vocabulary_load($vid);
+            // Extract terms belonging to the vocabulary in question.
+            $default_terms = array();
+            foreach ($terms as $term) {
+              if ($term->vid == $vid) {
+                $default_terms[$term->tid] = $term;
+              }
+            }
+            $form['taxonomy'][$vid] = i18ntaxonomy_vocabulary_form($vocabulary->vid, array_keys($default_terms));
+            $form['taxonomy'][$vid]['#weight'] = $vocabulary->weight;
+            $form['taxonomy'][$vid]['#required'] = $vocabulary->required;
+            $form['taxonomy'][$vid]['#description'] = i18nstrings("taxonomy:vocabulary:$vid:help", $vocabulary->help);
+          }
+          elseif (is_numeric($vid) && i18ntaxonomy_vocabulary($vid) == I18N_TAXONOMY_TRANSLATE) {
+            // Rebuild this vocabulary's form.
+            $vocabulary = taxonomy_vocabulary_load($vid);
+            $form['taxonomy'][$vid]['#title'] = i18nstrings_string("taxonomy:vocabulary:$vid:name", $vocabulary->name);
+            $form['taxonomy'][$vid]['#description'] = i18nstrings("taxonomy:vocabulary:$vid:help", $vocabulary->help);
+          }
+        }
+
         $form['taxonomy'][$vocabulary->vid] = $form_function($vocabulary->vid, array_keys($default_terms), $vocabulary->help);
         $form['taxonomy'][$vocabulary->vid]['#weight'] = $vocabulary->weight;
-        $form['taxonomy'][$vocabulary->vid]['#required'] = $vocabulary->required;
+        $form['taxonomy'][$vocabulary->vid]['#required'] = $required;
       }
     }
     if (!empty($form['taxonomy']) && is_array($form['taxonomy'])) {
@@ -308,8 +367,9 @@ function hs_taxonomy_form_alter(&$form, &$form_state, $form_id) {
 function hs_taxonomy_hierarchical_select_params() {
   $params = array(
     'vid',
-    'exclude_tid', // Allows a term to be excluded (necessary for the taxonomy_form_term form).
-    'root_term',   // Displays a fake "<root>" term in the root level (necessary for the taxonomy_form-term form).
+    'exclude_tid',                // Allows a term to be excluded (necessary for the taxonomy_form_term form).
+    'root_term',                  // Displays a fake "<root>" term in the root level (necessary for the taxonomy_form-term form).
+    'entity_count_for_node_type', // Restrict the entity count to a specific node type.
   );
   return $params;
 }
@@ -321,7 +381,7 @@ function hs_taxonomy_hierarchical_select_root_level($params) {
   $terms = _hs_taxonomy_hierarchical_select_get_tree($params['vid'], 0, -1, 1);
 
   // If the root_term parameter is enabled, then prepend a fake "<root>" term.
-  if ($params['root_term'] === TRUE) {
+  if (isset($params['root_term']) && $params['root_term'] === TRUE) {
     $root_term = new StdClass();
     $root_term->tid = 0;
     $root_term->name = '<'. t('root') .'>';
@@ -337,6 +397,16 @@ function hs_taxonomy_hierarchical_select_root_level($params) {
     }
   }
 
+  // If the Term Permissions module is installed, honor its settings.
+  if (function_exists('term_permissions_allowed')) {
+    global $user;
+    foreach ($terms as $key => $term) {
+      if (!term_permissions_allowed($term->tid, $user) ) {
+        unset($terms[$key]);
+      }
+    }
+  }
+
   return _hs_taxonomy_hierarchical_select_terms_to_options($terms);
 }
 
@@ -344,7 +414,7 @@ function hs_taxonomy_hierarchical_select_root_level($params) {
  * Implementation of hook_hierarchical_select_children().
  */
 function hs_taxonomy_hierarchical_select_children($parent, $params) {
-  if ($params['root_term'] && $parent == 0) {
+  if (isset($params['root_term']) && $params['root_term'] && $parent == 0) {
     return array();
   }
 
@@ -352,6 +422,16 @@ function hs_taxonomy_hierarchical_select_children($parent, $params) {
 
   // Unset the term that's being excluded, if it is among the children.
   unset($terms[$params['exclude_tid']]);
+
+  // If the Term Permissions module is installed, honor its settings.
+  if (function_exists('term_permissions_allowed')) {
+    global $user;
+    foreach ($terms as $key => $term) {
+      if (!term_permissions_allowed($term->tid, $user) ) {
+        unset($terms[$key]);
+      }
+    }
+  }
 
   return _hs_taxonomy_hierarchical_select_terms_to_options($terms);
 }
@@ -362,11 +442,11 @@ function hs_taxonomy_hierarchical_select_children($parent, $params) {
 function hs_taxonomy_hierarchical_select_lineage($item, $params) {
   $lineage = array();
 
-  if ($params['root_term'] && $item == 0) {
+  if (isset($params['root_term']) && $params['root_term'] && $item == 0) {
     return array(0);
   }
 
-  $terms = array_reverse(taxonomy_get_parents_all($item));
+  $terms = array_reverse(hs_taxonomy_get_parents_all($item));
   foreach ($terms as $term) {
     $lineage[] = $term->tid;
   }
@@ -374,16 +454,43 @@ function hs_taxonomy_hierarchical_select_lineage($item, $params) {
 }
 
 /**
+ * Alternative version of taxonomy_get_parents_all(): instead of using all
+ * parents of a term (i.e. when multiple parents are being used), only the
+ * first is kept.
+ */
+function hs_taxonomy_get_parents_all($tid) {
+  $parents = array();
+  if ($tid) {
+    $parents[] = taxonomy_get_term($tid);
+    $n = 0;
+    while ($parent = taxonomy_get_parents($parents[$n]->tid)) {
+      $parents = array_merge($parents, array(reset($parent)));
+      $n++;
+    }
+  }
+  return $parents;
+}
+
+/**
  * Implementation of hook_hierarchical_select_valid_item().
  */
 function hs_taxonomy_hierarchical_select_valid_item($item, $params) {
-  if ($params['root_term'] && $item == 0) {
+  if (isset($params['root_term']) && $params['root_term'] && $item == 0) {
     return TRUE;
   }
-  else if (!is_numeric($item) || $item < 1 || $item == $params['exclude_tid']) {
+  else if (!is_numeric($item) || $item < 1 || (isset($params['exclude_tid']) && $item == $params['exclude_tid'])) {
     return FALSE;
   }
   $term = taxonomy_get_term($item);
+
+  // If the Term Permissions module is installed, honor its settings.
+  if (function_exists('term_permissions_allowed')) {
+    global $user;
+    if (!term_permissions_allowed($term->tid, $user) ) {
+        return FALSE;
+    }
+  }
+
   return ($term->vid == $params['vid']);
 }
 
@@ -396,7 +503,12 @@ function hs_taxonomy_hierarchical_select_item_get_label($item, $params) {
   if (!isset($labels[$item])) {
     $term = taxonomy_get_term($item);
     // Use the translated term when available!
-    $labels[$item] = t($term->name);
+    if (module_exists('i18ntaxonomy') && i18ntaxonomy_vocabulary($term->vid) == I18N_TAXONOMY_LOCALIZE) {
+      $labels[$item] = tt("taxonomy:term:$term->tid:name", $term->name);
+    }
+    else {
+      $labels[$item] = t($term->name);
+    }
   }
 
   return $labels[$item];
@@ -408,7 +520,7 @@ function hs_taxonomy_hierarchical_select_item_get_label($item, $params) {
  */
 function hs_taxonomy_hierarchical_select_create_item($label, $parent, $params) {
   $form_state['values'] = array(
-    'name'   => $label,
+    'name'   => html_entity_decode($label, ENT_QUOTES),
     'parent' => $parent,
     'vid'    => $params['vid'],
   );
@@ -435,7 +547,13 @@ function hs_taxonomy_hierarchical_select_create_item($label, $parent, $params) {
  * Implementation of hook_hierarchical_select_entity_count().
  */
 function hs_taxonomy_hierarchical_select_entity_count($item, $params) {
-  return hs_taxonomy_term_count_nodes($item);
+  // Allow restricting entity count by node type.
+  if ($params['entity_count_for_node_type']){
+    return hs_taxonomy_term_count_nodes($item, $params['entity_count_for_node_type']);
+  }
+  else {
+    return hs_taxonomy_term_count_nodes($item);
+  }
 }
 
 /**
@@ -506,7 +624,7 @@ function hs_taxonomy_token_values($type, $object = NULL, $options = array()) {
       $node = $object;
 
       // Default values.
-      $values['save-lineage-termpath'] = $values['save-lineage-termpath-raw'] = FALSE;
+      $values['save-lineage-termpath'] = $values['save-lineage-termpath-raw'] = '';
 
       // If $node->taxonomy doesn't exist, these tokens cannot be created!
       if (!is_object($node) || !isset($node->taxonomy) || !is_array($node->taxonomy)) {
@@ -526,6 +644,7 @@ function hs_taxonomy_token_values($type, $object = NULL, $options = array()) {
       // when a token is requested for a vocabulary that's not associated with
       // the current content type.
       if (!isset($all_vids)) {
+        $all_vids = array();
         $result = db_query("SELECT vid FROM {vocabulary}");
         while ($row = db_fetch_object($result)) {
           $all_vids[] = $row->vid;
@@ -535,13 +654,15 @@ function hs_taxonomy_token_values($type, $object = NULL, $options = array()) {
       // Generate the per-vid "save-lineage-termpath" tokens.
       foreach ($all_vids as $vid) {
         $terms = array();
-        if (in_array($vid, $hs_vids)) {
+        if (in_array($vid, $hs_vids) && isset($node->taxonomy[$vid])) {
           $selection = $node->taxonomy[$vid];
           $terms = _hs_taxonomy_token_termpath_for_vid($selection, $vid);
         }
 
-        $values["save-lineage-termpath:$vid"] = implode($separator, array_map('check_plain', $terms));
-        $values["save-lineage-termpath-raw:$vid"] = implode($separator, $terms);
+        $terms_raw = $terms;
+        $terms = array_map('check_plain', $terms);
+        $values["save-lineage-termpath:$vid"] = !empty($options['pathauto']) ? $terms : implode($separator, $terms);
+        $values["save-lineage-termpath-raw:$vid"] = !empty($options['pathauto']) ? $terms_raw : implode($separator, $terms_raw);
       }
 
       // We use the terms of the first vocabulary that uses Hierarchical
@@ -549,8 +670,8 @@ function hs_taxonomy_token_values($type, $object = NULL, $options = array()) {
       $vids = array_intersect(array_keys($node->taxonomy), $hs_vids);
       if (!empty($vids)) {
         $vid = $vids[0];
-        $values['save-lineage-termpath'] = implode($separator, array_map('check_plain', $terms));
-        $values['save-lineage-termpath-raw'] = implode($separator, $terms);
+        $values['save-lineage-termpath'] = $values["save-lineage-termpath:$vid"];
+        $values['save-lineage-termpath-raw'] = $values["save-lineage-termpath-raw:$vid"];
       }
       break;
   }
@@ -619,7 +740,7 @@ function _hs_taxonomy_token_termpath_for_vid($selection, $vid) {
     foreach ($lineage as $item) {
       $terms[] = $item['label'];
     }
-  }  
+  }
 
   return $terms;
 }
@@ -633,17 +754,17 @@ function _hs_taxonomy_token_termpath_for_vid($selection, $vid) {
  */
 function hierarchical_select_taxonomy_form_vocabulary_validate($form, &$form_state) {
   // The "multiple select" setting doesn't exist for the forum vocabulary!
-  if (isset($form['multiple'])) {
+  if (isset($form['settings']['multiple'])) {
     // Enable Taxonomy's "multiple select" setting when:
     // - Hierarchical Select's "multiple select" setting is enabled, or:
     // - Hierarchical Select's "save term lineage" setting is enabled
-    $multiple_select_enabled = ($form_state['values']['hierarchical_select']['dropbox']['status'] || $form_state['values']['hierarchical_select']['save_lineage']);
-    form_set_value($form['multiple'], (int) $multiple_select_enabled, $form_state);
+    $multiple_select_enabled = ((isset($form_state['values']['hierarchical_select']['dropbox']['status']) && $form_state['values']['hierarchical_select']['dropbox']['status']) || $form_state['values']['hierarchical_select']['save_lineage']);
+    form_set_value($form['settings']['multiple'], (int) $multiple_select_enabled, $form_state);
   }
 
   // If Hierarchical Select is enabled, disable freetagging.
-  if ($form_state['values']['hierarchical_select']['status']) {
-    form_set_value($form['tags'], 0, $form_state);
+  if ($form_state['values']['hierarchical_select_status']) {
+    form_set_value($form['settings']['tags'], 0, $form_state);
   }
 }
 
@@ -687,7 +808,7 @@ function _hs_taxonomy_hierarchical_select_get_tree($vid, $parent = 0, $depth = -
   }
 
   $max_depth = (is_null($max_depth)) ? count($children[$vid]) : $max_depth;
-  if ($children[$vid][$parent]) {
+  if (isset($children[$vid][$parent])) {
     foreach ($children[$vid][$parent] as $child) {
       if ($max_depth > $depth) {
         $term = drupal_clone($terms[$vid][$child]);
@@ -697,14 +818,14 @@ function _hs_taxonomy_hierarchical_select_get_tree($vid, $parent = 0, $depth = -
         $term->parents = $parents[$vid][$child];
         $tree[] = $term;
 
-        if ($children[$vid][$child]) {
+        if (isset($children[$vid][$child])) {
           $tree = array_merge($tree, _hs_taxonomy_hierarchical_select_get_tree($vid, $child, $depth, $max_depth));
         }
       }
     }
   }
 
-  return $tree ? $tree : array();
+  return isset($tree) ? $tree : array();
 }
 
 /**
@@ -745,7 +866,12 @@ function _hs_taxonomy_hierarchical_select_terms_to_options($terms) {
   $options = array();
   foreach ($terms as $key => $term) {
     // Use the translated term when available!
-    $options[$term->tid] = t($term->name);
+    if (module_exists('i18ntaxonomy') && isset($term->vid) && i18ntaxonomy_vocabulary($term->vid) == I18N_TAXONOMY_LOCALIZE) {
+      $options[$term->tid] = tt("taxonomy:term:$term->tid:name", $term->name);
+    }
+    else {
+      $options[$term->tid] = t($term->name);
+    }
   }
   return $options;
 }
@@ -759,6 +885,7 @@ function _hs_taxonomy_hierarchical_select_terms_to_options($terms) {
  *   The depth of the vocabulary's tree.
  */
 function _hs_taxonomy_hierarchical_select_get_depth($vid) {
+  $depth = -99999;
   $tree = _hs_taxonomy_hierarchical_select_get_tree($vid);
   foreach ($tree as $term) {
     if ($term->depth > $depth) {

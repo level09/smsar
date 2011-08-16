@@ -1,6 +1,7 @@
 <?php
+// $Id: utility.inc,v 1.4.2.13 2009/10/30 13:54:39 dman Exp $
 /**
- * Utility form, conversion and rendering functions for image processes
+ * @file Utility form, conversion and rendering functions for image processes
  */
 
 
@@ -14,8 +15,7 @@
  * function in order to ensure it's in the registry.
  */
 function imagecache_rgb_form($action) {
-
-  if($action['HEX'] && $deduced = hex_to_rgb($action['HEX'])) {
+  if ($action['HEX'] && $deduced = hex_to_rgb($action['HEX'])) {
     $action = array_merge($action, $deduced);
     $action['HEX'] = ltrim($action['HEX'], '#');
     // With or without # is valid, but trim for consistancy
@@ -68,7 +68,7 @@ function imagecacheactions_pos_form($action) {
  * Set blanks to zero, just so the status summary doesn't get odd blanks
  */
 function imagecache_actions_validate_number(&$element, &$form_state) {
-  if(empty($element['#value'])) form_set_value($element, 0, $form_state);
+  if (empty($element['#value'])) form_set_value($element, 0, $form_state);
 }
 
 function imagecache_actions_validate_alpha(&$element, &$form_status) {
@@ -82,7 +82,6 @@ function imagecache_actions_validate_alpha(&$element, &$form_status) {
  * Render the subform in a table
  */
 function theme_imagecacheactions_rgb_form(&$form) {
-
   // Add a farb element
   drupal_add_css('misc/farbtastic/farbtastic.css', 'module', 'all', FALSE);
   drupal_add_js('misc/farbtastic/farbtastic.js');
@@ -123,10 +122,10 @@ function theme_imagecacheactions_rgb_form(&$form) {
 
 function theme_imagecacheactions_rgb($rgb) {
   if ($rgb['HEX']) {
-    return " <span style=\"width:2em; border:1px solid white; background-color:#{$rgb["HEX"]}\" >&nbsp;#{$rgb['HEX']}&nbsp;</span>";
+    return " <span style=\"width:2em; border:1px solid white; background-color:#{$rgb['HEX']}\" >&nbsp;#{$rgb['HEX']}&nbsp;</span>";
   }
   else {
-    return ' ' .t('Transparent');
+    return ' '. t('Transparent');
   }
 }
 
@@ -182,23 +181,29 @@ function hex_to_rgb($hex) {
  * 
  */
 function imagecache_actions_keyword_filter($value, $current_size, $object_size) {
-  $keyword = 0; 
+  $keyword = ''; 
   $offset = 0;
   
   // Check if we have plus or minus values
+  // Assume that no + means a raw value
+
   $keyword_split = explode('+', $value);
   $keyword = $keyword_split[0];
   if (! empty($keyword_split[1]) ) {
-    $offset = $keyword_split[1];
-  }
-  if (strstr($value, '-')) {
-    $k2 = explode('-', $value);
-    $keyword = $k2[0];
-    $offset = -intval($k2[1]);
+    $offset = intval($keyword_split[1]);
   }
 
+  if (strstr($value, '-')) {
+    $keyword_split = explode('-', $value);
+    $keyword = $keyword_split[0];
+    if (! empty($keyword_split[1]) ) {
+      $offset = -1 * intval($keyword_split[1]);
+    }
+  }
+  
+
   // handle % values
-  if (substr($value, strlen($value), 1) == '%') {
+  if (substr($value, strlen($value)-1, 1) == '%') {
     $percent = TRUE;
     $offset = intval($offset);
     $value = intval($value / 100 * $current_size);
@@ -211,7 +216,7 @@ function imagecache_actions_keyword_filter($value, $current_size, $object_size) 
       $offset = intval($offset / 100 * $current_size);
     }
   }
-
+  #dpm(get_defined_vars());  
 
   // Whether the value is 'top or left doesn't matter, treat both axes the same.
   switch ($keyword) {
@@ -225,13 +230,16 @@ function imagecache_actions_keyword_filter($value, $current_size, $object_size) 
       $offset = -1 * $offset;
       break;
     case 'center':
+    case 'middle':
       $value = $current_size/2 - $object_size/2;
       break;
     default :
       // if no keyword, it was a raw number - assume top left then
       $value = intval($value);
   }
+  #dpm(get_defined_vars());  
   #dpm("Placing an object $object_size big on a range of $current_size at a position of $value , $offset");  
+
   // Add any extra negative or positive
   if (!empty($offset)) {
     $value = $value + $offset;
@@ -239,6 +247,36 @@ function imagecache_actions_keyword_filter($value, $current_size, $object_size) 
   return $value;
 }
 
+/**
+ * Given two imageapi objects with dimensions, and some positioning values,
+ * calculate a new x,y for the layer to be placed at.
+ */
+function imagecache_actions_calculate_relative_position($base, $layer, $style) {
+  // $textimage should now have its size info available.
+  // Calc the position
+  if (isset($style['top'])) {
+    $ypos = $style['top'];
+  }
+  if (isset($style['bottom'])) {
+    $ypos = $base->info['height'] - ( $layer->info['height'] + $style['bottom']);
+  }
+  if (! isset($ypos)) {
+    // assume center
+    $ypos = ($base->info['height']/2) - ($layer->info['height']/2);
+  }
+
+  if (isset($style['left'])) {
+    $xpos = $style['left'];
+  }
+  if (isset($style['right'])) {
+    $xpos = $base->info['width'] - ( $layer->info['width'] + $style['right']);
+  }
+  if (! isset($xpos)) {
+    // assume center
+    $xpos = ($base->info['width']/2) - ($layer->info['width']/2);
+  }
+  return array('x' => $xpos, 'y' => $ypos);
+}
 
 /**
  * imagecache is conservative with its inclusion of inc files, but sometimes I
@@ -271,8 +309,8 @@ function imagecache_actions_node_from_filepath($filepath, &$file_data = NULL) {
 
   // lookup upload.module attachments
   if (module_exists('upload')) {
-    $sql = "SELECT nid, f.fid FROM {upload} AS u INNER JOIN {files} AS f N u.fid = f.fid WHERE f.filepath = '%s' LIMIT 1";
-    $results = db_query($sql, $filepath);
+    $sql = "SELECT nid, f.fid FROM {upload} AS u INNER JOIN {files} AS f ON u.fid = f.fid WHERE f.filepath = '%s'";
+    $results = db_query_range($sql, $filepath, 0, 1);
     if ( $row = db_fetch_array($results)) {
       // Return immediately
       $node = node_load($row['nid']);
@@ -284,8 +322,8 @@ function imagecache_actions_node_from_filepath($filepath, &$file_data = NULL) {
 
   // Lookup image.module nodes
   if (module_exists('image')) {
-    $sql = "SELECT nid FROM {image} AS i INNER JOIN {files} AS f ON i.fid = f.fid WHERE f.filepath = '%s' LIMIT 1";
-    if ( $nid = db_result(db_query($sql, $filepath))){
+    $sql = "SELECT nid FROM {image} AS i INNER JOIN {files} AS f ON i.fid = f.fid WHERE f.filepath = '%s'";
+    if ( $nid = db_result(db_query_range($sql, $filepath, 0, 1))) {
       // Return immediately
       return node_load($nid);
     }
@@ -343,7 +381,7 @@ function imagecache_actions_node_from_filepath($filepath, &$file_data = NULL) {
           $query_args[] = $fid; 
         }
 
-        $result = db_query("SELECT nid FROM {$tablename} WHERE ". join(' OR ', $wheres), $query_args);
+        $result = db_query('SELECT nid FROM {'. $tablename .'} WHERE '. join(' OR ', $wheres), $query_args);
         
         while ($row = db_fetch_array($result)) {
           // This while is a dummy loop - Just break out and return the first matching node. 
@@ -358,8 +396,8 @@ function imagecache_actions_node_from_filepath($filepath, &$file_data = NULL) {
           
           // We have the node but lost track of the file in the process.
           // Need to scan again to make sure we got the right one :-{
-          if( $file_fields = $node->{$field['field_name']} ) {
-            foreach($file_fields as $file_field) {
+          if ( $file_fields = $node->{$field['field_name']} ) {
+            foreach ($file_fields as $file_field) {
               if ($file_field['fid'] == $fid) {
                 $actual_file = $file_field;
               }

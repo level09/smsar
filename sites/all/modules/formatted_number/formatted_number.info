@@ -6,9 +6,9 @@ dependencies[] = content
 dependencies[] = format_number
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-07-08
-version = "6.x-1.2"
+; Information added by drupal.org packaging script on 2009-09-20
+version = "6.x-1.3"
 core = "6.x"
 project = "formatted_number"
-datestamp = "1247093153"
+datestamp = "1253449838"
 

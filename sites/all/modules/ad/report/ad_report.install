@@ -1,5 +1,5 @@
 <?php
-// $Id: ad_report.install,v 1.1.4.2 2009/02/23 22:39:05 jeremy Exp $
+// $Id: ad_report.install,v 1.1.4.3 2009/10/07 04:07:28 jeremy Exp $
 
 /**
  * @file
@@ -10,15 +10,10 @@
  */
 
 /**
- * Flush the menu cache to register the new ad_report admin menu.
+ * Rebuild the menu to support new paths.
  */
-function ad_report_update_5001() {
-  $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-    default:
-      $ret[] = update_sql('DELETE FROM {cache_menu}');
-  }
-  return $ret;
+function ad_report_update_6001() {
+  menu_rebuild();
+  return array();
 }
+

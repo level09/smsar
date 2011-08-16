@@ -1,5 +1,5 @@
 <?php
-// $Id: simplenews_action.module,v 1.1.2.6 2009/01/21 08:21:08 sutharsan Exp $
+// $Id: simplenews_action.module,v 1.1.2.8 2010/01/03 14:30:56 sutharsan Exp $
 
 /**
  * @file simplenews_action.inc
@@ -72,13 +72,13 @@ function simplenews_send_newsletter_action(&$object, $context = array()) {
       $accounts[] = $context['account'];
     }
 
-    // Get send status of this newsletter. The global newsletter send status is used not the send status of individual emails.
+    // Get sent status of this newsletter. The global newsletter sent status is used not the sent status of individual emails.
     $s_status = db_result(db_query("SELECT s_status FROM {simplenews_newsletters} WHERE nid = %d", $context['nid']));
 
     // Send newsletter if resend is allowed OR newsletter is not yet send.
     if ($context['resend'] OR $s_status == SIMPLENEWS_STATUS_SEND_NOT) {
       if ($context['hook'] == 'cron') {
-        // Set newsletter send status to pending if send by cron.
+        // Set newsletter sent status to pending if send by cron.
         db_query("UPDATE {simplenews_newsletters} SET s_status = %d WHERE nid = %d", SIMPLENEWS_STATUS_SEND_PENDING, $context['nid']);
       }
       simplenews_send_node($context['nid'], $accounts);
@@ -107,7 +107,7 @@ function simplenews_send_newsletter_action_form($context) {
   $tree = taxonomy_get_tree(variable_get('simplenews_vid', ''));
   $terms = array();
   foreach ($tree as $newsletter) {
-    $terms[$newsletter->tid] = check_plain($newsletter->name);
+    $terms[$newsletter->tid] = $newsletter->name;
   }
 //  $form['newsletter'] = array(
 //    '#title' => t('Newsletter'),
@@ -119,7 +119,7 @@ function simplenews_send_newsletter_action_form($context) {
   $result = taxonomy_select_nodes(array_keys($terms));
   $nids = array();
   while ($node = db_fetch_object($result)) {
-    $nids[$node->nid] = check_plain($node->title);
+    $nids[$node->nid] = $node->title;
   }
   $form['newsletter_issue'] = array(
     '#title' => t('Newsletter issue'),
@@ -132,7 +132,7 @@ function simplenews_send_newsletter_action_form($context) {
     '#title' => t('Allow to resend newsletter'),
     '#type' => 'checkbox',
     '#default_value' => $context['resend'],
-    '#description' => t('When checked a newsletter will be send even when already send before. The newsletter send status is checked, not the status of individual email addresses. Use this for repeated (e.g. monthly) newsletters.'),
+    '#description' => t('When checked a newsletter will be send even when already sent before. The newsletter sent status is checked, not the status of individual email addresses. Use this for repeated (e.g. monthly) newsletters.'),
   );
  
   return $form;
@@ -205,7 +205,7 @@ function simplenews_subscribe_user_action_form($context) {
   $tree = taxonomy_get_tree(variable_get('simplenews_vid', ''));
   $terms = array();
   foreach ($tree as $newsletter) {
-    $terms[$newsletter->tid] = check_plain($newsletter->name);
+    $terms[$newsletter->tid] = $newsletter->name;
   }
   $form['newsletter'] = array(
     '#title' => t('Newsletter'),
@@ -254,8 +254,8 @@ function simplenews_unsubscribe_user_action(&$object, $context = array()) {
           db_query('DELETE FROM {simplenews_subscriptions} WHERE snid = %d', $result->snid);
         }
       }
-      drupal_set_message(t('You have been removed from the %newsletter subscription list.', array('%newsletter' => check_plain($context['name']))));
-      watchdog('action', 'User %name unsubscribed from newsletter %newsletter.', array('%name' => check_plain($account->name), '%newsletter' => check_plain($context['name'])));
+      drupal_set_message(t('You have been removed from the %newsletter subscription list.', array('%newsletter' => $context['name'])));
+      watchdog('action', 'User %name unsubscribed from newsletter %newsletter.', array('%name' => $account->name, '%newsletter' => $context['name']));
     }
   }
 }
@@ -271,7 +271,7 @@ function simplenews_unsubscribe_user_action_form($context) {
   $tree = taxonomy_get_tree(variable_get('simplenews_vid', ''));
   $terms = array();
   foreach ($tree as $newsletter) {
-    $terms[$newsletter->tid] = check_plain($newsletter->name);
+    $terms[$newsletter->tid] = $newsletter->name;
   }
   $form['newsletter'] = array(
     '#title' => t('Newsletter'),

@@ -1,0 +1,81 @@
+<?php
+// $Id: ad_actions.install,v 1.1.2.1 2009/10/20 00:20:58 jeremy Exp $
+
+/**
+ * @file
+ * Ad_actions module database schema.
+ *
+ * Copyright (c) 2009.
+ *   Jeremy Andrews <jeremy@tag1consulting.com>.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function ad_actions_schema() {
+  $schema['ad_actions_queue'] = array(
+    'description' => 'The ad_notify table stores notifications data such as recepient, message body, event, etc.',
+    'fields' => array(
+      'qid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'aid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'recipient' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'scheduled' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'period' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'sent' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'context' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('qid'),
+    'unique keys' => array(
+      'aid_period_recipient' => array('aid', 'period', 'recipient'),
+    ),
+    'indexes' => array(
+      'period_scheduled' => array('period', 'scheduled'),
+      'sent_period' => array('sent', 'period'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * ad_actions module installation.
+ */
+function ad_actions_install() {
+  drupal_install_schema('ad_actions');
+}
+
+/**
+ * Allow complete uninstallation of the ad_actions module.
+ */
+function ad_actions_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('ad_actions');
+}
+

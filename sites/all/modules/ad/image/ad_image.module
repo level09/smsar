@@ -1,5 +1,5 @@
 <?php
-// $Id: ad_image.module,v 1.2.2.13.2.40.2.11.2.7 2009/05/15 13:27:23 jeremy Exp $
+// $Id: ad_image.module,v 1.2.2.13.2.40.2.11.2.9 2009/11/23 06:45:40 Jeremy Exp $
 
 /**
  * @file
@@ -226,7 +226,7 @@ function ad_image_global_settings_submit($form, &$form_state) {
 /**
  * Implementation of hook_adapi().
  */
-function ad_image_adapi($op, &$node) {
+function ad_image_adapi($op, $node) {
   $output = NULL;
   switch ($op) {
 
@@ -521,6 +521,9 @@ function ad_image_node_form(&$node) {
     $path = NULL;
     $active = 0;
     foreach ($files as $file) {
+      if (is_array($file)) {
+        $file = (object)$file;
+      }
       if ($file->list && file_exists($file->filepath)) {
         $path .= '<img src="'. file_create_url($file->filepath) .'" alt="'. check_plain($file->filename) .'" /> ';
         $image = ad_image_validate_size($file, $node->nid);

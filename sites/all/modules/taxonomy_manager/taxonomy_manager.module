@@ -1,6 +1,6 @@
 <?php
 
-// $Id: taxonomy_manager.module,v 1.5.2.17.2.14.2.13 2009/08/11 09:37:59 mh86 Exp $ 
+// $Id: taxonomy_manager.module,v 1.5.2.17.2.14.2.16 2010/01/30 15:52:57 mh86 Exp $ 
 
 /**
  * 
@@ -120,7 +120,7 @@ function taxonomy_manager_menu() {
  * Implementation of hook_menu_alter
  */
 function taxonomy_manager_menu_alter(&$callbacks) {
-  if (!variable_get('taxonomy_manager_disable_merge_redirect', 0)) {
+  if (!variable_get('taxonomy_manager_disable_merge_redirect', TRUE)) {
     $callbacks['taxonomy/term/%']['page callback'] = 'taxonomy_manager_term_page';
   }
 }
@@ -560,7 +560,7 @@ function _taxonomy_manager_tree_get_first_path($tid, &$tree, &$terms_to_expand) 
  * helper function to check whether a given term is a root term
  */
 function taxonomy_manager_term_is_root($tid) {
-  if (db_affected_rows(db_query("SELECT tid FROM term_hierarchy WHERE tid = %d AND parent = 0", $tid)) == 1) {
+  if (db_affected_rows(db_query("SELECT tid FROM {term_hierarchy} WHERE tid = %d AND parent = 0", $tid)) == 1) {
     return TRUE;
   }
   return FALSE; 
@@ -1001,7 +1001,7 @@ function _taxonomy_manager_term_get_lang($tid) {
  * @param $element
  * @return html output
  */
-function theme_taxonomy_manager_tree(&$element) {
+function theme_taxonomy_manager_tree($element) {
   $tree = theme('taxonomy_manager_tree_elements', $element['#elements']);
   if ((!$element['#parent'] && !$element['#siblings_page']) || $element['#render_whole_tree']) {
     $output = '<div id="'. $element['#id'] .'">';

@@ -1,12 +1,13 @@
-; $Id: similarterms.info,v 1.4 2008/06/30 04:07:58 rmiddle Exp $
-name = Similar By Terms
-core = 6.x
-description = "Display a block of other content that is similar by keywords (taxonomy terms)."
+; $Id: similarterms.info,v 1.7.2.2 2010/09/09 13:58:19 jjeff Exp $
+core = "6.x"
+dependencies[] = "views"
+description = "Use Views to show similar content based on taxonomy terms"
+name = "Similar By Terms"
+package = "Views"
 
-
-; Information added by drupal.org packaging script on 2009-01-27
-version = "6.x-1.18"
+; Information added by drupal.org packaging script on 2010-12-18
+version = "6.x-2.2"
 core = "6.x"
 project = "similarterms"
-datestamp = "1233023132"
+datestamp = "1292713860"
 

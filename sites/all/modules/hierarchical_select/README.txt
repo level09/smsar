@@ -1,4 +1,3 @@
-$Id: README.txt,v 1.39 2009/08/15 10:44:59 wimleers Exp $
 
 Description
 -----------
@@ -16,11 +15,10 @@ and levels through Hierarchical Select!
 
 Integrates with
 ---------------
-* Book (Drupal core) – NOT YET PORTED TO DRUPAL 6
 * Forum (Drupal core)
 * Menu (Drupal core)
 * Taxonomy (Drupal core)
-* Content Taxonomy (http://drupal.org/project/content_taxonomy) – NOT YET PORTED TO DRUPAL 6
+* Content Taxonomy (http://drupal.org/project/content_taxonomy)
 * Views
 
 
@@ -44,14 +42,24 @@ Troubleshooting
 If you ever have problems, make sure to go through these steps:
 
 1) Go to admin/logs/status (i.e. the Status Report). Ensure that the status
-   of the following modules is ok:
-   - Hierarchical Select
-   - Hierarchical Select Taxonomy Views (if installed)
-   - Hierarchical Select Content Taxonomy Views (if installed)
+   of the Hierarchical Select module is ok.
 
 2) Ensure that the page isn't being served from your browser's cache. Use
    CTRL+R in Windows/Linux browsers, CMD+R in Mac OS X browsers to enforce the
    browser to reload everything, preventing it from using its cache.
+
+3) When you're getting a JS alert with the following message: "Received an
+   invalid response from the server.", ensure that the page (of which this
+   form is a part) is *not* being cached.
+
+4) When Hierarchical Select seems to be misbehaving in a certain use case in
+   which terms with multiple parents are being used, make sure to enable the
+   "Save term lineage" setting.
+   Note: you may have to repeat this for every configuration in which the
+   vocabulary with terms that have multiple parents are being used. E.g. if
+   such a vocabulary is called "A", then go to 
+      admin/settings/hierarchical_select/configs
+   and edit all configuration that have "A" in the "Hierarchy" column.
 
 In case of problems, don't forget to try a hard refresh in your browser!
 
@@ -77,10 +85,19 @@ Limitations
    A -> D
    B -> C
    B -> D
-   If you then save any two lineages in which all four terms exist, all four
-   lineages will be rendered by Hierarchical Select, because only the four
-   terms are stored and thus there is no way to recover the originally
-   selected two lineages.
+  If you then save any two lineages in which all four terms exist, all four
+  lineages will be rendered by Hierarchical Select, because only the four
+  terms are stored and thus there is no way to recover the originally selected
+  two lineages.
+- You can NOT expect the Hierarchical Select Taxonomy module to automagically
+  fix all existing nodes when you enable or disable the "save lineage" setting
+  and neither can you expect it to keep working properly when you reorganize
+  the term hierarchy. There's nothing I can do about this. Hierarchical Select
+  is merely a form element, it can't be held responsible for features that
+  Drupal core lacks or supports poorly.
+  See the following issues:
+  * http://drupal.org/node/1023762#comment-4054386
+  * http://drupal.org/node/976394#comment-4054456
 
 
 Maximum scalability

@@ -1,0 +1,58 @@
+// $Id: CHANGELOG.txt,v 1.1.2.5 2009/09/20 12:22:28 markuspetrux Exp $
+
+6.x-1.3
+=======
+
+There is no need to run update.php. Just be sure to clear your javascript caches.
+
+Features:
+- Integration with diff module.
+- #580548 by Bevan - Additional formatters for fixed number of decimal places and significant figures.
+- Added CHANGELOG.txt.
+- Make javaScript compatible with other libraries than jQuery. See:
+  http://drupal.org/update/modules/6/7#javascript_compatibility
+- Use single quotes rather than double quotes in javascript file.
+
+
+6.x-1.2
+=======
+
+Features:
+- Added Dutch translation (by libeco).
+
+Bugfixes:
+- #466572 by Freso - PHP notice: Undefined index: min in formatted_number.module on line 389.
+
+
+6.x-1.1
+=======
+
+Features:
+- Integration with diff module.
+
+Bugfixes:
+- Fix check of format_number module version in hook_requirements('install').
+
+
+6.x-1.0
+=======
+
+- First stable release. No changes since RC1.
+
+
+6.x-1.x-rc1
+===========
+
+Features:
+- Removed leading underscores in functions that can be reused by other modules.
+- Minor documentation issues.
+- Updated translation template.
+
+Bugfixes:
+- Fixed implementation of hook_content_is_empty().
+
+
+6.x-1.x-beta1
+=============
+
+- First beta release.

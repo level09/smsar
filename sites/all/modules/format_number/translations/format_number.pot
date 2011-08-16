@@ -1,17 +1,17 @@
-# $Id: format_number.pot,v 1.1.2.1 2008/11/13 13:25:57 markuspetrux Exp $
+# $Id: format_number.pot,v 1.1.2.2 2009/12/26 07:36:02 markuspetrux Exp $
 #
 # LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:
-#  format_number.settings.inc: n/a
-#  format_number.module,v 1.1.2.3 2008/11/10 00:52:32 markuspetrux
-#  format_number.info,v 1.1.2.1 2008/11/02 14:20:26 markuspetrux
+#  format_number.settings.inc,v 1.1.2.2 2009/02/18 17:07:40 markuspetrux
+#  format_number.module,v 1.1.2.12 2009/12/01 09:54:48 markuspetrux
+#  format_number.info,v 1.1.2.2 2008/11/13 13:25:57 markuspetrux
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2008-11-13 13:54+0100\n"
+"POT-Creation-Date: 2009-12-26 08:22+0100\n"
 "PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
@@ -60,56 +60,68 @@ msgstr ""
 msgid "Number format settings"
 msgstr ""
 
-#: format_number.module:18
+#: format_number.module:23
 msgid "The <em>Format Number API</em> module provides a method to configure number formats (site default and user defined) with configurable decimal point and thousand separators. It also exposes several functions that can be used by other contributed or custom modules to display numbers accordingly."
 msgstr ""
 
-#: format_number.module:68;82
+#: format_number.module:83;97
 msgid "full stop (.)"
 msgstr ""
 
-#: format_number.module:69;83
+#: format_number.module:84;98
 msgid "comma (,)"
 msgstr ""
 
-#: format_number.module:70
+#: format_number.module:85
 msgid "arabic decimal separator (٫)"
 msgstr ""
 
-#: format_number.module:81
+#: format_number.module:96
 msgid "none"
 msgstr ""
 
-#: format_number.module:84
+#: format_number.module:99
 msgid "apostrophe (')"
 msgstr ""
 
-#: format_number.module:85
+#: format_number.module:100
 msgid "no-break space ( )"
 msgstr ""
 
-#: format_number.module:86
+#: format_number.module:101
 msgid "full width comma (，)"
 msgstr ""
 
-#: format_number.module:87
+#: format_number.module:102
 msgid "arabic thousands separator (٬)"
 msgstr ""
 
-#: format_number.module:88
+#: format_number.module:103
 msgid "ethiopic syllable wa (ወ)"
 msgstr ""
 
-#: format_number.module:26
+#: format_number.module:514
+msgid "%name: The specified number @num is invalid."
+msgstr ""
+
+#: format_number.module:530
+msgid "%name: The value may be no smaller than @minimum."
+msgstr ""
+
+#: format_number.module:534
+msgid "%name: The value may be no larger than @maximum."
+msgstr ""
+
+#: format_number.module:31
 msgid "configure default number format"
 msgstr ""
 
-#: format_number.module:35
+#: format_number.module:40
 msgid "Number format"
 msgstr ""
 
-#: format_number.module:0
-msgid "format_number"
+#: format_number.module:41
+msgid "Configure site wide number format settings."
 msgstr ""
 
 #: format_number.info:0

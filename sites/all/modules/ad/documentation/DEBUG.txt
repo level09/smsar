@@ -14,7 +14,7 @@ are unable to get ads to appear, be sure to explain what method you are using
 to try and display ads: blocks, views, ad_embed, etc...
 
 In the event that ads are not displaying, it is helpful if you collect the
-following debug information and inculde it in your bug report.  Using your
+following debug information and include it in your bug report.  Using your
 web browser, view the html source of the page on which you expect
 advertisements to show up.  Search for the string "serve.php", then copy and
 paste that entire URL directly into your web browser.  It will look something

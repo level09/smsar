@@ -8,9 +8,9 @@ Requirements:
 -------------
 Installation:
 -------------
-1) Extract the ad tarball.  Move the resulting 'ad/' subdirectory within your
-   'modules/' directory.  Be sure the web server has read permissions to this
-   directory and the files within it.
+1) Extract the ad tarball.  Move the resulting 'ad/' subdirectory within the
+   correct 'sites/*/modules/' directory.  Be sure the web server has read
+   permissions to this directory and the files within it.
 
    NOTE:  For optimal performance you should set the DRUPAL_ROOT variable at
    the top of the adserve.inc file.  Otherwise, the ad module will automatically
@@ -64,3 +64,14 @@ Installation:
     content type, you may want to review the following projects:
       http://drupal.org/project/better_formats
       http://drupal.org/project/filterbynodetype
+
+11) Optionally enable the date api and date popup modules, part of the date
+    project:
+      http://drupal.org/project/date
+    Once enabled, you will be able to set the autoenable and autoexpire times
+    using a popup calendar.
+
+12) Optionally, if you're using the ad_image module and you'd like to keep your
+    image uploads more organized, you may want to use one of the following modules
+      http://drupal.org/project/filefield_paths
+      http://drupal.org/project/uploadpath

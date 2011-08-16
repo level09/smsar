@@ -1,5 +1,5 @@
 <?php
-// $Id: ad.pages.inc,v 1.1.2.6.2.2 2009/02/28 23:39:47 jeremy Exp $
+// $Id: ad.pages.inc,v 1.1.2.6.2.4 2009/11/30 16:31:20 Jeremy Exp $
 
 /**
  * @file
@@ -250,4 +250,33 @@ function ad_click_details($node, $cid) {
   return $output;
 }
 
+
+function ad_activity_details($node) {
+  $output = '';
+  drupal_set_breadcrumb(array(l(t('Home'), NULL), l(check_plain($node->title), 'node/'. $node->nid)));
+  if (ad_permission($node, 'access click history')) {
+    $header = array(
+      array('data' => t('Date'), 'field' => 'date', 'sort' => 'desc'),
+      array('data' => t('Action'), 'field' => 'action'));
+    if (isset($node->nid) && $node->nid > 0) {
+      $sql = "SELECT * FROM {ad_statistics} WHERE action NOT IN ('view', 'click') AND aid = %d";
+      $sql .= tablesort_sql($header);
+      $result = pager_query($sql, 25, 0, NULL, $node->nid);
+      while ($ad = db_fetch_object($result)) {
+        $row = array();
+        $row[] = format_date(strtotime($ad->date . '00'), 'large');
+        $row[] = $ad->action;
+        $rows[] = $row;
+      }
+      if (empty($rows)) {
+        $output = '<p>'. t('There is no activity yet.') .'</p>';
+      }
+      else {
+        $output = theme('table', $header, $rows);
+      }
+      $output .= theme('pager', NULL, 25, 0);
+    }
+  }
+  return theme('box', t('Activity'), $output);
+}
 

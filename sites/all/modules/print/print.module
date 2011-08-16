@@ -1,5 +1,4 @@
 <?php
-// $Id: print.module,v 1.25.2.75 2009/08/20 02:19:19 jcnventura Exp $
 
 /**
  * @defgroup print Printer, e-mail and PDF versions
@@ -47,10 +46,12 @@ define('PRINT_FOOTER_OPTIONS_DEFAULT', 1);
 define('PRINT_FOOTER_USER_DEFAULT', '');
 define('PRINT_CSS_DEFAULT', '');
 define('PRINT_URLS_DEFAULT', 1);
+define('PRINT_URLS_ANCHORS_DEFAULT', 0);
 define('PRINT_COMMENTS_DEFAULT', 0);
 define('PRINT_NEWWINDOW_DEFAULT', 1);
 
 define('PRINT_HTML_LINK_POS_DEFAULT', 'link');
+define('PRINT_HTML_LINK_TEASER_DEFAULT', 0);
 define('PRINT_HTML_SHOW_LINK_DEFAULT', 1);
 define('PRINT_HTML_NODE_LINK_VISIBILITY_DEFAULT', 0);
 define('PRINT_HTML_NODE_LINK_PAGES_DEFAULT', '');
@@ -61,6 +62,7 @@ define('PRINT_HTML_LINK_USE_ALIAS_DEFAULT', 0);
 define('PRINT_HTML_BOOK_LINK_DEFAULT', 1);
 define('PRINT_HTML_NEW_WINDOW_DEFAULT', 0);
 define('PRINT_HTML_SENDTOPRINTER_DEFAULT', 0);
+define('PRINT_HTML_WINDOWCLOSE_DEFAULT', 1);
 
 define('PRINT_SOURCEURL_ENABLED_DEFAULT', 1);
 define('PRINT_SOURCEURL_DATE_DEFAULT', 0);
@@ -73,6 +75,7 @@ define('PRINT_ROBOTS_NOARCHIVE_DEFAULT', 0);
 define('PRINT_TYPE_SHOW_LINK_DEFAULT', 1);
 define('PRINT_TYPE_COMMENT_LINK_DEFAULT', 0);
 define('PRINT_TYPE_URLLIST_DEFAULT', 1);
+define('PRINT_TYPE_SYS_URLLIST_DEFAULT', 0);
 
 define('PRINT_ALLOW_NORMAL_LINK', 1);
 define('PRINT_ALLOW_BOOK_LINK', 2);
@@ -93,7 +96,94 @@ function print_theme() {
     'print_format_link' => array(
       'arguments' => array(),
     ),
+    'print_node' => array(
+      'arguments' => array('node' => NULL, 'teaser' => FALSE, 'page' => FALSE, 'type' => PRINT_HTML_FORMAT),
+      'template' => 'print_node',
+    ),
+    'print_page' => array(
+      'arguments' => array('print' => NULL, 'type' => PRINT_HTML_FORMAT, 'node' => NULL),
+      'template' => 'print',
+    ),
   );
+}
+
+/**
+ * Implementation of hook_theme_registry_alter().
+ */
+function print_theme_registry_alter(&$theme_registry) {
+  $theme_registry['print_node']['theme paths'] = array_merge($theme_registry['print_node']['theme paths'], $theme_registry['node']['theme paths']);
+  $theme_registry['print_page']['theme paths'] = array_merge($theme_registry['print_page']['theme paths'], $theme_registry['page']['theme paths']);
+}
+
+/**
+ * Implementation of hook_preprocess_HOOK().
+ */
+function print_preprocess_print_node(&$variables) {
+  static $hooks = NULL;
+  if (!isset($hooks)) {
+    init_theme();
+    $hooks = theme_get_registry();
+  }
+
+  //Stolen from theme() so that ALL preprocess functions are called
+  $info = $hooks['node'];
+  if (isset($info['preprocess functions']) && is_array($info['preprocess functions'])) {
+    // This construct ensures that we can keep a reference through
+    // call_user_func_array.
+    $args = array(&$variables, $hook);
+    foreach ($info['preprocess functions'] as $preprocess_function) {
+      if (function_exists($preprocess_function)) {
+        call_user_func_array($preprocess_function, $args);
+      }
+    }
+  }
+  $variables += $args[0];
+
+  //Include the right template suggestions based on format (print, email) and type.
+  $format = $variables['type'];
+  $type = $variables['node']->type;
+
+  $variables['template_files'][] = "node";
+  $variables['template_files'][] = "node-$type";
+  $variables['template_files'][] = "print_node";
+  $variables['template_files'][] = "print_node_$format";
+  $variables['template_files'][] = "print_node_$format.node-$type";
+}
+
+/**
+ * Implementation of hook_preprocess_HOOK().
+ */
+function print_preprocess_print_page(&$variables) {
+  static $hooks = NULL;
+  if (!isset($hooks)) {
+    init_theme();
+    $hooks = theme_get_registry();
+  }
+
+  $variables['show_blocks'] = FALSE;
+  $variables['show_messages'] = FALSE;
+
+  //Stolen from theme() so that ALL preprocess functions are called
+  $info = $hooks['page'];
+  if (isset($info['preprocess functions']) && is_array($info['preprocess functions'])) {
+    // This construct ensures that we can keep a reference through
+    // call_user_func_array.
+    $args = array(&$variables, $hook);
+    foreach ($info['preprocess functions'] as $preprocess_function) {
+      if (function_exists($preprocess_function)) {
+        call_user_func_array($preprocess_function, $args);
+      }
+    }
+  }
+  $variables += $args[0];
+
+  $format = $variables['type'];
+  $type = (isset($variables['node']->type)) ? $variables['node']->type : '';
+
+  $variables['template_files'][] = "print";
+  $variables['template_files'][] = "print.node-$type";
+  $variables['template_files'][] = "print_$format";
+  $variables['template_files'][] = "print_$format.node-$type";
 }
 
 /**
@@ -110,7 +200,7 @@ function print_menu() {
     'file' => 'print.pages.inc',
   );
   $items[PRINT_PATH .'/'. PRINT_PATH] = array(
-    'page callback' => 'drupal_access_denied',
+    'access callback' => FALSE,
   );
   $items['admin/settings/print'] = array(
     'title' => 'Printer, e-mail and PDF versions',
@@ -173,7 +263,9 @@ function print_block($op = 'list', $delta = 0, $edit = array()) {
   switch ($op) {
     case 'list':
       $block[0]['info'] = t('Printer, e-mail and PDF versions');
+      $block[0]['cache'] = BLOCK_CACHE_PER_PAGE;
       $block[1]['info'] = t('Most printed');
+      $block[1]['cache'] = BLOCK_CACHE_GLOBAL;
       return $block;
       break;
     case 'configure':
@@ -182,36 +274,41 @@ function print_block($op = 'list', $delta = 0, $edit = array()) {
       return;
     case 'view':
       switch ($delta) {
-      case 0:
-      $nid = preg_replace('!^node/!', '', $_GET['q']);
-      if (is_numeric($nid)) {
-        $node = node_load($nid);
-      }
-      else {
-        $node = NULL;
-      }
-      $funcs = get_defined_functions();
-      $block['content'] = '';
-      foreach ($funcs['user'] as $func) {
-        if (preg_match('!^print.*?_insert_link$!', $func)) {
-          $link = $func(NULL, $node);
-          if (!empty($link)) {
-            $block['content'] .= $link;
+        case 0:
+          $nid = preg_replace('!^node/!', '', $_GET['q']);
+          if (ctype_digit($nid)) {
+            $node = node_load($nid);
+            if (!node_access('view', $node)) {
+              // If the user doesn't have access to the node, don't show any links
+              $block['content'] == '';
+              return;
+            }
           }
-        }
-      }
-        break;
-      case 1:
-        $block['subject'] = t('Most printed');
-        $result = db_query_range("SELECT path FROM {print_page_counter} ORDER BY totalcount DESC", 0, 3);
-        if (db_affected_rows()) {
-          $block['content'] = '<div class="item-list"><ul>';
-          while ($obj = db_fetch_object($result)) {
-            $block['content'] .= '<li>'. l(_print_get_title($obj->path), $obj->path) .'</li>';
+          else {
+            $node = NULL;
           }
-          $block['content'] .= '</ul></div>';
-        }
-        break;
+          $funcs = get_defined_functions();
+          $block['content'] = '';
+          foreach ($funcs['user'] as $func) {
+            if (preg_match('!^print.*?_insert_link$!', $func)) {
+              $link = $func(NULL, $node);
+              if (!empty($link)) {
+                $block['content'] .= $link;
+              }
+            }
+          }
+          break;
+        case 1:
+          $block['subject'] = t('Most printed');
+          $result = db_query_range("SELECT path FROM {print_page_counter} ORDER BY totalcount DESC", 0, 3);
+          if (db_affected_rows()) {
+            $block['content'] = '<div class="item-list"><ul>';
+            while ($obj = db_fetch_object($result)) {
+              $block['content'] .= '<li>'. l(_print_get_title($obj->path), $obj->path) .'</li>';
+            }
+            $block['content'] .= '</ul></div>';
+          }
+          break;
       }
       return $block;
       break;
@@ -330,26 +427,30 @@ function print_nodeapi(&$node, $op = 'view', $teaser, $page) {
   switch ($op) {
     case 'view':
       // Insert content corner links
-      if (($teaser === FALSE) && isset($node->build_mode) && ($node->build_mode == NODE_BUILD_NORMAL)) {
+      if ((!$teaser) && isset($node->build_mode) && ($node->build_mode === NODE_BUILD_NORMAL)) {
       $node->content['print_links'] = array(
-        '#value' => "<span class='print-link'></span>",
+        '#prefix' => '<span class="print-link">',
+        '#value' => '',
+        '#suffix' => '</span>',
         '#weight' => -101,
       );
       $print_html_link_pos = variable_get('print_html_link_pos', array(PRINT_HTML_LINK_POS_DEFAULT => PRINT_HTML_LINK_POS_DEFAULT));
       if (!empty($print_html_link_pos['corner'])) {
-        $link = print_insert_link(NULL, $node);
-        if ($link) {
-          $node->content['print_links']['#value'] = preg_replace('!</span>$!', $link .'</span>', $node->content['print_links']['#value']);
-        }
+        $node->content['print_links']['#value'] .= print_insert_link(NULL, $node);
       }
       }
       break;
     case 'load':
       _print_set_node_fields($node);
       break;
+    case 'insert':
     case 'update':
       if (user_access('administer print') || user_access('node-specific print configuration')) {
-      _print_node_conf_modify($node->nid, $node->print_display, $node->print_display_comment, $node->print_display_urllist);
+        if ($node->print_display === NULL) $node->print_display = variable_get('print_display_'. $node->type, PRINT_TYPE_SHOW_LINK_DEFAULT);
+        if ($node->print_display_comment === NULL) $node->print_display_comment = variable_get('print_display_comment_'. $node->type, PRINT_TYPE_COMMENT_LINK_DEFAULT);
+        if ($node->print_display_urllist === NULL) $node->print_display_urllist = variable_get('print_display_urllist_'. $node->type, PRINT_TYPE_URLLIST_DEFAULT);
+
+        _print_node_conf_modify($node->nid, $node->print_display, $node->print_display_comment, $node->print_display_urllist);
       }
       break;
     case 'delete':
@@ -372,6 +473,7 @@ function print_form_alter(&$form, $form_state, $form_id) {
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#weight' => (function_exists('content_extra_field_weight') && isset($form['type'])) ? content_extra_field_weight($form['type']['#value'], 'print') : PRINT_TYPE_FIELDS_WEIGHT,
+      '#group' => 'additional_settings',
     );
 
     $form['print']['label'] = array(
@@ -396,14 +498,12 @@ function print_form_alter(&$form, $form_state, $form_id) {
       $form['print']['print_display']['#default_value'] = variable_get('print_display_'. $form['#node_type']->type, PRINT_TYPE_SHOW_LINK_DEFAULT);
       $form['print']['print_display_comment']['#default_value'] = variable_get('print_display_comment_'. $form['#node_type']->type, PRINT_TYPE_COMMENT_LINK_DEFAULT);
       $form['print']['print_display_urllist']['#default_value'] = variable_get('print_display_urllist_'. $form['#node_type']->type, PRINT_TYPE_URLLIST_DEFAULT);
-      $form['print']['label']['#value'] = '<p><em>'. t('The settings below only apply when some of the corresponding module-wide link settings are enabled.') .'</em></p>'. $form['print']['label']['#value'];
     }
     else {
       $node = $form['#node'];
-      $form['print']['print_display']['#default_value'] = isset($node->print_display) ? $node->print_display : PRINT_TYPE_SHOW_LINK_DEFAULT;
-      $form['print']['print_display_comment']['#default_value'] = isset($node->print_display_comment) ? $node->print_display_comment : PRINT_TYPE_COMMENT_LINK_DEFAULT;
-      $form['print']['print_display_urllist']['#default_value'] = isset($node->print_display_urllist) ? $node->print_display_urllist : PRINT_TYPE_URLLIST_DEFAULT;
-      $form['print']['label']['#value'] = '<p><em>'. t('The settings below only apply in case the corresponding type-specific setting is also enabled (except for the "Show link in individual comments").') .'</em></p>'. $form['print']['label']['#value'];
+      $form['print']['print_display']['#default_value'] = isset($node->print_display) ? $node->print_display : variable_get('print_display_'. $node->type, PRINT_TYPE_SHOW_LINK_DEFAULT);
+      $form['print']['print_display_comment']['#default_value'] = isset($node->print_display_comment) ? $node->print_display_comment : variable_get('print_display_comment_'. $node->type, PRINT_TYPE_COMMENT_LINK_DEFAULT);
+      $form['print']['print_display_urllist']['#default_value'] = isset($node->print_display_urllist) ? $node->print_display_urllist : variable_get('print_display_urllist_'. $node->type, PRINT_TYPE_URLLIST_DEFAULT);
     }
   }
 }
@@ -450,9 +550,9 @@ function _print_set_node_fields(&$node) {
   else {
     $res = FALSE;
   }
-  $node->print_display = $res ? intval($res->link) : PRINT_TYPE_SHOW_LINK_DEFAULT;
-  $node->print_display_comment = $res ? intval($res->comments) : PRINT_TYPE_COMMENT_LINK_DEFAULT;
-  $node->print_display_urllist = $res ? intval($res->url_list) : PRINT_TYPE_URLLIST_DEFAULT;
+  $node->print_display = $res ? intval($res->link) : variable_get('print_display_'. $node->type, PRINT_TYPE_SHOW_LINK_DEFAULT);
+  $node->print_display_comment = $res ? intval($res->comments) : variable_get('print_display_comment_'. $node->type, PRINT_TYPE_COMMENT_LINK_DEFAULT);
+  $node->print_display_urllist = $res ? intval($res->url_list) : variable_get('print_display_urllist_'. $node->type, PRINT_TYPE_URLLIST_DEFAULT);
 }
 
 /**
@@ -466,13 +566,18 @@ function _print_set_node_fields(&$node) {
 function _print_get_title($path) {
   $path = drupal_get_normal_path($path);
   $nid = preg_replace('!^node/!', '', $path);
-  if (is_numeric($nid)) {
+  if (ctype_digit($nid)) {
     $res = db_fetch_object(db_query("SELECT title FROM {node} WHERE nid = %d", $nid));
     return $res->title;
   }
   else {
     $res = db_fetch_object(db_query("SELECT link_title FROM {menu_links} WHERE link_path = '%s'", $path));
-    return $res->link_title;
+    if ($res) {
+      return $res->link_title;
+    }
+    else {
+      return NULL;
+    }
   }
 }
 
@@ -490,16 +595,10 @@ function _print_get_title($path) {
  *   value of the url_list field (0 or 1)
  */
 function _print_node_conf_modify($nid, $link, $comments, $url_list) {
-  if (($link == PRINT_TYPE_SHOW_LINK_DEFAULT) && ($comments == PRINT_TYPE_COMMENT_LINK_DEFAULT) &&
-      ($url_list == PRINT_TYPE_URLLIST_DEFAULT)) {
-    db_query("DELETE FROM {print_node_conf} WHERE nid = %d", $nid);
-  }
-  else {
     db_query("UPDATE {print_node_conf} SET link = %d, comments = %d, url_list = %d WHERE nid = %d", $link, $comments, $url_list, $nid);
     if (!db_affected_rows()) {
-      db_query("INSERT INTO {print_node_conf} (nid, link, comments, url_list) VALUES (%d, %d, %d, %d)", $nid, $link, $comments, $url_list);
+      @db_query("INSERT INTO {print_node_conf} (nid, link, comments, url_list) VALUES (%d, %d, %d, %d)", $nid, $link, $comments, $url_list);
     }
-  }
 }
 
 /**
@@ -663,7 +762,7 @@ function print_insert_link($path = NULL, $node = NULL) {
 }
 
 /**
- * Determine if the current page is enabled according to the visibility settings
+ * Determine if the provided page is enabled according to the visibility settings
  *
  * @param $visibility
  *   current visibility settings:
@@ -674,15 +773,15 @@ function print_insert_link($path = NULL, $node = NULL) {
  * @return
  *   TRUE if it is enabled, FALSE otherwise
  */
-function _print_page_match($visibility, $pages) {
+function _print_page_match($visibility, $path, $pages) {
   if ($pages) {
     if ($visibility == 2) {
       return drupal_eval($pages);
     }
-    $path = drupal_get_path_alias($_GET['q']);
+    $alias = drupal_get_path_alias($path);
     $page_match = drupal_match_path($path, $pages);
-    if ($path != $_GET['q']) {
-      $page_match = $page_match || drupal_match_path($_GET['q'], $pages);
+    if ($alias != $path) {
+      $page_match = $page_match || drupal_match_path($alias, $pages);
     }
 
     return !($visibility xor $page_match);
@@ -704,13 +803,14 @@ function _print_page_match($visibility, $pages) {
  *   PRINT_ALLOW_BOOK_LINK if a link is allowed in a book node
  */
 function print_link_allowed($args) {
-  if (!empty($args['teaser']) || !user_access('access print')) {
-    // If showing only the teaser or the user is not allowed or link is disabled
+  if ((!empty($args['teaser']) && !variable_get('print_html_link_teaser', PRINT_HTML_LINK_TEASER_DEFAULT))
+      || !user_access('access print')) {
+    // If the teaser link is disabled or the user is not allowed
     return FALSE;
   }
   if (!empty($args['path'])) {
     $nid = preg_replace('!^node/!', '', drupal_get_normal_path($args['path']));
-    if (is_numeric($nid)) {
+    if (ctype_digit($nid)) {
       $args['node'] = node_load($nid);
     }
   }
@@ -725,24 +825,26 @@ function print_link_allowed($args) {
     $print_html_node_link_visibility = variable_get('print_html_node_link_visibility', PRINT_HTML_NODE_LINK_VISIBILITY_DEFAULT);
     $print_html_node_link_pages = variable_get('print_html_node_link_pages', PRINT_HTML_NODE_LINK_PAGES_DEFAULT);
 
-    if (!_print_page_match($print_html_node_link_visibility, $print_html_node_link_pages)) {
+    if (!_print_page_match($print_html_node_link_visibility, "node/". $node->nid, $print_html_node_link_pages)) {
       // Page not in visibility list
       return FALSE;
     }
     elseif (isset($args['type']) && ($args['type'] == 'comment') && isset($node_type)) {
       // Link is for a comment, return the configured setting
-      $res = db_fetch_object(db_query("SELECT comments FROM {print_node_conf} WHERE nid = %d", $node->nid));
-      $print_display_comment = $res ? intval($res->comments) : PRINT_TYPE_COMMENT_LINK_DEFAULT;
-      if (($print_display_comment) ||
-          variable_get('print_display_comment_'. $node_type, PRINT_TYPE_COMMENT_LINK_DEFAULT)) {
+      // Cache this statically to avoid duplicate queries for every comment.
+      static $res = array();
+      if (!isset($res[$node->nid])) {
+        $res[$node->nid] = db_fetch_object(db_query("SELECT comments FROM {print_node_conf} WHERE nid = %d", $node->nid));
+      }
+      $print_display_comment = $res ? intval($res[$node->nid]->comments) : variable_get('print_display_comment_'. $node_type, PRINT_TYPE_COMMENT_LINK_DEFAULT);
+      if ($print_display_comment) {
         return PRINT_ALLOW_NORMAL_LINK;
       }
     }
     else {
       // Node link
-      if ((!$node->print_display) || (isset($node_type) &&
-          !variable_get('print_display_'. $node_type, PRINT_TYPE_SHOW_LINK_DEFAULT))) {
-        // Link for this node type is disabled
+      if (!$node->print_display) {
+        // Link for this node is disabled
         return FALSE;
       }
       elseif (isset($node->book)) {
@@ -768,7 +870,7 @@ function print_link_allowed($args) {
     $print_html_sys_link_visibility = variable_get('print_html_sys_link_visibility', PRINT_HTML_SYS_LINK_VISIBILITY_DEFAULT);
     $print_html_sys_link_pages = variable_get('print_html_sys_link_pages', PRINT_HTML_SYS_LINK_PAGES_DEFAULT);
 
-    return _print_page_match($print_html_sys_link_visibility, $print_html_sys_link_pages);
+    return _print_page_match($print_html_sys_link_visibility, $_GET['q'], $print_html_sys_link_pages);
   }
   return FALSE;
 }

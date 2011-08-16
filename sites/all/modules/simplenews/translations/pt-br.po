@@ -720,7 +720,7 @@ msgid "Synchronize with account"
 msgstr "Sincronizar com conta de usuário"
 
 #: simplenews.module:2289
-msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deteted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
+msgid "When checked subscriptions will be synchronized with site accounts. When accounts are deleted, subscriptions with the same email address will be removed. When site accounts are blocked/unblocked, subscriptions will be deactivated/activated. When not checked subscriptions will be unchanged when associated accounts are deleted or blocked."
 msgstr "Quando selecionado, assinaturas serão sincronizadas com as contas do site. Quando contas forem apagadas, as assinaturas com o mesmo endereço de email serão canceladas. Quando contas do site forem bloqueadas/desbloqueadas, as assinaturas serão desativadas/ativadas. Quando não selecionado, as assinaturas não serão alteradas quando contas associadas forem apagadas ou bloqueadas."
 
 #: simplenews.module:2307

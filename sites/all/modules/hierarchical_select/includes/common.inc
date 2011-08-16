@@ -1,5 +1,4 @@
 <?php
-// $Id: common.inc,v 1.27 2009/08/15 10:45:00 wimleers Exp $
 
 /**
  * @file
@@ -56,7 +55,7 @@ function hierarchical_select_common_config_del($config_id) {
  */
 function hierarchical_select_common_config_apply(&$form_item, $config_id, $defaults_override = array()) {
   $config = hierarchical_select_common_config_get($config_id, $defaults_override);
-  $form_item['#config'] = array_merge((is_array($form_item['#config'])) ? $form_item['#config'] : array(), $config);
+  $form_item['#config'] = array_merge((isset($form_item['#config']) && is_array($form_item['#config'])) ? $form_item['#config'] : array(), $config);
 }
 
 
@@ -92,7 +91,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
     '#title' => t('Hierarchical Select configuration'),
     '#attributes' => array(
       'class' => 'hierarchical-select-config-form',
-      'id'    => 'hierarchical-select-config-form-'. $config_id,
+      'id'    => 'hierarchical-select-config-form-' . $config_id,
     ),
   );
 
@@ -125,7 +124,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
       1 => t('Save !item lineage', $args),
       0 => t('Save only the deepest !item', $args),
     ),
-    '#default_value' => $config['save_lineage'],
+    '#default_value' => (isset($config['save_lineage'])) ? $config['save_lineage'] :  NULL,
     '#description' => t(
       'Saving the !item lineage means saving the <em>the !item itself and all
       its ancestors</em>.',
@@ -140,7 +139,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
       1 => t('Force the user to choose a !item from a <em>deepest level</em>', $args),
       0 => t('Allow the user to choose a !item from <em>any level</em>', $args),
     ),
-    '#default_value' => $config['enforce_deepest'],
+    '#default_value' => (isset($config['enforce_deepest'])) ? $config['enforce_deepest'] : NULL,
     '#description' => t(
       'This setting determines from which level in the !hierarchy tree a
       user can select a !item.',
@@ -162,7 +161,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
         0 => t('Disabled'),
         1 => t('Enabled'),
       ),
-      '#default_value' => $config['entity_count'],
+      '#default_value' => (isset($config['entity_count'])) ? $config['entity_count'] : NULL,
       '#attributes' => array('class' => 'entity-count'),
     );
 
@@ -179,12 +178,10 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
         0 => t('Disabled'),
         1 => t('Enabled'),
       ),
-      '#default_value' => $config['require_entity'],
+      '#default_value' => (isset($config['require_entity'])) ? $config['require_entity'] : NULL,
       '#attributes' => array('class' => 'require-entity'),
     );
   }
-  $form['level_labels']['#theme'] = 'hierarchical_select_common_config_form_level_labels';
-  $form['level_labels']['#strings'] = $strings;
 
   $form['resizable'] = array(
     '#type' => 'radios',
@@ -198,7 +195,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
       0 => t('Disabled'),
       1 => t('Enabled'),
     ),
-    '#default_value' => $config['resizable'],
+    '#default_value' => (isset($config['resizable'])) ? $config['resizable'] : NULL,
     '#attributes' => array('class' => 'resizable'),
   );
 
@@ -220,7 +217,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
   $form['level_labels']['status'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable level labels'),
-    '#default_value' => $config['level_labels']['status'],
+    '#default_value' => (isset($config['level_labels']['status'])) ? $config['level_labels']['status'] : NULL,
     '#attributes' => array('class' => 'level-labels-status'),
   );
   for ($depth = 0; $depth <= $max_hierarchy_depth; $depth++) {
@@ -228,7 +225,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
       '#type' => 'textfield',
       '#size' => 20,
       '#maxlength' => 255,
-      '#default_value' => $config['level_labels']['labels'][$depth],
+      '#default_value' => (isset($config['level_labels']['labels'][$depth])) ? $config['level_labels']['labels'][$depth] : NULL,
       '#attributes' => array('class' => 'level-label'),
     );
   }
@@ -244,7 +241,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
   $form['dropbox']['status'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable the dropbox'),
-    '#default_value' => $config['dropbox']['status'],
+    '#default_value' => (isset($config['dropbox']['status'])) ? $config['dropbox']['status'] : NULL,
     '#attributes' => array('class' => 'dropbox-status'),
   );
   $form['dropbox']['title'] = array(
@@ -253,7 +250,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
     '#description' => t('The title you enter here appears above the dropbox.'),
     '#size' => 20,
     '#maxlength' => 255,
-    '#default_value' => $config['dropbox']['title'],
+    '#default_value' => (isset($config['dropbox']['title'])) ? $config['dropbox']['title'] : NULL,
     '#attributes' => array('class' => 'dropbox-title'),
   );
   $form['dropbox']['limit'] = array(
@@ -270,7 +267,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
     ),
     '#size' => 5,
     '#maxlength' => 5,
-    '#default_value' => $config['dropbox']['limit'],
+    '#default_value' => (isset($config['dropbox']['limit'])) ? $config['dropbox']['limit'] : NULL,
     '#attributes' => array('class' => 'dropbox-limit'),
   );
   $form['dropbox']['reset_hs'] = array(
@@ -284,7 +281,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
       0 => t('Disabled'),
       1 => t('Enabled'),
     ),
-    '#default_value' => $config['dropbox']['reset_hs'],
+    '#default_value' => (isset($config['dropbox']['reset_hs'])) ? $config['dropbox']['reset_hs'] : NULL,
     '#attributes' => array('class' => 'dropbox-reset-hs'),
   );
 
@@ -306,7 +303,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
         0 => t('Disabled'),
         1 => t('Enabled'),
       ),
-      '#default_value' => $config['editability']['status'],
+      '#default_value' => (isset($config['editability']['status'])) ? $config['editability']['status'] : NULL,
       '#attributes' => array('class' => 'editability-status'),
     );
     for ($depth = 0; $depth <= $max_hierarchy_depth; $depth++) {
@@ -314,7 +311,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
         '#type' => 'textfield',
         '#size' => 20,
         '#maxlength' => 255,
-        '#default_value' => $config['editability']['item_types'][$depth],
+        '#default_value' => (isset($config['editability']['item_types'][$depth])) ? $config['editability']['item_types'][$depth] : NULL,
         '#attributes' => array('class' => 'editability-item-type'),
       );
     }
@@ -341,7 +338,7 @@ function hierarchical_select_common_config_form($module, $params, $config_id, $d
       '#options' => array(
         0 => t('0 (no limit)'), 1, 2, 3, 4, 5, 6, 7, 8, 9
       ),
-      '#default_value' => $config['editability']['max_levels'],
+      '#default_value' => (isset($config['editability']['max_levels'])) ? $config['editability']['max_levels'] : NULL,
       '#description' => t(
         'When the user is allowed to create new levels, this option prevents
         the user from creating extremely deep !hierarchies.',

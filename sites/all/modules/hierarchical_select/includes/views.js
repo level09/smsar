@@ -1,4 +1,3 @@
-// $Id: views.js,v 1.8 2009/08/15 10:45:00 wimleers Exp $
 
 
 /**

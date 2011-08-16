@@ -1,4 +1,4 @@
-// $Id: termData.js,v 1.1.2.3.2.8.2.12 2009/08/11 06:56:26 mh86 Exp $
+// $Id: termData.js,v 1.1.2.3.2.8.2.13 2010/01/30 16:37:29 mh86 Exp $
 
 /**
  * @file js support for term editing form for ajax saving and tree updating
@@ -191,7 +191,7 @@ Drupal.TermData.prototype.form = function() {
     termdata.div.children().hide();
   });
   
-  $(this.div).find('a').click(function() {
+  $(this.div).find('a.taxonomy-term-data-name-link').click(function() {
     var url = this.href;
     var tid = url.split("/").pop();
     var li = termdata.tree.getLi(tid);

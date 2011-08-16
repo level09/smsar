@@ -1,5 +1,5 @@
 <?php
-// $Id: ad.module,v 1.2.2.29.2.83.2.16.2.26 2009/08/05 00:13:36 jeremy Exp $
+// $Id: ad.module,v 1.2.2.29.2.83.2.16.2.37 2009/11/30 16:24:08 Jeremy Exp $
 
 /**
  * @file
@@ -156,6 +156,9 @@ function ad($group = FALSE, $quantity = 1, $options = array()) {
       }
       else {
         $query['u'] = $_GET['q'];
+        if ($alias = drupal_get_path_alias($_GET['q'])) {
+          $query['l'] = $alias;
+        }
       }
       $src = url($base_url .'/'. $adserve, array('query' => $query));
       if ($options['ad_display'] == 'iframe') {
@@ -225,13 +228,8 @@ function ad_redirect($aid, $group = NULL) {
   $extra = isset($_GET['extra']) ? $_GET['extra'] : '';
   if (function_exists('click_filter_status')) {
     $status = click_filter_status($aid, $hostid);
-    if ($status == CLICK_VALID) {
-      ad_statistics_increment($aid, 'click', $group, $hostid);
-    }
   }
   else {
-    // We're not filtering clicks, so all clicks are valid.
-    ad_statistics_increment($aid, 'click', $group, $hostid);
     $status = 0;
   }
   // Allow source url to be passed in.
@@ -240,7 +238,14 @@ function ad_redirect($aid, $group = NULL) {
     $url = referer_uri();
   }
   db_query("INSERT INTO {ad_clicks} (aid, uid, status, hostname, user_agent, adgroup, extra, hostid, url, timestamp) VALUES (%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %d)", $aid, $user->uid, $status, ip_address(), $_SERVER['HTTP_USER_AGENT'], $group, $extra, $hostid, $url, time());
-
+  watchdog('ad', 'Clicked %type ad aid %aid hostid %hostid.', array('%type' => $adtype, '%aid' => $aid, '%hostid' => $hostid));
+  if (function_exists('click_filter_status') && ($status == CLICK_VALID)) {
+    ad_statistics_increment($aid, 'click', $group, $hostid);
+  }
+  else if (!function_exists('click_filter_status')) {
+    // We're not filtering clicks, so all clicks are valid.
+    ad_statistics_increment($aid, 'click', $group, $hostid);
+  }
   // Determine where we're supposed to redirect the user.
   $adtype = db_result(db_query('SELECT adtype FROM {ads} WHERE aid = %d', $aid));
 
@@ -248,7 +253,6 @@ function ad_redirect($aid, $group = NULL) {
   $node->hostid = $hostid;
   $url = module_invoke('ad_'. $adtype, 'adapi', 'redirect', $node);
   if (isset($url)) {
-    watchdog('ad', 'Clicked %type ad aid %aid hostid %hostid.', array('%type' => $adtype, '%aid' => $aid, '%hostid' => $hostid));
     header('Location: '. $url);
   }
   else {
@@ -567,7 +571,13 @@ function ad_access($op, $node, $account) {
     case 'delete':
       return (user_access('delete any advertisement', $account) || (user_access('delete own advertisements', $account) && is_ad_owner($node->nid)) || user_access('administer advertisements', $account));
     case 'view':
-      return (user_access('show advertisements', $account) || user_access('administer advertisements', $account));
+      // Return false if user doesn't have basic permissions to view
+      // advertisements.  Don't return true to let default Drupal
+      // domain/node access checks happen.
+      if (!user_access('show advertisements', $account) &&
+          !user_access('administer advertisements', $account)) {
+        return false;
+      }
   }
 }
 
@@ -577,6 +587,7 @@ function ad_access($op, $node, $account) {
 function ad_form(&$node, &$form_state) {
   $form = array();
 
+  $type = node_get_types('type', $node);
   // When form_state is not empty, we should rather use it's values
   // to not loose data if validation fails.
   if (!empty($form_state['values'])) {
@@ -588,21 +599,26 @@ function ad_form(&$node, &$form_state) {
     '#value' => isset($node->nid) ? $node->nid : 0,
   );
 
-  $form['title'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Title'),
-    '#required' => TRUE,
-    '#default_value' => isset($node->title) ? $node->title : '',
-  );
-  if ($type->has_body) {
-    $form['body_filter']['body'] = array(
-      '#type' => 'textarea',
-      '#title' => t('Description'),
-      '#default_value' => isset($node->body) ? $node->body : '',
-      '#rows' => 3
+  if ($type->has_title) {
+    $form['title'] = array(
+      '#type' => 'textfield',
+      '#title' => check_plain($type->title_label),
+      '#required' => TRUE,
+      '#default_value' => isset($node->title) ? $node->title : '',
+      '#weight' => -5,
     );
   }
-  $form['body_filter']['format'] = filter_form($node->format);
+  if ($type->has_body) {
+    $form['body_field'] = node_body_field($node, $type->body_label, $type->min_word_count);
+  }
+  else {
+    // The body array has to exist otherwise the format field gets removed.
+    $form['body'] = array(
+      '#type' => 'hidden',
+      '#value' => '',
+    );
+    $form['body_field']['format'] = filter_form($node->format);
+  }
 
   // determine the current ad type
   if (!isset($adtype)) {
@@ -702,32 +718,50 @@ function ad_form(&$node, &$form_state) {
       ? FALSE : TRUE,
   );
 
+  $date_api = FALSE;
+  if (module_exists('date_popup')) {
+    $date_api = TRUE;
+  }
   if ((isset($node->nid) && ad_permission($node->nid, 'manage status')) ||
       user_access('administer advertisements')) {
-    $form['schedule']['current'] = array(
-      '#type' => 'markup',
-      '#prefix' => '<div>',
-      '#suffix' => '</div>',
-      '#value' => t('The current date and time is "%date".', array('%date' => format_date(time(), 'custom', 'F j, Y H:i')))
-    );
+    if (!$date_api) {
+      $form['schedule']['current'] = array(
+        '#type' => 'markup',
+        '#prefix' => '<div>',
+        '#suffix' => '</div>',
+        '#value' => t('The current date and time is "%date".', array('%date' => format_date(time(), 'custom', 'F j, Y H:i')))
+      );
+    }
     $form['schedule']['autoactivate'] = array(
-      '#type' => 'textfield',
+      '#type' => $date_api ? 'date_popup' : 'textfield',
       '#title' => t('Automatically activate ad'),
       '#required' => FALSE,
-      '#default_value' => isset($node->autoactivate) && $node->autoactivate > 0 ? format_date((int)$node->autoactivate, 'custom', 'F j, Y H:i') : 0,
-      '#description' => t('You can specify a date and time for this advertisement to be automatically activated.  The advertisement needs to be in an <em>approved</em> state before it can be automatically activated.  If you prefer to activate the advertisement immediately, leave this field empty.')
+      '#description' => t('You can specify a date and time for this advertisement to be automatically activated.  The advertisement needs to be in an <em>approved</em> state before it can be automatically activated.  If you prefer to activate the advertisement immediately, leave this field empty.'),
     );
+    if ($date_api) {
+      $form['schedule']['autoactivate']['#date_format'] = 'F j, Y H:i';
+      $form['schedule']['autoactivate']['#default_value'] = isset($node->autoactivate) && $node->autoactivate > 0 ? format_date((int)$node->autoactivate, 'custom', 'Y-m-j H:i') : '';
+    }
+    else {
+      $form['schedule']['autoactivate']['#default_value'] = isset($node->autoactivate) && $node->autoactivate > 0 ? format_date((int)$node->autoactivate, 'custom', 'F j, Y H:i') : 0;
+    }
   }
 
   if (user_access('administer advertisements')) {
     // admins can expire advertisements
     $form['schedule']['autoexpire'] = array(
-      '#type' => 'textfield',
+      '#type' => $date_api ? 'date_popup' : 'textfield',
       '#title' => t('Automatically expire ad'),
       '#required' => FALSE,
-      '#default_value' => isset($node->autoexpire) && $node->autoexpire > 0 ? format_date((int)$node->autoexpire, 'custom', 'F j, Y H:i') : 0,
-      '#description' => t('You can specify a date and time for this advertisement to be automatically expired.  If you don\'t want the advertisement to expire, leave this field empty.')
+      '#description' => t('You can specify a date and time for this advertisement to be automatically expired.  If you don\'t want the advertisement to expire, leave this field empty.'),
     );
+    if ($date_api) {
+      $form['schedule']['autoexpire']['#date_format'] = 'F j, Y H:i';
+      $form['schedule']['autoexpire']['#default_value'] = isset($node->autoexpire) && $node->autoexpire > 0 ? format_date((int)$node->autoexpire, 'custom', 'Y-m-j H:i') : '';
+    }
+    else {
+      $form['schedule']['autoexpire']['#default_value'] = isset($node->autoexpire) && $node->autoexpire > 0 ? format_date((int)$node->autoexpire, 'custom', 'F j, Y H:i') : 0;
+    }
     $form['schedule']['maxviews'] = array(
       '#type' => 'textfield',
       '#title' => t('Maximum impressions'),
@@ -881,7 +915,6 @@ function ad_nodeapi(&$node, $op, $teaser, $page) {
   global $user;
 
   switch ($op) {
-
     case 'load':
       $ad = db_fetch_array(db_query('SELECT * FROM {ads} WHERE aid = %d', $node->nid));
       $merge = array_merge((array)$node, (array)$ad);
@@ -900,9 +933,10 @@ function ad_nodeapi(&$node, $op, $teaser, $page) {
           $node->adstatus = 'expired';
         }
         $activated = $node->adstatus == 'active' ? time() : 0;
-        if (!isset($node->autoactivate)) {
-          $node->autoactivate = 0;
-        }
+        $node->autoactivate = isset($node->autoactivate) ? trim($node->autoactivate) : 0;
+        $node->autoactivate = (is_numeric($node->autoactivate)) ? $node->autoactivate : strtotime($node->autoactivate);
+        $node->autoexpire = isset($node->autoexpire) ? trim($node->autoexpire) : 0;
+        $node->autoexpire = (is_numeric($node->autoexpire)) ? $node->autoexpire : strtotime($node->autoexpire);
         if (!isset($node->maxviews)) {
           $node->maxviews = 0;
         }
@@ -917,10 +951,15 @@ function ad_nodeapi(&$node, $op, $teaser, $page) {
     case 'update':
       if (isset($node->adtype)) {
         $ad = db_fetch_object(db_query('SELECT * FROM {ads} WHERE aid = %d', $node->nid));
+        $node->autoactivate = isset($node->autoactivate) ? trim($node->autoactivate) : 0;
+        $node->autoactivate = (is_numeric($node->autoactivate)) ? $node->autoactivate : strtotime($node->autoactivate);
+        $node->autoexpire = isset($node->autoexpire) ? trim($node->autoexpire) : 0;
+        $node->autoexpire = (is_numeric($node->autoexpire)) ? $node->autoexpire : strtotime($node->autoexpire);
         // Ad must be in approved state to be able to autoactivate it.
-        if ($node->adstatus != 'approved' && isset($node->autoactive) && $node->autoactivate) {
+        if ($node->adstatus != 'approved' && $node->autoactivate) {
           if ($node->adstatus == 'active') {
             // This ad is already active, no need to autoactivate it.
+            drupal_set_message(t('This ad is already active, ignoring autoactivate date.'));
             $node->autoactivate = 0;
           }
           else {
@@ -951,22 +990,22 @@ function ad_nodeapi(&$node, $op, $teaser, $page) {
           ad_statistics_increment($node->nid, $node->adstatus);
         }
         // Update ads table with new information.
-        db_query("UPDATE {ads} SET uid = %d, adstatus = '%s', adtype = '%s', redirect = '%s', autoactivate = %d, autoexpire = %d, activated = %d, maxviews = %d, maxclicks = %d, expired = %d WHERE aid = %d", $node->uid, $node->adstatus, $node->adtype, url('ad/redirect/'. $node->nid, array('absolute' => TRUE)), isset($node->autoactivate) && strlen($node->autoactivate) > 1 ? strtotime($node->autoactivate) : '', isset($node->autoexpire) && strlen($node->autoexpire) > 1 ? strtotime($node->autoexpire) : '', isset($activated) ? $activated : 0, isset($node->maxviews) ? (int)$node->maxviews : 0, isset($node->maxclicks) ? (int)$node->maxclicks : 0, isset($expired) ? $expired : 0, $node->nid);
+        db_query("UPDATE {ads} SET uid = %d, adstatus = '%s', adtype = '%s', redirect = '%s', autoactivate = %d, autoexpire = %d, activated = %d, maxviews = %d, maxclicks = %d, expired = %d WHERE aid = %d", $node->uid, $node->adstatus, $node->adtype, url('ad/redirect/'. $node->nid, array('absolute' => TRUE)), $node->autoactivate, $node->autoexpire, isset($activated) ? $activated : 0, isset($node->maxviews) ? (int)$node->maxviews : 0, isset($node->maxclicks) ? (int)$node->maxclicks : 0, isset($expired) ? $expired : 0, $node->nid);
         ad_statistics_increment($node->nid, 'update');
       }
       break;
 
     case 'delete':
-      db_query("DELETE FROM {ads} WHERE aid = %d", $node->nid);
-      db_query("DELETE FROM {ad_statistics} WHERE aid = %d", $node->nid);
       // All that's left of the ad is a single timestamp as to when it was
       // deleted.
       ad_statistics_increment($node->nid, 'delete');
+      db_query("DELETE FROM {ads} WHERE aid = %d", $node->nid);
+      db_query("DELETE FROM {ad_statistics} WHERE aid = %d", $node->nid);
       break;
 
     case 'view':
       if (isset($node->adtype)) {
-        if (variable_get('ad_meta_noindex', 1)) {
+        if (variable_get('ad_meta_noindex', 0)) {
           ad_noindex_meta();
         }
         $node = node_prepare($node, $teaser);
@@ -976,16 +1015,29 @@ function ad_nodeapi(&$node, $op, $teaser, $page) {
         );
       }
       break;
+
+    case 'validate':
+      $autoactivate = isset($node->autoactivate) ? trim($node->autoactivate) : '';
+      if (!empty($autoactivate)) {
+        $timestamp = (is_numeric($autoactivate)) ? $autoactivate : strtotime($autoactivate);
+        if ($timestamp <= 0) {
+          form_set_error('autoactivate', 'Please select a valid time to automatically active this ad.');
+        }
+      }
+      $autoexpire = isset($node->autoexpire) ? trim($node->autoexpire) : '';
+      if (!empty($autoexpire)) {
+        $timestamp = (is_numeric($autoexpire)) ? $autoexpire : strtotime($autoexpire);
+        if ($timestamp <= 0) {
+          form_set_error('autoexpire', 'Please select a valid time to automatically expire this ad.');
+        }
+      }
+      break;
   }
   // Allow ad type module to act on nodeapi events.  The adapi hook provides
   // access to additional variables not available in the nodeapi hook.
   if (isset($node->adtype)) {
-    // Don't use module_invoke, as in pre-PHP5 the changes to $node won't be
-    // passed back.
-    $function = "ad_$node->adtype" .'_adapi';
-    if (function_exists($function)) {
-      $function($op, $node);
-    }
+    $module = "ad_{$node->adtype}";
+    module_invoke("ad_{$node->adtype}", adapi, $op, $node);
   }
   // Allow ad cache module to act on nodeapi events.
   $cache = variable_get('ad_cache', 'none');
@@ -1025,6 +1077,7 @@ function ad_adapi($op, $node = NULL) {
       return array(
         'access statistics' => TRUE,
         'access click history' => TRUE,
+        'access activity log' => TRUE,
         'set status as pending' => FALSE,
         'set status as denied' => FALSE,
         'set status from pending to approved' => FALSE,
@@ -1136,6 +1189,17 @@ function ad_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'ad.pages.inc',
   );
+
+  $items["node/%node/activity"] = array(
+    'title' => t('Activity log'),
+    'page callback' => 'ad_activity_details',
+    'page arguments' => array(1),
+    'access arguments' => array(1, 'access activity log'),
+    'access callback' => 'ad_permission',
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'ad.pages.inc',
+  );
+
   $items["ad/redirect/%"] = array(
     'access arguments' => array('show advertisements'),
     'type' => MENU_CALLBACK,
@@ -1195,7 +1259,10 @@ function ad_block($op = 'list', $delta = 0, $edit = array()) {
       $blocks = array();
       $groups = ad_groups_list();
       foreach ($groups as $tid => $name) {
-        $blocks[$tid]['info'] = t('ad group: @name', array('@name' => $name));
+        $blocks[$tid] = array(
+          'info' => t('ad group: @name', array('@name' => $name)),
+          'cache' => BLOCK_CACHE_PER_PAGE,
+        );
       }
       return $blocks;
     case 'configure':
@@ -1365,85 +1432,6 @@ function ad_groups_list($object = FALSE, $tid = NULL) {
     else {
       return $names;
     }
-  }
-}
-
-/**
- * Implement ad notify api _hook.
- */
-function ad_adnotifyapi($op, $arg1 = NULL, $arg2 = NULL) {
-  switch ($op) {
-    // Make the following events available for notification.
-    case 'register':
-      return array(
-        '-expired' => t('Email @when before the advertisement will expire.'),
-        'expired' => t('Email @when after the advertisement is expired.'),
-        '-active' => t('Email @when before the advertisement will be activated (if scheduled).'),
-        'active' => t('Email @when after the advertisement is activated.'),
-        'offline' => t('Email @when after the advertisement is taken offline.'),
-        'click' => t('Email @when after the advertisement is clicked.'),
-        'approved' => t('Email @when after the advertisement is approved.'),
-        'denied' => t('Email @when after the advertisement is denied.'),
-        'update' => t('Email @when after the advertisement is updated.'),
-      );
-      break;
-    case '-expired':
-      $node = node_load($arg1->aid);
-      if (isset($node->autoexpire) && $node->autoexpire) {
-        if ((time() + $arg1->delay >= $node->autoexpire) &&
-            ($arg1->sent + $arg1->delay < $node->autoexpire)) {
-          return array('-expired' => 1);
-        }
-      }
-      break;
-    case '-active':
-      $node = node_load($arg1->aid);
-      if (isset($node->autoactivate) && $node->autoactivate) {
-        if ((time() + $arg1->delay >= $node->autoactivate) &&
-            ($arg1->sent + $arg1->delay < $node->autoactivate)) {
-          return array('-active' => 1);
-        }
-      }
-      break;
-    case 'mail_text':
-      switch ($arg1) {
-        case 'expired':
-          return array(
-            'subject' => t('[%site-name ad] %event notification'),
-            'body' => t("Hello %owner_name,\n\n  This is an automatically generated notification to inform you that your advertisement \"%title\" that was being displayed on the %site-name website has expired.\n\n  Your advertisement was viewed %global_impressions times and clicked %global_clicks times since it was activated on %activated_large.\n\n  You can view additional statistics about this advertisement or update this notification at the following url:\n    %url\n\nRegards,\n The %site-name Team\n\n-\n%site-url"),
-          );
-        case '-expired':
-          return array(
-            'subject' => t('[%site-name ad] expiration notification'),
-            'body' => t("Hello %owner_name,\n\n  This is an automatically generated notification to inform you that your advertisement \"%title\" that is being displayed on the %site-name website will expire on %autoexpire_large.\n\n  Your advertisement has been viewed %today_impressions times and clicked %today_clicks times today.  It was viewed %yesterday_impressions times and clicked %yesterday_clicks times yesterday.  It has been viewed %global_impressions times and clicked %global_clicks times since it was activated on %activated_large.\n\n  You can view additional statistics about this advertisement or update this notification at the following url:\n    %url\n\nRegards,\n The %site-name Team\n\n-\n%site-url"),
-          );
-        case 'active':
-          return array(
-            'subject' => t('[%site-name ad] %event notification'),
-            'body' => t("Hello %owner_name,\n\n  This is an automatically generated notification to inform you that your advertisement \"%title\" is now actively being displayed on the %site-name website.\n\n  Your advertisement has been viewed %global_impressions times and clicked %global_clicks times since it was activated on %activated_large.\n\n  You can view additional statistics about this advertisement or update this notification at the following url:\n    %url\n\nRegards,\n The %site-name Team\n\n-\n%site-url"),
-          );
-        case '-active':
-          return array(
-            'subject' => t('[%site-name ad] activation notification'),
-            'body' => t("Hello %owner_name,\n\n  This is an automatically generated notification to inform you that your advertisement \"%title\" will be actively displayed on the %site-name website on %autoactivate_large.\n\n  You can view statistics about this advertisement or update this notification at the following url:\n    %url\n\nRegards,\n The %site-name Team\n\n-\n%site-url"),
-          );
-        case 'click':
-          return array(
-            'subject' => t('[%site-name ad] %event notification'),
-            'body' => t("Hello %owner_name,\n\n  This is an automatically generated notification to inform you that your advertisement \"%title\" on the %site-name website has been clicked.\n\n  Your advertisement has been viewed %today_impressions times and clicked %today_clicks times today.  It was viewed %yesterday_impressions times and clicked %yesterday_clicks times yesterday.  It has been viewed %global_impressions times and clicked %global_clicks times since it was activated on %activated_large.\n\n  You will receive this %frequency  You can view additional statistics about this advertisement or update this notification at the following url:\n    %url\n\nRegards,\n The %site-name Team\n\n-\n%site-url"),
-          );
-        case 'approved':
-          return array(
-            'subject' => t('[%site-name ad] %event notification'),
-            'body' => t("Hello %owner_name,\n\n  This is an automatically generated notification to inform you that your advertisement \"%title\" on the %site-name website has been approved.\n\n  You can view statistics about this advertisement at the following url:\n    %url\n\nRegards,\n The %site-name Team\n\n-\n%site-url"),
-          );
-        case 'denied':
-          return array(
-            'subject' => t('[%site-name ad] %event notification'),
-            'body' => t("Hello %owner_name,\n\n  This is an automatically generated notification to inform you that your advertisement \"%title\" on the %site-name website has been denied and will not be displayed.\n\n  You can view statistics about this advertisement at the following url:\n    %url\n\nRegards,\n The %site-name Team\n\n-\n%site-url"),
-          );
-      }
-      break;
   }
 }
 

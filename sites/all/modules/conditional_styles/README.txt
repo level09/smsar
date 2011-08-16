@@ -1,5 +1,3 @@
-// $Id: README.txt,v 1.3 2009/05/25 15:13:45 johnalbin Exp $
-
 ABOUT CONDITIONAL STYLESHEETS
 -----------------------------
 

@@ -1,4 +1,3 @@
-/* $Id: hierarchical_select-rtl.css,v 1.10 2008/12/01 02:21:17 wimleers Exp $ */
 
 
 /* The hierarchical select. */
@@ -43,7 +42,7 @@
 
 /* Child level indicator. */
 .hierarchical-select-wrapper .hierarchical-select option.has-children {
-  background: url(images/arrow.png) no-repeat left center;
+  background: url(images/arrow-rtl.png) no-repeat left center;
 }
 
 

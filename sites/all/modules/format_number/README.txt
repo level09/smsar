@@ -1,6 +1,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Format Number module for Drupal
-;; $Id: README.txt,v 1.1.2.4 2008/11/13 13:25:57 markuspetrux Exp $
+;; $Id: README.txt,v 1.1.2.7 2009/11/30 23:14:56 markuspetrux Exp $
 ;;
 ;; Original author: markus_petrux at drupal.org (October 2008)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -11,6 +11,7 @@ CONTENTS
 * INSTALLATION
 * PHP API
 * JAVASCRIPT API
+* FORMS API NUMERIC ELEMENT
 
 
 OVERVIEW
@@ -21,6 +22,10 @@ defined) with configurable decimal point and thousand separators.
 
 The function <code>format_number($number, $decimals = 0)</code> can be used by
 other contributed or custom modules to display numbers accordingly.
+
+This module also provides the 'numericfield' Forms API element, which is a right
+aligned text input element that allows the user enter numbers using the
+configured thousands separator and decimal point (site default or user defined).
 
 External references:
 - http://www.php.net/number_format
@@ -65,6 +70,18 @@ PHP API
  *   The formatted number.
  */
 function format_number($number, $decimals = 0) {}
+
+/**
+ * Formats numbers to a specified number of significant figures.
+ *
+ * @param number $number
+ *   The number to format.
+ * @param integer $significant_figures
+ *   The number of significant figures to round and format the number to.
+ * @return string
+ *   The rounded and formatted number.
+ */
+function format_number_significant_figures($number, $significant_figures) {}
 
 /**
  * Parse a formatted number.
@@ -119,10 +136,12 @@ JAVASCRIPT API
  *   The number being formatted.
  * @param int decimals
  *   Number of decimal digits. Use -1 for any number of decimals.
+ * @param boolean truncate
+ *   TRUE to trucate the decimal part (default). FALSE to round the result.
  * @return string
  *   The formatted number.
  */
-Drupal.formatNumber = function(number, decimals) {}
+Drupal.formatNumber = function(number, decimals, truncate) {}
 
 /**
  * Parse a number with (site default or user defined) thousands separator
@@ -139,3 +158,62 @@ Drupal.formatNumber = function(number, decimals) {}
  *   A valid number.
  */
 Drupal.parseNumber = function(number, required) {}
+
+
+FORMS API NUMERIC ELEMENT
+=========================
+
+The 'numericfield' Forms API element provides a right aligned text input
+element that allows the user enter numbers using the configured thousands
+separator and decimal point (site default or user defined).
+
+
+Example:
+
+$form['my_number'] = array(
+  '#type' => 'numericfield',
+  '#title' => t('My number'),
+  '#precision' => 10,
+  '#decimals' => 2,
+  '#minimum' => 0,
+  '#maximum' => 123456.99,
+  '#default_value' => $my_number,
+);
+
+
+Specific Forms API attributes for elements of #type 'numericfield':
+
+- #precision:
+  Integer that indicates the total number of digits available to store the
+  number, including the digits to the right of the decimal point.
+  Defaults to 12.
+
+- #decimals
+  Integer that indicates the number of available digits to the right of
+  the decimal point.
+  Defaults to 0. Maximum allowed number of decimal digits: 8.
+
+- #minimum
+- #maximum
+  Minimum and maximum possible values that are allowed on input.
+
+
+Other Forms API supported attributes for elements of #type 'numericfield':
+
+- #title
+- #description
+- #attributes
+- #field_prefix
+- #field_suffix
+- #prefix
+- #suffix
+
+
+Theme function used to render the form element:
+
+- theme_numericfield($element)
+
+
+CSS Class attached to numeric form elements:
+
+- form-numeric (defined in format_number.css).

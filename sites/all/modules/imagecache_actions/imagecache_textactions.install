@@ -1,5 +1,8 @@
 <?php
-// $Id: imagecache_textactions.install,v 1.1.2.2 2009/02/07 16:31:19 dman Exp $
+// $Id: imagecache_textactions.install,v 1.1.2.3 2009/08/31 04:12:20 dman Exp $
+/**
+ * @file Set up new text actions. Tell imagecache.module about them
+ */
 
 /**
  * Need to flush the cache when this module is enabled or disabled

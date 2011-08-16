@@ -1,5 +1,4 @@
 <?php
-// $Id: print_mail.admin.inc,v 1.1.2.14 2009/07/09 12:00:52 jcnventura Exp $
 
 /**
  * @file
@@ -10,6 +9,9 @@
  *
  * @ingroup print
  */
+
+// Include MIME library
+@include_once('Mail/mime.php');
 
 /**
  * Menu callback for the send by e-mail module settings form.
@@ -28,6 +30,13 @@ function print_mail_settings() {
     '#default_value' => variable_get('print_mail_link_pos', array(PRINT_MAIL_LINK_POS_DEFAULT => PRINT_MAIL_LINK_POS_DEFAULT)),
     '#options' => array('link' => t('Links area'), 'corner' => t('Content corner')),
     '#description' => t('Choose the location of the link(s) to the send by e-mail page. The Links area is usually below the node content, whereas the Content corner is placed in the upper-right corner of the node content. Unselect all options to disable the link. Even if the link is disabled, you can still send a node by e-mail by going to !path/nid where nid is the numeric id of the node.', array('!path' => PRINTMAIL_PATH)),
+  );
+
+  $form['settings']['print_mail_link_teaser'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display send by e-mail link in teaser'),
+    '#default_value' => variable_get('print_mail_link_teaser', PRINT_MAIL_LINK_TEASER_DEFAULT),
+    '#description' => t('Enabling this will display the link in teaser mode.'),
   );
 
   $form['settings']['adv_link'] = array(
@@ -139,6 +148,20 @@ function print_mail_settings() {
     '#description' => t('If checked, the user will be able to choose between sending the full content or only the teaser at send time.'),
   );
 
+  $form['settings']['print_mail_send_option_default'] = array(
+    '#type' => 'select',
+    '#title' => t('Default e-mail sending format'),
+    '#default_value' => variable_get('print_mail_send_option_default', PRINT_MAIL_SEND_OPTION_DEFAULT),
+    '#options' => array(
+      'sendlink' => t('Link'),
+      'sendpage' => t('Inline HTML'),
+    ),
+  );
+  if (class_exists('Mail_mime')) {
+    $form['settings']['print_mail_send_option_default']['#options']['inline-attachment'] = t('Inline HTML with Attachment');
+    $form['settings']['print_mail_send_option_default']['#options']['plain-attachment'] = t('Plain Text with Attachment');
+  }
+
   if (module_exists('job_queue')) {
     $form['settings']['print_mail_job_queue'] = array(
       '#type' => 'checkbox',
@@ -147,6 +170,13 @@ function print_mail_settings() {
       '#description' => t("Selecting this option, e-mail delivery will be performed by the Job Queue module during each cron run. Leaving this unselected, the e-mail will be sent immediately, but the site will take slightly longer to reply to the user."),
     );
   }
+
+  $form['settings']['print_mail_display_sys_urllist'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Printer-friendly URLs list in system pages'),
+    '#default_value' => variable_get('print_mail_display_sys_urllist', PRINT_TYPE_SYS_URLLIST_DEFAULT),
+    '#description' => t('Enabling this option will display a list of printer-friendly destination URLs at the bottom of the page.'),
+  );
 
   return system_settings_form($form);
 }
@@ -171,6 +201,12 @@ function print_mail_strings_settings() {
     '#description' => t('Text used in the link to the send by-email form.'),
   );
 
+  $form['print_mail_text']['print_mail_text_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Form page title'),
+    '#default_value' => variable_get('print_mail_text_title', t('Send page by e-mail')),
+    '#description' => t("Text used as the page title of the mail submission form. Requires a menu rebuild to apply."),
+  );
   $form['print_mail_text']['print_mail_text_subject'] = array(
     '#type' => 'textfield',
     '#title' => t('Message Subject'),
@@ -178,13 +214,13 @@ function print_mail_strings_settings() {
     '#description' => t("e-mail subject line. The sender's name will appear in place of !user in the subject. The web site name will be inserted in place of !site. The page title replaces !title."),
   );
   $form['print_mail_text']['print_mail_text_message'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#title' => t('Message Preamble'),
     '#default_value' => variable_get('print_mail_text_message', t('Message from sender')),
     '#description' => t('e-mail message preamble. The sender will be able to add their own message after this.'),
   );
   $form['print_mail_text']['print_mail_text_content'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#title' => t('Message Content'),
     '#default_value' => variable_get('print_mail_text_content', ''),
     '#description' => t('Set the default contents of the message.'),

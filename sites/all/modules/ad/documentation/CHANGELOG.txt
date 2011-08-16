@@ -1,6 +1,116 @@
-$Id: CHANGELOG.txt,v 1.2.2.40.2.176.2.41.2.101 2009/08/05 00:13:37 jeremy Exp $
+$Id: CHANGELOG.txt,v 1.2.2.40.2.176.2.41.2.130 2009/11/30 16:31:20 Jeremy Exp $
 
-August 4th, 2009
+November 30th, 2009 (6.x-2.2)
+ - ad.module
+    o bug #645598: don't munge ad expiration time when ad edited by user without
+      permission to edit expiration time, patch thanks to Wim Leers
+ - ad.pages.inc
+    o bug #646066: add missing {}'s, patch thanks to Jens Soerensen, aka beltofte
+
+November 23rd, 2009 (6.x-2.2-rc1)
+ - adserve.inc
+    o bug #595524: support Windows paths to ad serving scripts
+ - ad_cache_file.module
+    o bug #639576: remove pass-by-reference calls to adcacheapi
+ - ad_channel.install
+    o bug #612302: make weight signed int to allow for negative weights
+ - ad_actions.module
+    o bug #640950: remove dependancy on token_actions module
+    o bug #640948: implement _mail hook to populate notification emails
+
+November 22nd, 2009
+ - ad_channel.module
+    o bug #622004: don't try and display RON ads if there are none
+ - ad_embed.module
+    o bug #618798: make embeded ads work when there is no other content
+ - adcache.inc
+    o bug #557918: respect node permissions when displaying ads (if no ad cache
+      is enabled)
+ - ad_text.module
+ - ad_html.module
+ - ad_channel.module
+ - ad_actions.module
+ - ad_external.module
+    o bug #637624: remove pass-by-reference calls to adapi
+ - ad_image.module
+    o bug #637624: remove pass-by-reference calls to adapi
+    o bug #446262: be sure $file is an object, fixing "unable to locate image" error
+ - ad.module
+    o bug #637624: remove pass-by-reference calls to adapi
+    o bug #478198: do not memove ads from remote search engines by default as users
+      with custom home pages are sometimes having the noindex meta header set on
+      all pages
+ - ad_cache_file.module
+    o bug #639576: remove pass-by-reference calls to adcacheapi
+ - ad_report.module
+    o bug #639584: remove inappropriate call-time pass-by-reference
+
+October 27th, 2009
+ - ad.module
+    o bug #565574: only allow valid autoactivate and autoexpire dates
+    o feature #565550: use jquery calendar popup for autoactivate and autoexpire
+      dates if the date_api and date_popup modules are enabled.
+
+October 20th, 2009
+ - ad.module
+    o bug #604350: use per-page block caching for auto-generated ad blocks
+    o feature #411666: when serving ads pass in the url alias, if any
+    o feature #548232: add new 'access activity log' permission
+ - ad_channel.module
+    o bug #606244: fix error when editing channel for first time, patch thanks
+      to tetramentis
+ - adserve.php
+    o feature #411666: register the alias where the ad is being displayed
+ - ad_channel.inc
+    o feature #411666: check path rules against Drupal path and alias
+ - ad_channel.inc
+    o feature #411666: update documentation
+
+October 19th, 2009
+ - ad_notify.module
+    o bug #547474: removed module, notifications can now be built with the new
+      ad_actions module
+ - ad_actions.module
+    o bug #547474: new module, defines numerous ad triggers and advanced
+      actions
+ - ad.module
+    o bug #547474: reorder logic so clicking an ad is recorded before the
+      trigger is called
+
+October 7th, 2009
+ - ad_module.install
+    o bug #598182: properly return array with update 7
+
+October 6th, 2009
+ - ad_report.module
+    o feature #558618: display image when generating administrative reports
+      NOTICE: The ad_report module is now dependent on the chart module
+      available at http://drupal.org/project/chart -- this means that all charts
+      are now built using Google's Charts API.
+ - ad_module.install
+    o feature #558618: modify index to greatly improve reporting performance
+      CAUTION: This update will take a _very_ long time to run if you have a
+      large ad_statistics table, locking the table and possibly preventing ads
+      from being properly displayed while the update is running.
+
+September 23rd, 2009
+ - ad.pages.inc
+    o feature #548232: expose activity log, showing when changes are made to ad
+ - ad_channel.module
+    o feature #545212: allow filtering by channel <none> on main ad listing
+
+September 22nd, 2009
+ - ad_chanel.module
+    o feature #547578: allow the non-channel ads percentage to be set to 0
+ - ad_report.module
+    o feature #543084: display more details when running reports
+
+September 18th, 2009
+ - ad.module
+    o bug #551598: allow input filter to be configured to something other than
+                   'Filtered HTML'
+
+August 4th, 2009 (6.x-2.1)
  - ad.module
     o bug #527658: don't require user to choose ad type if only one is available
     o bug #445264: fix jQuery display method

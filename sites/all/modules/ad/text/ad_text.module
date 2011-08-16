@@ -1,5 +1,5 @@
 <?php
-// $Id: ad_text.module,v 1.2.2.7.2.24.2.13.2.3 2009/03/31 04:41:03 jeremy Exp $
+// $Id: ad_text.module,v 1.2.2.7.2.24.2.13.2.4 2009/11/23 05:13:15 Jeremy Exp $
 
 /**
  * @file
@@ -190,7 +190,7 @@ function ad_text_global_settings_submit($form, &$form_state) {
 /**
  * Implementation of hook_adapi().
  */
-function ad_text_adapi($op, &$node) {
+function ad_text_adapi($op, $node) {
   switch ($op) {
     case 'load':
       $return = db_fetch_array(db_query('SELECT aid, url, adheader, adbody FROM {ad_text} WHERE aid = %d', $node['aid']));

@@ -1,15 +1,6 @@
-/* $Id: hierarchical_select.css,v 1.32 2008/11/30 00:48:49 wimleers Exp $ */
 
 
 /* The hierarchical select. */
-.hierarchical-select-wrapper {
-  margin: 2px; /* Make sure a Hierarchical Selects is *indistuingishable*
-                  from a normal select with regards to spacing. Firefox seems
-                  to be giving special treatment to select elements though,
-                  because it's not rendering the 2px horizontal margins though
-                  they *are* set. */
-}
-
 .hierarchical-select-wrapper .hierarchical-select .selects {
   float: left; /* If a block is floated, it won't consume as much width as
                   available, only just enough. This allows the grippie to

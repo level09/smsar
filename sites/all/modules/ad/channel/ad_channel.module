@@ -1,5 +1,5 @@
 <?php
-// $Id: ad_channel.module,v 1.1.4.27 2009/07/29 23:00:39 jeremy Exp $
+// $Id: ad_channel.module,v 1.1.4.34 2009/11/23 05:13:15 Jeremy Exp $
 
 /**
  * @file
@@ -226,6 +226,7 @@ function ad_channel_form_alter(&$form, &$form_state, $form_id) {
     if ($display_channel) {
       $channels = _ad_channel_get_channels();
       $options = array();
+      $options['channel-0'] = t('<none>');
       foreach ($channels as $channel) {
         $key = 'channel-'. $channel->chid;
         $options[$key] = $channel->name;
@@ -431,33 +432,51 @@ function ad_channel_adreport($join, $where, $args, $select) {
       $channels = $_SESSION['ad_report_channel'];
       unset($channels[-1]);
       // Check if we're filtering on <none> and one or more channels
+      $list = array();
+      $list[] = 'none';
       if (count($channels)) {
+        foreach ($channels as $chid) {
+          $channel = _ad_channel_get_channels($chid);
+          $list[] = $channel->name;
+        }
         $where = array('(ISNULL(acn.chid) OR acn.chid IN (%s))');
         $args = array(implode(',', $channels));
       }
       else {
         $where = array('ISNULL(acn.chid)');
       }
+      drupal_set_message(t('Ad channels: !channels', array('!channels' => implode(', ', $list))));
       return array('join' => $join, 'where' => $where, 'args' => $args);
     }
     // Filtering by one or more channels
     else {
+      $channels = $_SESSION['ad_report_channel'];
+      $list = array();
+      foreach ($channels as $chid) {
+        $channel = _ad_channel_get_channels($chid);
+        $list[] = $channel->name;
+      }
+      drupal_set_message(t('Ad channels: !channels', array('!channels' => implode(', ', $list))));
       $join = array('LEFT JOIN {ad_channel_node} acn ON acn.nid = a.aid');
       $where = array('acn.chid IN (%s)');
       $args = array(implode(',', $_SESSION['ad_report_channel']));
       return array('join' => $join, 'where' => $where, 'args' => $args);
     }
   }
+  else {
+    drupal_set_message(t('Ad channels: all'));
+  }
 }
 
 /**
  * Implement hook _adapi.
  */
-function ad_channel_adapi($op, &$node) {
+function ad_channel_adapi($op, $node) {
   switch ($op) {
     case 'admin_filters':
       $channels = _ad_channel_get_channels();
       $options = array();
+      $options['channel-0'] = t('<none>');
       foreach ($channels as $channel) {
         $key = 'channel-'. $channel->chid;
         $options[$key] = $channel->name;
@@ -483,6 +502,14 @@ function ad_channel_adapi($op, &$node) {
         list($key, $value) = $node;
         if ($key == 'channel') {
           list($key, $value) = explode('-', $value, 2);
+          if ($value == 0)  {
+            return array(
+            'channel' => array(
+              'where' => 'c.chid IS %s',
+              'join' => 'LEFT JOIN {ad_channel_node} c ON n.nid = c.nid ',
+              'value' => 'NULL',
+              ));
+          }
           return array(
             'channel' => array(
               'where' => 'c.chid = %d',
@@ -709,7 +736,7 @@ function _ad_channel_validate_nodes($node) {
     $channel = _ad_channel_get_channels($chid);
     if(isset($channel->inventory) && $channel->inventory > 0) {
       $num_ads = _ad_channel_get_channel_active_ad_count($chid);
-      if ($num_ads + 1 >= $channel->inventory) {
+      if ($num_ads + 1 > $channel->inventory) {
         form_set_error("channel[$channel->conid][channel-$chid]", t('You may not assign more than !inventory to %name.', array('!inventory' => format_plural($channel->inventory, '1 advertisement', '@count advertisements'),  '%name' => $channel->name)));
       }
     }
@@ -1094,7 +1121,7 @@ function ad_channel_admin_channel($form_state, $chid = 0) {
   $form['URL_rules']['urls'] = array(
     '#type' => 'textarea',
     '#title' => t('Paths'),
-    '#description' => t("Enter one URL per line.  If serving ads locally use Drupal relative paths.  If serving ads remotely include the 'http://' or 'https:/'.  Use '&lt;front&gt;' to specify the front page.  The '*' character is a wildcard.  Example URLs are <em>blog</em> for the blog page and <em>blog/*</em> for every personal blog on your local website.  When specifying local paths you must enter the raw path (ie 'node/123') and not the url alias (ie 'my/custom/path'), if any."),
+    '#description' => t("Enter one URL per line.  If serving ads locally use Drupal relative paths.  If serving ads remotely include the 'http://' or 'https:/'.  Use '&lt;front&gt;' to specify the front page.  The '*' character is a wildcard.  Example URLs are <em>blog</em> for the blog page and <em>blog/*</em> for every personal blog on your local website."),
     '#default_value' => $chid ? unserialize($channel->urls) : '',
   );
 
@@ -1209,7 +1236,7 @@ function ad_channel_admin_channel_submit($form, &$form_state) {
   }
   switch ($form_state['values']['op']) {
     case t('Create'):
-      db_query("INSERT INTO {ad_channel} (name, description, conid, weight, display, no_channel_percent, urls, groups, inventory) VALUES('%s', '%s', %d, %d, %d, '%s', '%s', %d, %d)", $form_state['values']['name'], $form_state['values']['description'], $form_state['values']['conid'], $form_state['values']['weight'], $form_state['values']['display'], $form_state['values']['no_channel_percent'], serialize($urls), serialize($form_state['values']['groups']), $form_state['values']['inventory']);
+      db_query("INSERT INTO {ad_channel} (name, description, conid, weight, display, no_channel_percent, urls, groups, inventory) VALUES('%s', '%s', %d, %d, %d, '%s', '%s', '%s', %d)", $form_state['values']['name'], $form_state['values']['description'], $form_state['values']['conid'], $form_state['values']['weight'], $form_state['values']['display'], $form_state['values']['no_channel_percent'], serialize($urls), serialize($form_state['values']['groups']), $form_state['values']['inventory']);
       drupal_set_message(t('The %name channel has been created.', array('%name' => $form_state['values']['name'])));
       break;
     case t('Update'):
@@ -1284,7 +1311,7 @@ function _ad_channel_probabilities() {
  */
 function _ad_channel_percentages() {
   $options = array();
-  for($i = 5; $i <= 95; $i += 5) {
+  for($i = 0; $i <= 95; $i += 5) {
     $options[$i] = t($i.'%');
   }
   return $options;

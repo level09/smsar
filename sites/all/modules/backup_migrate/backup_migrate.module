@@ -1,5 +1,5 @@
 <?php
-// $Id: backup_migrate.module,v 1.3.2.17 2009/01/18 02:53:16 ronan Exp $
+// $Id: backup_migrate.module,v 1.3.2.25 2010/06/13 22:51:49 ronan Exp $
 
 
 /**
@@ -15,22 +15,22 @@ function backup_migrate_menu() {
   $items = array();
 
   $items['admin/content/backup_migrate'] = array(
-    'title' => t('Backup and Migrate'),
-    'description' => t('Backup/restore your database or migrate data to or from another Drupal site.'),
+    'title' => 'Backup and Migrate',
+    'description' => 'Backup/restore your database or migrate data to or from another Drupal site.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('backup_migrate_backup'),
     'access arguments' => array('perform backup'),
     'type' => MENU_NORMAL_ITEM,
   );
   $items['admin/content/backup_migrate/export'] = array(
-    'title' => t('Backup/Export DB'),
+    'title' => 'Backup/Export DB',
     'description' => t('Backup the database.'),
     'weight' => 0,
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   $items['admin/content/backup_migrate/restore'] = array(
-    'title' => t('Restore/Import DB'),
-    'description' => t('Restore the database from a previous backup'),
+    'title' => 'Restore/Import DB',
+    'description' => 'Restore the database from a previous backup',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('backup_migrate_restore'),
     'access arguments' => array('restore from backup'),
@@ -38,15 +38,15 @@ function backup_migrate_menu() {
     'type' => MENU_LOCAL_TASK,
   );
   $items['admin/content/backup_migrate/files'] = array(
-    'title' => t('Saved Backups'),
-    'description' => t('View existing backup files'),
+    'title' => 'Saved Backups',
+    'description' => 'View existing backup files',
     'page callback' => '_backup_migrate_list_files',
     'access arguments' => array('access backup files'),
     'weight' => 2,
     'type' => MENU_LOCAL_TASK,
   );
   $items['admin/content/backup_migrate/files/manual'] = array(
-    'title' => t('Manual Backups'),
+    'title' => 'Manual Backups',
     'page callback' => '_backup_migrate_list_files',
     'page arguments' => array('manual'),
     'access arguments' => array('access backup files'),
@@ -54,7 +54,7 @@ function backup_migrate_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   $items['admin/content/backup_migrate/files/scheduled'] = array(
-    'title' => t('Scheduled Backups'),
+    'title' => 'Scheduled Backups',
     'page callback' => '_backup_migrate_list_files',
     'page arguments' => array('scheduled'),
     'access arguments' => array('access backup files'),
@@ -62,8 +62,8 @@ function backup_migrate_menu() {
     'type' => MENU_LOCAL_TASK,
   );
   $items['admin/content/backup_migrate/schedule'] = array(
-    'title' => t('Backup Schedule'),
-    'description' => t('View existing backup files'),
+    'title' => 'Backup Schedule',
+    'description' => 'View existing backup files',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('backup_migrate_schedule'),
     'access arguments' => array('access backup files'),
@@ -71,15 +71,15 @@ function backup_migrate_menu() {
     'type' => MENU_LOCAL_TASK,
   );
   $items['admin/content/backup_migrate/restorefile'] = array(
-    'title' => t('restore from backup'),
-    'description' => t('Restore database from a backup file on the server'),
+    'title' => 'restore from backup',
+    'description' => 'Restore database from a backup file on the server',
     'page callback' => '_backup_migrate_restore_from_server',
     'access arguments' => array('restore from backup'),
     'type' => MENU_CALLBACK,
   );
   $items['admin/content/backup_migrate/delete'] = array(
-    'title' => t('Delete File'),
-    'description' => t('Delete a backup file'),
+    'title' => 'Delete File',
+    'description' => 'Delete a backup file',
     'page callback' => '_backup_migrate_delete',
     'access arguments' => array('delete backup files'),
     'type' => MENU_CALLBACK,
@@ -94,6 +94,12 @@ function backup_migrate_menu() {
  * Takes care of scheduled backups.
  */
 function backup_migrate_cron() {
+  // Backing up requires a full bootstrap as it uses the file functionality in 
+  // files.inc. Running poormanscron with caching on can cause cron to run without
+  // a full bootstrap so we manually finish bootstrapping here.
+  require_once './includes/common.inc';
+  _drupal_bootstrap_full();
+
   if ($backup_schedule_period = variable_get("backup_migrate_schedule_backup_period", 0)) {
     $last_backup = variable_get("backup_migrate_schedule_last_backup", 0);
     $now = time();
@@ -119,19 +125,19 @@ function backup_migrate_cron() {
   }
 
   // Delete temp files abandoned for 6 or more hours.
-  foreach (file_scan_directory(file_directory_temp(), 'backup_migrate_*', array('.', '..'), 0, FALSE) as $file) {
-    if (filectime($file->filename) < time() - 21600) {
-      unlink($file->filename);
+  $dir = file_directory_temp();
+  $expire = time() - variable_get('backup_migrate_cleanup_time', 21600);
+  if (file_exists($dir) && is_dir($dir) && is_readable($dir) && $handle = opendir($dir)) {
+    while (FALSE !== ($file = @readdir($handle))) {
+      // Delete 'backup_migrate_' files in the temp directory that are older than the expire time.
+      // We should only attempt to delete writable files to prevent errors in shared environments.
+      // This could still cause issues in shared environments with poorly configured file permissions.
+      if (strpos($file, 'backup_migrate_') === 0 && is_writable("$dir/$file") && @filectime("$dir/$file") < $expire) {
+        unlink("$dir/$file");
+      }
     }
+    closedir($handle);
   }
-}
-
-/**
- * Implementation of hook_exit().
- */
-function backup_migrate_exit() {
-  // Delete any temporary files generated during this execution.
-  _backup_migrate_temp_file('', TRUE);
 }
 
 /**
@@ -149,7 +155,7 @@ function _backup_migrate_delete() {
   $args = func_get_args();
   $path = implode('/', $args);
 
-  if ($path && _backup_migrate_path_is_in_save_dir($path)) {
+  if ($path = _backup_migrate_path_is_in_save_dir($path)) {
     return drupal_get_form('backup_migrate_delete_confirm', $path);
   }
   $form_state['redirect'] = user_access('access backup files') ? "admin/content/backup_migrate/files" : "admin/content/backup_migrate";
@@ -166,11 +172,13 @@ function backup_migrate_delete_confirm(&$form_state, $path) {
 function backup_migrate_delete_confirm_submit($form, &$form_state) {
   $path = $form_state['values']['path'];
 
-  if ($path && _backup_migrate_path_is_in_save_dir($path)) {
+  if ($path = _backup_migrate_path_is_in_save_dir($path)) {
     file_delete($path);
   }
   watchdog('backup_migrate', 'Database backup file deleted: %file', array('%file' => $path));
-  $form_state['redirect'] = user_access('access backup files') ? "admin/content/backup_migrate/files" : "admin/content/backup_migrate";
+
+  $redir = strpos($path, '/scheduled/') ? 'admin/content/backup_migrate/files/scheduled' : 'admin/content/backup_migrate/files';
+  $form_state['redirect'] = user_access('access backup files') ? $redir : "admin/content/backup_migrate";
 }
 
 /**
@@ -329,8 +337,7 @@ function _backup_migrate_restore_from_server() {
   // Merge remainder of arguments from GET['q'], into relative file path.
   $args = func_get_args();
   $path = implode('/', $args);
-
-  if ($path && _backup_migrate_path_is_in_save_dir($path)) {
+  if ($path = _backup_migrate_path_is_in_save_dir($path)) {
     return drupal_get_form('backup_migrate_restore_confirm', $path);
   }
   drupal_goto(user_access('access backup files') ? "admin/content/backup_migrate/files" : "admin/content/backup_migrate");
@@ -346,7 +353,7 @@ function backup_migrate_restore_confirm(&$form_state, $path) {
 
 function backup_migrate_restore_confirm_submit($form, &$form_state) {
   $path = $form_state['values']['path'];
-  if ($path && _backup_migrate_path_is_in_save_dir($path)) {
+  if ($path = _backup_migrate_path_is_in_save_dir($path)) {
     _backup_migrate_restore_file($path);
     watchdog('backup_migrate', 'Database restored from %file', array('%file' => $path));
   }
@@ -471,7 +478,7 @@ function _backup_migrate_backup_with_defaults($mode = "manual") {
  * Build the database dump file. Takes a list of tables to exclude and some formatting options.
  */
 function _backup_migrate_dump_tables($filename, $exclude_tables, $nodata_tables, $type = "sql", $destination = "download", $compression = "none", $mode = "manual", $append_timestamp = FALSE) {
-  $file_mime = "text/plain";
+  $filemime = "text/plain";
   $success = FALSE;
 
   if ($append_timestamp) {
@@ -529,7 +536,7 @@ function _backup_migrate_dump_tables($filename, $exclude_tables, $nodata_tables,
         break;
 
       case "download":
-        _backup_migrate_send_file_to_download($filename, $file_mime, $temp_file);
+        _backup_migrate_send_file_to_download($filename, $filemime, $temp_file);
         break;
     }
   }
@@ -571,14 +578,12 @@ function _backup_migrate_send_file_to_download($filename, $filetype, $file_path)
  */
 function _backup_migrate_get_dump_sql($file, $exclude_tables, $nodata_tables) {
   if ($dst = fopen($file, "w")) {
-    $exclude = variable_get("backup_migrate_exclude_tables", _backup_migrate_default_exclude_tables());
-    $nodata = variable_get("backup_migrate_nodata_tables", _backup_migrate_default_structure_only_tables());
     fwrite($dst, _backup_migrate_get_sql_file_header());
     $alltables = _backup_migrate_get_tables();
     foreach ($alltables as $table) {
-      if ($table['Name'] && !isset($exclude[$table['Name']])) {
+      if ($table['Name'] && !isset($exclude_tables[$table['Name']])) {
         fwrite($dst, _backup_migrate_get_table_structure_sql($table));
-        if (!in_array($table['Name'], $nodata)) {
+        if (!in_array($table['Name'], $nodata_tables)) {
           _backup_migrate_dump_table_data_sql_to_handle($dst, $table);
         }
       }
@@ -591,6 +596,7 @@ function _backup_migrate_get_dump_sql($file, $exclude_tables, $nodata_tables) {
     return FALSE;
   }
 }
+
 
 /**
  * Get the sql for the structure of the given table.
@@ -811,6 +817,9 @@ function _backup_migrate_restore_file($filepath, $filename = "", $delete = FALSE
     drupal_set_message(t("Unable to open file %file to restore database", array("%file" => $filepath)), 'error');
   }
 
+  // Release cron semaphore that was set during scheduled backup.
+  variable_del('cron_semaphore');
+
   // Delete any temp files we've created.
   _backup_migrate_temp_file("", TRUE);
 }
@@ -889,7 +898,7 @@ function _backup_migrate_save_to_disk($temp_file, $filename, $mode = "manual") {
  * Allow users with the appropriate permissions to download backup files.
  */
 function backup_migrate_file_download($path) {
-  if (_backup_migrate_path_is_in_save_dir($path)) {
+  if ($path = _backup_migrate_path_is_in_save_dir($path)) {
     if (user_access('access backup files') && $info = _backup_migrate_file_info($path)) {
       return array(
         'Content-Type: '. $info['filemime'],
@@ -946,6 +955,9 @@ function _backup_migrate_list_files($mode = "manual") {
       while (FALSE !== ($file = readdir($handle))) {
         $filepath = $dir ."/". $file;
         if ($info = _backup_migrate_file_info($filepath)) {
+          if (strpos($filepath, file_directory_path() .'/') === 0) {
+            $filepath = trim(substr($filepath, strlen(file_directory_path())), '\\/');
+          }
           $files[$file] = array(
             $file,
             format_date($info['filemtime']),
@@ -1006,7 +1018,7 @@ function _backup_migrate_remove_expired_backups() {
  */
 function _backup_migrate_path_is_in_save_dir($path, $mode = "") {
   $backup_dir = _backup_migrate_get_save_path($mode);
-  return file_exists($backup_dir) && file_check_location($path, $backup_dir);
+  return ($path && file_exists($backup_dir)) ? file_create_path($path, $backup_dir) : FALSE;
 }
 
 /**
@@ -1043,53 +1055,55 @@ function _backup_migrate_check_destination_dir($mode = "") {
     return FALSE;
   }
 
-  // Check for a htaccess file which adequately protects the backup files.
-  $htaccess_lines = "order allow,deny\ndeny from all\n";
-  if (!is_file($directory .'/.htaccess') || strpos(file_get_contents($directory .'/.htaccess'), $htaccess_lines) === FALSE) {
-    // Attempt to protect the backup files from public access using htaccess.
-    if (($fp = @fopen($directory .'/.htaccess', 'w')) && @fputs($fp, $htaccess_lines)) {
-      fclose($fp);
-      chmod($directory .'/.htaccess', 0664);
+  // If the files are saved inside the webroot (ie: may be web-accesible).
+  if (strtolower(substr(realpath($directory), 0, strlen($_SERVER['DOCUMENT_ROOT']))) === strtolower($_SERVER['DOCUMENT_ROOT'])) {
+    // Check for a htaccess file which adequately protects the backup files.
+    $htaccess_lines = "order allow,deny\ndeny from all\n";
+    if (!is_file($directory .'/.htaccess') || strpos(file_get_contents($directory .'/.htaccess'), $htaccess_lines) === FALSE) {
+      // Attempt to protect the backup files from public access using htaccess.
+      if (($fp = @fopen($directory .'/.htaccess', 'w')) && @fputs($fp, $htaccess_lines)) {
+        fclose($fp);
+        chmod($directory .'/.htaccess', 0664);
+      }
+      // Unable to create htaccess... warn the user.
+      else {
+        $message = "Security warning: Couldn't modify .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code> or add them to the existing .htaccess file";
+        $replace = array('%directory' => $directory, '!htaccess' => '<br />'. nl2br(check_plain($htaccess_lines)));
+        drupal_set_message(t($message, $replace), "error");
+        watchdog('security', $message, $replace, WATCHDOG_ERROR);
+        return FALSE;
+      }
     }
-    // Unable to create htaccess... warn the user.
-    else {
-      $message = "Security warning: Couldn't modify .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code> or add them to the existing .htaccess file";
-      $replace = array('%directory' => $directory, '!htaccess' => '<br />'. nl2br(check_plain($htaccess_lines)));
-      drupal_set_message(t($message, $replace), "error");
-      watchdog('security', $message, $replace, WATCHDOG_ERROR);
+  
+    // Check the user agent to make sure we're not responding to a request from drupal itself.
+    // That should prevent infinite loops which could be caused by poormanscron in some circumstances.
+    if (strpos($_SERVER['HTTP_USER_AGENT'], 'Drupal') !== FALSE) {
       return FALSE;
     }
-  }
-
-  // Check the user agent to make sure we're not responding to a request from drupal itself.
-  // That should prevent infinite loops which could be caused by poormanscron in some circumstances.
-  if (strpos($_SERVER['HTTP_USER_AGENT'], 'Drupal') !== FALSE) {
-    return FALSE;
-  }
-
-  // Check to see if the destination is publicly accessible
-  $test_contents = "this file should not be publicly accesible";
-  // Create the the text.txt file if it's not already there.
-  if (!is_file($subdir .'/test.txt') || file_get_contents($subdir .'/test.txt') != $test_contents) {
-    if ($fp = fopen($subdir .'/test.txt', 'w')) {
-      @fputs($fp, $test_contents);
-      fclose($fp);
+  
+    // Check to see if the destination is publicly accessible
+    $test_contents = "this file should not be publicly accesible";
+    // Create the the text.txt file if it's not already there.
+    if (!is_file($subdir .'/test.txt') || file_get_contents($subdir .'/test.txt') != $test_contents) {
+      if ($fp = fopen($subdir .'/test.txt', 'w')) {
+        @fputs($fp, $test_contents);
+        fclose($fp);
+      }
+      else {
+        $message = t("Security notice: Backup and Migrate was unable to write a test text file to the destination directory %directory, and is therefore unable to check the security of the backup destination. Backups to the server will be disabled until the destination becomes writable and secure.", array('%directory' => $directory));
+        drupal_set_message($message, "error");
+        return FALSE;
+      }
     }
-    else {
-      $message = t("Security notice: Backup and Migrate was unable to write a test text file to the destination directory %directory, and is therefore unable to check the security of the backup destination. Backups to the server will be disabled until the destination becomes writable and secure.", array('%directory' => $directory));
+  
+    // Attempt to read the test file via http. This may fail for other reasons, so it's not a bullet-proof check.
+    $path = trim(substr($subdir .'/test.txt', strlen(file_directory_path())), '\\/');
+    if (_backup_migrate_test_file_readable_remotely($path, $test_contents)) {
+      $message = t("Security notice: Backup and Migrate will not save backup files to the server because the destination directory is publicly accessible. If you want to save files to the server, please secure the '%directory' directory", array('%directory' => $directory));
       drupal_set_message($message, "error");
       return FALSE;
     }
   }
-
-  // Attempt to read the test file via http. This may fail for other reasons, so it's not a bullet-proof check.
-  $path = trim(substr($subdir .'/test.txt', strlen(file_directory_path())), '\\/');
-  if (_backup_migrate_test_file_readable_remotely($path, $contents)) {
-    $message = t("Security notice: Backup and Migrate will not save backup files to the server because the destination directory is publicly accessible. If you want to save files to the server, please secure the '%directory' directory", array('%directory' => $directory));
-    drupal_set_message($message, "error");
-    return FALSE;
-  }
-
   return $out;
 }
 

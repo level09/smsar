@@ -1,4 +1,3 @@
-// $Id: hierarchical_select_cache.js,v 1.8 2008/11/30 01:56:35 wimleers Exp $
 
 /**
  * @file
