@@ -23,14 +23,13 @@ Manage a property website with drupal, easy
 1. Copy the files into the root of your website directory 
 2. Create a mysql database using a GUI tool like phpmyadmin or using the command line : 
 	create database db_name default charset utf8; 
-3. restore the database file in the db directory
-this can be done with : 
+3. restore the database file in the db directory this can be done with: 
 
-	mysql -u username -p db_name < db/db 
+	 	mysql -u username -p db_name < db/db; 
 
-if you have drush installed, you can simply 
+if you have drush installed, you can simply:
 
-	drush sql-cli < db/db 
+		drush sql-cli < db/db; 
 
 4. Open sites/default directory and copy the default.settings.php or rename it to settings.php and update the database configuration line. 
 5. make sure the following directory is writable : 
@@ -41,10 +40,11 @@ sites/all/modules/print/lib/cache/
 
 user: admin
 pass: admin 
+7. Sign up for Google maps API key (http://code.google.com/apis/maps/signup.html)
+8. Go to "Site Configurations" > "Simplest Gmap" and replace the api key with your own.
+7. Check the status report for any outstanding issues. 
 
-7. Check the status report for any issues. 
-
-## Demo site 
+## Demo website 
 
 http://smsar.me 
 
